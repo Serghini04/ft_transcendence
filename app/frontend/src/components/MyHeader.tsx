@@ -5,7 +5,7 @@ export default function MyHeader() {
   return (
     <header className="fixed top-0 left-20 right-0 h-20 flex items-center justify-between px-6 md:px-10 bg-transparent backdrop-blur-md z-30">
       {/* Search Bar */}
-      <div className="flex items-center w-full max-w-[500px] bg-[rgba(13,34,52,0.5)] rounded-full px-5 py-2 shadow-md backdrop-blur-sm hover:shadow-lg transition-all">
+      <div className="flex items-center w-full max-w-[500px] bg-[rgba(13,34,52,0.5)] rounded-full px-5 py-2.5 shadow-md backdrop-blur-sm hover:shadow-lg transition-all">
         <SearchIcon className="text-gray-400 mr-3" fontSize="medium" />
         <input
           type="text"
@@ -19,7 +19,7 @@ export default function MyHeader() {
         {/* Notifications */}
         <div className="relative flex items-center justify-center w-7 h-7">
           <NotificationsIcon className="text-gray-300 hover:text-white transition-colors" fontSize="large" />
-          <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-[1px] rounded-full border border-[#0b1b29]">
+          <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-[1px] rounded-full border border-[#0b1b29]">
             3
           </span>
         </div>
