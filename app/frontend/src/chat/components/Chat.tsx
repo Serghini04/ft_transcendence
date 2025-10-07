@@ -20,13 +20,13 @@ export default function Chat() {
   ];
 
   return (
-    <div className="fixed pt-20 pl-20 inset-0 flex">
+    <div className="fixed bg-[rgba(15,26,36,0.5)] mt-30 ml-30 border-l-2 border-t-2 rounded-tl-4xl border-[#27445E] inset-0 flex">
       {/* LEFT SIDEBAR */}
-      <aside className="w-80 bg-[rgba(13,34,52,0.75)] backdrop-blur-md border-r border-white/10 flex flex-col">
+      <aside className="w-96 flex flex-col border-r-2 border-[#27445E]">
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10 shrink-0">
-          <MessageSquareMore className="text-emerald-400" size={26} />
-          <h2 className="text-lg font-semibold text-white">Messages</h2>
+        <div className="flex h-25 items-center justify-center gap-5 px-6 py-5 border-b-2 border-[#27445E] shrink-0">
+          <MessageSquareMore  size={26} />
+          <h2 className="text-[25px] font-medium text-white tracking-[0.07em] font-outfit">Messages</h2>
         </div>
 
         {/* Chat List */}
@@ -37,7 +37,7 @@ export default function Chat() {
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
             >
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
                   MS
                 </div>
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-[rgba(13,34,52,0.75)]"></span>
