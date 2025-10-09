@@ -1,5 +1,5 @@
 import AppRoutes from "./components/AppRoutes";
-import MyHeader from "./components/MyHeader";
+import HeaderBar from "./components/HeaderBar";
 import SideMenu from "./components/SideMenu";
 import { BrowserRouter as Router } from "react-router-dom";
 
@@ -10,7 +10,7 @@ export default function App() {
         <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
 
         <SideMenu />
-        <MyHeader />
+        <HeaderBar />
 
         <main className="overflow-hidden pl-20 pt-20 p-6 relative z-10">
           <AppRoutes />

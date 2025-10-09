@@ -1,7 +1,7 @@
 import { Search as SearchIcon } from "@mui/icons-material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 
-export default function MyHeader() {
+export default function HeaderBar() {
   return (
     <header className="fixed top-0 left-20 right-0 h-20 flex items-center justify-between px-6 md:px-10 bg-transparent backdrop-blur-md z-30">
       {/* Search Bar */}
