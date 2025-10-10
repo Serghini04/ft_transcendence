@@ -1,8 +1,10 @@
 import { MessageSquareMore, CircleEllipsis, Send, Menu, X, CircleX } from "lucide-react";
 import { useState } from "react";
+import { Bell, Sword, UserX, RotateCcw } from "lucide-react";
 
 export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Mock data (replace with API data in production)
   const mockChats = Array(6)
@@ -24,14 +26,25 @@ export default function Chat() {
       time: "13:32 PM",
     },
   ];
+  
+  const matches = [
+    { id: 1, userScore: 4, opponentScore: 3 },
+    { id: 2, userScore: 3, opponentScore: 2 },
+    { id: 3, userScore: 5, opponentScore: 2 },
+    { id: 4, userScore: 4, opponentScore: 0 },
+  ];
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const toggleHistory = () => {
+    setIsHistoryOpen((prev) => !prev);
+  };
+
   return (
     <div className="fixed bg-[rgba(15,26,36,0.5)] mt-30 ml-30 border-l-2 border-t-2 rounded-tl-4xl border-[#27445E] inset-0 flex">
-      {/* Overlay for mobile */}
+      {/* Overlay for mobile - Left Sidebar */}
       {isSidebarOpen && (
         <div
           className="md:hidden fixed inset-0 bg-black/50 z-30"
@@ -54,20 +67,21 @@ export default function Chat() {
       >
         {/* Header */}
         <div className="flex h-25 items-center justify-between md:justify-center gap-5 px-6 py-5 border-b-2 border-[#27445E]">
-        <div className="flex items-center gap-5">
-          <MessageSquareMore size={26} />
-          <h2 className="text-[25px] font-medium text-white tracking-[0.07em] font-outfit">
-            Messages
-          </h2>
+          <div className="flex items-center gap-5">
+            <MessageSquareMore size={26} />
+            <h2 className="text-[25px] font-medium text-white tracking-[0.07em] font-outfit">
+              Messages
+            </h2>
+          </div>
+          <button
+            onClick={toggleSidebar}
+            className="md:hidden !p-2 rounded-full !bg-transparent transition-colors !border-none"
+            aria-label="Toggle sidebar"
+            aria-expanded={isSidebarOpen}
+          >
+            <CircleX size={26} className="mt-1 text-[#b7b3b3] hover:text-white"/>
+          </button>
         </div>
-        <button
-          onClick={toggleSidebar}
-          className="md:hidden !p-2 rounded-full !bg-transparent transition-colors !border-none"
-          aria-label="Toggle sidebar"
-        >
-          <CircleX size={26}  className="mt-1 text-[#b7b3b3] hover:text-white" />
-        </button>
-      </div>
 
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -106,7 +120,7 @@ export default function Chat() {
       </aside>
 
       {/* RIGHT CHAT AREA */}
-      <section className="flex-1 flex flex-col border-[#20374A] w-full md:w-auto">
+      <section className="flex-1 flex flex-col w-full md:w-auto">
         {/* Chat Header */}
         <div className="flex h-25 justify-between items-center px-4 md:px-6 py-4 border-b-2 border-[#27445E] shrink-0">
           <div className="flex items-center gap-3 md:gap-4">
@@ -115,6 +129,7 @@ export default function Chat() {
               onClick={toggleSidebar}
               className="md:hidden !p-2 rounded-full !bg-transparent transition-colors flex items-center !border-none justify-center"
               aria-label="Toggle sidebar"
+              aria-expanded={isSidebarOpen}
             >
               {isSidebarOpen ? (
                 <X size={26} className="text-[#b7b3b3] hover:text-white" />
@@ -135,13 +150,22 @@ export default function Chat() {
             </div>
           </div>
           <button 
+              onClick={toggleHistory}
               className="!p-2 rounded-full !bg-transparent transition-colors flex items-center !border-none justify-center"
-              aria-label="Toggle sidebar"
+              aria-label="Toggle history panel"
+              aria-expanded={isHistoryOpen}
             >
-            <CircleEllipsis
-              className="text-[#b7b3b3] hover:text-white transition-colors bg-transparent"
-              size={30}
-            />
+            {isHistoryOpen ? (
+              <X
+                className="text-[#b7b3b3] hover:text-white transition-colors bg-transparent"
+                size={30}
+              />
+            ) : (
+              <CircleEllipsis
+                className="text-[#b7b3b3] hover:text-white transition-colors bg-transparent"
+                size={30}
+              />
+            )}
           </button>
         </div>
 
@@ -185,6 +209,106 @@ export default function Chat() {
           </button>
         </div>
       </section>
+        
+      {/* History Bar (toggleable) */}
+      <div
+        className={`
+          flex flex-col items-center
+          border-l-2 border-[#20374A]
+          text-white
+          min-h-screen
+          overflow-hidden
+          transition-all duration-300 ease-in-out
+          ${isHistoryOpen ? "w-full sm:w-80 opacity-100" : "w-0 opacity-0"}
+          ${isHistoryOpen ? "px-4 py-6" : "px-0 py-0"}
+        `}
+        aria-hidden={!isHistoryOpen}
+      >
+        {/* Avatar */}
+        <div className="flex flex-col mt-14 items-center space-y-3">
+          <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-600">
+            <img
+              src="/user.png"
+              alt="User avatar"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold">Mehdi Serghini</h2>
+            <h3 className="text-[#A8AAAB] text-sm">meserghi</h3>
+          </div>
+        </div>
+
+        {/* History Section */}
+        <div className="mt-6 w-full">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <h2 className="text-lg font-medium">History</h2>
+            <RotateCcw size={18} className="text-[#A8AAAB]" />
+          </div>
+
+          <div className="flex flex-col gap-3 w-full">
+            {matches.map((match) => (
+              <div
+                key={match.id}
+                className="flex justify-between items-center bg-[#112434] p-3 rounded-xl"
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/user.png"
+                    alt="User"
+                    className="w-10 h-10 rounded-full border border-gray-600"
+                  />
+                  <div className="flex flex-col items-center">
+                    <span className="text-base font-semibold">
+                      {match.userScore}
+                    </span>
+                  </div>
+                </div>
+
+                
+                <span className="text-[#A8AAAB] font-semibold">vs</span>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center">
+                    <span className="text-base font-semibold">
+                      {match.opponentScore}
+                    </span>
+                  </div>
+                  <img
+                    src="/enemy.jpeg"
+                    alt="Opponent"
+                    className="w-10 h-10 rounded-full border border-gray-600"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-6 flex flex-col gap-3 w-full">
+          <button className="flex items-center justify-center gap-2 !bg-[#112434] !hover:bg-[#1A2D42] rounded-xl py-2 text-sm transition-colors">
+            <Sword size={16} />
+            launch a challenge
+          </button>
+
+          <div className="flex items-center justify-between bg-[#112434] rounded-xl py-3 px-4">
+            <div className="flex items-center gap-2">
+              <Bell size={16} />
+              <span className="text-sm">Mute notifications</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" />
+              <div className="w-9 h-5 bg-gray-600 rounded-full peer peer-checked:bg-[#1EC49F] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-4 after:w-4 after:rounded-full after:transition-all peer-checked:after:translate-x-full"></div>
+            </label>
+          </div>
+
+          <button className="flex items-center justify-center gap-2 !bg-[#A33B2E] !hover:bg-[#8E3125] rounded-xl py-2 text-sm transition-colors">
+            <UserX size={16} />
+            Block
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
