@@ -1,10 +1,11 @@
 import { Routes, Route } from "react-router-dom";
-import Chat from "../chat/components/Chat";
+import Game from "../Game/GameMenu";
+
 
 export default function AppRoutes() {
     return (
         <Routes>
-          <Route path="/chat" element={<Chat />} />
+          <Route path="/game" element={<Game />} />
         </Routes>
       );
 }

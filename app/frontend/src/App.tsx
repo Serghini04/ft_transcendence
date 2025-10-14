@@ -1,7 +1,6 @@
-// import AppRoutes from "./components/AppRoutes";
+import AppRoutes from "./components/AppRoutes";
 import HeaderBar from "./components/HeaderBar";
 import SideMenu from "./components/SideMenu";
-import UrTask from "./urtask/components/index";
 import { useState } from "react";
 
 import { BrowserRouter as Router } from "react-router-dom";
@@ -20,10 +19,10 @@ export default function App() {
         <SideMenu open={menuOpen} onClose={handleMenuClose} />
         {/* <HeaderBar /> */}
         <HeaderBar onMenuToggle={handleMenuToggle} />
-        <UrTask />
+        {/* <Game /> */}
 
-        <main className="overflow-hidden pl-20 pt-20 p-6 relative z-10">
-          {/* <AppRoutes /> */}
+        <main className="pl-20 pt-20 p-6 relative z-10">
+          <AppRoutes />
         </main>
       </div>
     </Router>
