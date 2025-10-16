@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import Chat from "../chat/components/Chat";
+import Chat from "../chat/components/ChatPage";
 
 export default function AppRoutes() {
     return (
