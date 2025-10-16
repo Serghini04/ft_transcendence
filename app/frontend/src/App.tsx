@@ -10,7 +10,7 @@ export default function App() {
   const handleMenuToggle = () => setMenuOpen((prev) => !prev);
   const handleMenuClose = () => setMenuOpen(false);
 
-  // ✅ Automatically sync sidebar with screen size
+  // Automatically sync sidebar with screen size
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -31,7 +31,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className="bg-red-200 relative min-h-screen text-white overflow-hidden">
+      <div className="relative min-h-screen text-white">
         {/* Background image */}
         <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
 
@@ -48,7 +48,7 @@ export default function App() {
           }`}
         >
           <main className="pt-20 px-10">
-            <AppRoutes />
+            <AppRoutes menuOpen={menuOpen}/>
           </main>
         </div>
       </div>

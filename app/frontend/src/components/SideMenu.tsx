@@ -5,6 +5,8 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom"
+
 
 interface SideMenuProps {
   open: boolean;
@@ -12,7 +14,8 @@ interface SideMenuProps {
 }
 
 export default function SideMenu({ open, onClose}: SideMenuProps) {
-  
+  const location = useLocation();
+
   return (
     <>
       {/* --- Logo Bar (Always visible) --- */}
@@ -32,44 +35,75 @@ export default function SideMenu({ open, onClose}: SideMenuProps) {
 
         {/* Navigation Icons */}
         <nav className="flex flex-col items-center justify-center flex-1 space-y-20 w-full mt-4">
-          <NavItem icon={<Home size={32} />} />
-          <NavItem icon={<MessageCircle size={32} />} />
-          <NavItem icon={<Gamepad2 size={32} />} />
-          <NavItem icon={<Settings size={32} />} />
+          <NavItem
+            icon={<Home size={32} />}
+            color="#12C0AD"
+            to="/"
+            active={location.pathname === "/"}
+          />
+          <NavItem
+            icon={<MessageCircle size={32} />}
+            color="#12C0AD"
+            to="/chat"
+            active={location.pathname === "/chat"}
+          />
+          <NavItem
+            icon={<Gamepad2 size={32} />}
+            color="#12C0AD"
+            to="/game"
+            active={location.pathname === "/game"}
+          />
+          <NavItem
+            icon={<Settings size={32} />}
+            color="#12C0AD"
+            to="/settings"
+            active={location.pathname === "/settings"}
+          />
         </nav>
 
         {/* Logout Section */}
         <div className="w-full flex flex-col items-center mt-4 mb-6">
           <div className="w-10 border-t border-gray-700 mb-3"></div>
-          <NavItem icon={<LogOut size={32} />} color="#FF4C4C" />
+          <NavItem icon={<LogOut size={32} />} color="#FF4C4C" to="/auth" />
         </div>
       </aside>
   </>
   );
 }
 
-function NavItem({
-  icon,
-  color = "#12C0AD",
-}: {
+
+interface NavItemProps {
   icon: React.ReactNode;
   color?: string;
-}) {
+  to: string;
+  active?: boolean;
+}
+
+function NavItem({icon, color = "#12C0AD", to, active = false}: NavItemProps)
+{
   return (
-    <div className="group relative flex items-center justify-center w-full cursor-pointer">
-      {/* Icon */}
+    <Link to={to} className="group relative flex items-center justify-center w-full cursor-pointer">
+       {/* Icon */}
       <div
-        className="text-gray-400 transition-colors duration-300 group-hover:text-[color:var(--hover)]"
-        style={{ "--hover": color } as React.CSSProperties}
+        className={`transition-colors duration-300 ${
+          active ? "text-[color:var(--active)]" : "text-gray-400 group-hover:text-[color:var(--hover)]"
+        }`}
+        style={
+          {
+            "--hover": color,
+            "--active": color,
+          } as React.CSSProperties
+        }
       >
         {icon}
       </div>
-
-      {/* Hover Line */}
+        {/* Active or Hover Line */}
       <div
-        className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-[3px] rounded-full scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300"
+        className={`absolute right-0 top-1/2 -translate-y-1/2 h-10 w-[3px] rounded-full origin-center transition-transform duration-300 ${
+          active ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100"
+        }`}
         style={{ backgroundColor: color }}
       ></div>
-    </div>
+    </Link>
   );
 }
