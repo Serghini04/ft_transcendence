@@ -2,15 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { User } from "lucide-react"; // you can replace with avatar images
 
 export default function Local() {
-  const [leftScore, setLeftScore] = useState(2);
+  const [leftScore, setLeftScore] = useState(0);
   const [rightScore, setRightScore] = useState(0);
-  const [time, setTime] = useState(128); // seconds = 2:08
+  const [time, setTime] = useState(0); // seconds = 2:08
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Simple countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
-      setTime((prev) => (prev > 0 ? prev - 1 : 0));
+      setTime((prev) => (prev + 1));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -31,10 +31,37 @@ export default function Local() {
     const width = canvas.width;
     const height = canvas.height;
 
-    let ball = { x: width / 2, y: height / 2, dx: 3, dy: 3, size: 8 };
-    let leftPaddle = { x: 10, y: height / 2 - 40, width: 10, height: 80 };
-    let rightPaddle = { x: width - 20, y: height / 2 - 40, width: 10, height: 80 };
+    let ball = { x: width / 2, y: height / 2, dx: 4, dy: 3, size: 8, visible: true};
+    let leftPaddle = { x: 0, y: height / 2 - 45, width: 10, height: 90, speed: 6 };
+    let rightPaddle = { x: width - 10, y: height / 2 - 45, width: 10, height: 90, speed: 6 };
 
+    let gameOver = false;
+    let lScore = 0;
+    let rScore = 0;
+
+    const keysPressed: Record<string, boolean> = {};
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressed[e.key.toLocaleLowerCase()] = true;
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed[e.key.toLocaleLowerCase()] = false;
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    const resetBall = (direction : number) => {
+      ball.visible = false;
+      setTimeout(() => {
+        ball.x = width / 2;
+        ball.y = height / 2;
+        ball.dx = 3 * direction;
+        ball.dy = 3;
+        ball.visible = true;
+      }, 1000);
+    };
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
@@ -43,32 +70,90 @@ export default function Local() {
       ctx.fillRect(0, 0, width, height);
 
       // Center dashed line
-      ctx.strokeStyle = "rgba(255,255,255,0.2)";
-      ctx.setLineDash([6, 12]);
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.setLineDash([20]);
       ctx.beginPath();
       ctx.moveTo(width / 2, 0);
       ctx.lineTo(width / 2, height);
       ctx.stroke();
 
       // Ball
-      ctx.fillStyle = "#12C0AD";
+      ctx.fillStyle = "#8ADDD4";
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
       ctx.fill();
 
       // Paddles
-      ctx.fillStyle = "#12C0AD";
-      ctx.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height);
-      ctx.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
+      ctx.fillStyle = "#8ADDD4";
+      ctx.beginPath();
+      ctx.roundRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height, 8);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.roundRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height, 8);
+      ctx.fill();
+
     };
 
     const update = () => {
+      if (gameOver || !ball.visible) return;
+
+      if (keysPressed["w"]) leftPaddle.y -= leftPaddle.speed;
+      if (keysPressed["s"]) leftPaddle.y += leftPaddle.speed;
+      if (keysPressed["arrowup"]) rightPaddle.y -= rightPaddle.speed;
+      if (keysPressed["arrowdown"]) rightPaddle.y += rightPaddle.speed;
+
+      // ******** mathmin(???) ***************************&&&&&&&*****&*&*&**&&*&****
+      // Prevent paddles from going outside canvas
+      leftPaddle.y = Math.max(0, Math.min(height - leftPaddle.height, leftPaddle.y));
+      rightPaddle.y = Math.max(0, Math.min(height - rightPaddle.height, rightPaddle.y));
+
       ball.x += ball.dx;
       ball.y += ball.dy;
 
-      if (ball.y < 0 || ball.y > height) ball.dy *= -1;
+      // Bounce off top/bottom
+      if (ball.y - ball.size < 0 || ball.y + ball.size > height) {
+        ball.dy *= -1;
+      }
 
-      if (ball.x < 0 || ball.x > width) ball.dx *= -1;
+      // Paddle collisions
+      if (
+        ball.x - ball.size < leftPaddle.x + leftPaddle.width &&
+        ball.y > leftPaddle.y &&
+        ball.y < leftPaddle.y + leftPaddle.height
+      ) {
+        ball.dx *= -1;
+        ball.x = leftPaddle.x + leftPaddle.width + ball.size;
+      }
+
+      if (
+        ball.x + ball.size > rightPaddle.x &&
+        ball.y > rightPaddle.y &&
+        ball.y < rightPaddle.y + rightPaddle.height
+      ) {
+        ball.dx *= -1;
+        ball.x = rightPaddle.x - ball.size;
+      }
+
+      // Scoring
+      if (ball.x + ball.size < 0) {
+        rScore++;
+        setRightScore(rScore);
+        
+        // if (rightScore === 5) {
+        //   gameOver = true;
+        //   alert("🏆 Left Player Wins!");
+        // }
+      }
+
+      if (ball.x - ball.size > width) {
+        lScore++;
+        setLeftScore(lScore);
+        // if (leftScore === 5) {
+        //   gameOver = true;
+        //   alert("🏆 Left Player Wins!");
+        // }
+      }
     };
 
     const loop = () => {
@@ -78,6 +163,11 @@ export default function Local() {
     };
 
     loop();
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyUp);
+    };
   }, []);
 
   return (
