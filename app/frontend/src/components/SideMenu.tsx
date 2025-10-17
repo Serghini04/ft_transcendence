@@ -45,19 +45,19 @@ export default function SideMenu({ open, onClose}: SideMenuProps) {
             icon={<MessageCircle size={32} />}
             color="#12C0AD"
             to="/chat"
-            active={location.pathname === "/chat"}
+            active={location.pathname.startsWith("/chat")}
           />
           <NavItem
             icon={<Gamepad2 size={32} />}
             color="#12C0AD"
             to="/game"
-            active={location.pathname === "/game"}
+            active={location.pathname.startsWith("/game")}
           />
           <NavItem
             icon={<Settings size={32} />}
             color="#12C0AD"
             to="/settings"
-            active={location.pathname === "/settings"}
+            active={location.pathname.startsWith("/settings")}
           />
         </nav>
 
