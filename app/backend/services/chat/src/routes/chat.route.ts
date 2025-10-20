@@ -1,9 +1,9 @@
 import { FastifyInstance } from "fastify";
 import {chatController} from "./../controllers/chat.controller"
 
-// GET /api/chat/contacts - get all contacts
-// GET /api/chat/:id - get messages by user id
-// POST /api/chat/send/:id - send message to user by id
+// GET /api/v1/chat/contacts - get all contacts
+// GET /api/v1/chat/:id - get messages by user id
+// POST /api/v1/chat/send/:id - send message to user by id
 
 export default async function messageRoutes(fastify: FastifyInstance, opts: any) {
     fastify.get("/contacts", chatController.getAllContacts);

@@ -2,12 +2,6 @@ import Database from "better-sqlite3";
 
 export const db = new Database("./src/db/chat.sqlite");
 
-declare module "fastify" {
-  interface FastifyInstance {
-    db: Database.Database;
-  }
-}
-
 db.exec(`
   -- Users (from User Service)
   CREATE TABLE IF NOT EXISTS users (
