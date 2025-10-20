@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { Contact } from "../models/contact";
-import { Message } from "../models/message";
+// import { Message } from "../models/message";
 import { User, UserStatus } from "../models/user";
 
 
@@ -57,7 +57,7 @@ export class ChatRepository {
       );
     }
 
-    getConvertionByUserId(userId: number) {
+    getConversationByUserId(userId: number) {
 
     }
     
