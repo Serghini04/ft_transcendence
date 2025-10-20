@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { User } from "../models/user";
+import { ChatRepository } from "../repositories/chat.repository";
 
 interface Contact {
     id: number,
@@ -9,32 +10,18 @@ interface Contact {
 async function getAllContacts(req: FastifyRequest, res: FastifyReply) {
     // Api GetWay :
     req.user = { userId: 1, fullName: "Mehdi Serghini" };
+    const chatRepo = new ChatRepository(req.server.db);
 
-    const stmt = req.server.db.prepare(`
-        SELECT
-        contacts.id AS contact_id,
-        users.id AS user_id,
-        users.full_name,
-        users.username,
-        users.status,
-        users.avatar_url
-        FROM contacts
-        JOIN users 
-        ON users.id = CASE 
-            WHEN contacts.sender_id = ? THEN contacts.received_id
-            ELSE contacts.sender_id
-        END
-        WHERE ? IN (contacts.sender_id, contacts.received_id);
-    `);
-    if (req.user)
-        res.send(stmt.all(req.user.userId, req.user.userId));
-    else
-        res.status(400).send({ error: "User not authenticated" });
+    const contacts = chatRepo.getContacts(req.user.userId);
+    res.send(contacts);
 }
 
 async function getConversationByUserId(req: FastifyRequest, res: FastifyReply) {
-    const {id} = req.params as {id: string};
-    res.send({message: "GET Converstaion By User Id " + id});
+    req.user = { userId: 1, fullName: "Mehdi Serghini" };
+    const chatRepo = new ChatRepository(req.server.db);
+
+    const conversation = getConvertionByUserId(req.user.userId);
+    res.send(conversation);
 }
 
 async function sendMessage(req: FastifyRequest, res: FastifyReply) {

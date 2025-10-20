@@ -1,5 +1,5 @@
 
-export type UserStatus = 'online' | 'offline';
+export type UserStatus = 'online' | 'offline' | string;
 
 export class User{
     id: number;
