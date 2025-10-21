@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import messageRoutes from "./routes/chat.route";
 import { db } from "./db/chat.db";
+import chatRoutes from "./routes/chat.route";
 
 const app = Fastify({
   logger: {
@@ -17,7 +18,7 @@ const app = Fastify({
 });
 
 app.decorate("db", db);
-app.register(messageRoutes, { prefix: "/api/v1/chat"});
+app.register(chatRoutes, { prefix: "/api/v1/chat"});
 
 const start = async () => {
   try {

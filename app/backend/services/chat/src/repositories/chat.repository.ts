@@ -85,4 +85,12 @@ export class ChatRepository {
                       !!row.isSender
                   ));
     }
+
+    sendMessage(senderId: number, receivedId: number, text: string) {
+      const stmt = this.db.prepare(`
+        INSERT INTO messages (sender_id, received_id, text) VALUE (?, ?, ?);
+      `);
+      const res = stmt.run(senderId, receivedId, text);
+      return {success: res.changes > 0};
+    }
 }
