@@ -29,11 +29,9 @@ db.exec(`
     sender_id INTEGER NOT NULL,
     received_id INTEGER NOT NULL,
     text TEXT NOT NULL,
-    conversation_id INTEGER NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,  
-    FOREIGN KEY (received_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (conversation_id) REFERENCES contacts(id) ON DELETE CASCADE
+    FOREIGN KEY (received_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
   -- Relationships

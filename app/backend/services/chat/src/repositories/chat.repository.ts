@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { Contact } from "../models/contact";
 // import { Message } from "../models/message";
 import { User, UserStatus } from "../models/user";
+import { Message } from "../models/message";
 
 
 export class ChatRepository {
@@ -39,7 +40,7 @@ export class ChatRepository {
         username: string;
         status: UserStatus;
         avatar_url: string;
-        is_blocked: number;
+        is_blocked: boolean;
       }[];
     
       return rows.map(row =>
@@ -57,8 +58,31 @@ export class ChatRepository {
       );
     }
 
-    getConversationByUserId(userId: number) {
-
-    }
+    getConversationBetweenUsers(currentUserId: number, otherUserId: number) {
+      const stmt = this.db.prepare(`
+        SELECT
+          id,
+          CASE
+            WHEN sender_id = ? THEN 1
+            ELSE 0
+          END AS isSender,
+          text,
+          timestamp
+        FROM messages
+        WHERE ? IN (messages.sender_id, messages.received_id);
+      `);
+      const rows = stmt.all(currentUserId, otherUserId) as {
+        id: number;
+        timestamp: Date;
+        text: string;
+        isSender: boolean;
+      }[];
     
+      return rows.map(row => new Message(
+                      row.id,
+                      row.timestamp,
+                      row.text,
+                      !!row.isSender
+                  ));
+    }
 }
