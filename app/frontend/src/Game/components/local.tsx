@@ -31,13 +31,22 @@ export default function Local() {
     const width = canvas.width;
     const height = canvas.height;
 
-    let ball = { x: width / 2, y: height / 2, dx: 4, dy: 3, size: 8, visible: true};
-    let leftPaddle = { x: 0, y: height / 2 - 45, width: 10, height: 90, speed: 6 };
-    let rightPaddle = { x: width - 10, y: height / 2 - 45, width: 10, height: 90, speed: 6 };
+    // let ball = { x: width / 2, y: height / 2, dx: 4, dy: 3, size: 8, visible: true};
+    // let leftPaddle = { x: 0, y: height / 2 - 45, width: 10, height: 90, speed: 6 };
+    // let rightPaddle = { x: width - 10, y: height / 2 - 45, width: 10, height: 90, speed: 6 };
 
-    let gameOver = false;
-    let lScore = 0;
-    let rScore = 0;
+    const ballRef = {
+      current: { x: width / 2, y: height / 2, dx: 4, dy: 3, size: 8, visible: true },
+    } as const as { current: { x: number; y: number; dx: number; dy: number; size: number; visible: boolean } };
+
+    const leftPaddleRef = { current: { x: 0, y: height / 2 - 45, width: 10, height: 90, speed: 6 } };
+    const rightPaddleRef = { current: { x: width - 10, y: height / 2 - 45, width: 10, height: 90, speed: 6 } };
+
+    const lScoreRef = { current: 0 };
+    const rScoreRef = { current: 0 };
+    const startRef = { current: false };
+    const rafIdRef = { current: 0 as number | null };
+    const scoredRef = { current: false };
 
     const keysPressed: Record<string, boolean> = {};
 
@@ -53,16 +62,26 @@ export default function Local() {
     window.addEventListener("keyup", handleKeyUp);
 
     const resetBall = (direction : number) => {
+      const ball = ballRef.current;
       ball.visible = false;
+      // scoredRef.current = true;
       setTimeout(() => {
         ball.x = width / 2;
         ball.y = height / 2;
         ball.dx = 3 * direction;
         ball.dy = 3;
         ball.visible = true;
+        scoredRef.current = false;
       }, 1000);
     };
+
+
     const draw = () => {
+      const ball = ballRef.current;
+      const leftPaddle = leftPaddleRef.current;
+      const rightPaddle = rightPaddleRef.current;
+
+      // Clear canvas
       ctx.clearRect(0, 0, width, height);
 
       // Background
@@ -96,7 +115,11 @@ export default function Local() {
     };
 
     const update = () => {
-      if (gameOver || !ball.visible) return;
+      const ball = ballRef.current;
+      const leftPaddle = leftPaddleRef.current;
+      const rightPaddle = rightPaddleRef.current; 
+
+      if (!ball.visible) return;
 
       if (keysPressed["w"]) leftPaddle.y -= leftPaddle.speed;
       if (keysPressed["s"]) leftPaddle.y += leftPaddle.speed;
@@ -136,35 +159,39 @@ export default function Local() {
       }
 
       // Scoring
-      if (ball.x + ball.size < 0) {
-        rScore++;
-        setRightScore(rScore);
-        
-        // if (rightScore === 5) {
-        //   gameOver = true;
-        //   alert("🏆 Left Player Wins!");
-        // }
+      if (!scoredRef.current && ball.x + ball.size < 0) {
+        ball.visible = false;
+        scoredRef.current = true;
+        rScoreRef.current += 1;
+        setRightScore(rScoreRef.current);
+        resetBall(1);
+        return ;
       }
-
-      if (ball.x - ball.size > width) {
-        lScore++;
-        setLeftScore(lScore);
-        // if (leftScore === 5) {
-        //   gameOver = true;
-        //   alert("🏆 Left Player Wins!");
-        // }
+      
+      if (!scoredRef.current && ball.x - ball.size > width) {
+        ball.visible = false;
+        scoredRef.current = true;
+        lScoreRef.current += 1;
+        setLeftScore(lScoreRef.current);
+        resetBall(-1);
+        return ;
       }
     };
 
     const loop = () => {
       update();
       draw();
-      requestAnimationFrame(loop);
+      rafIdRef.current = requestAnimationFrame(loop);
     };
 
-    loop();
+
+    if (!startRef.current) {
+      startRef.current = true;
+      loop();
+    }
 
     return () => {
+      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keydown", handleKeyUp);
     };
@@ -173,25 +200,49 @@ export default function Local() {
   return (
     <div className="flex flex-col items-center justify-center w-full min-h-[calc(100vh-5rem)]">
       {/* Scoreboard */}
-      <div className="flex items-center justify-between w-full max-w-4xl px-6 py-3 bg-[rgba(13,34,52,0.55)] rounded-t-xl backdrop-blur-md border border-white/10 shadow-lg">
-        {/* Left Player */}
-        <div className="flex items-center space-x-2">
-          <User className="text-[#12C0AD] h-6 w-6" />
-          <span className="text-white font-semibold text-lg">{leftScore}</span>
-        </div>
+      <div className="flex justify-center items-center w-full mt-6">
+        <div
+          className="flex justify-between items-center w-[600px] max-w-[90%] px-6 py-3 rounded-lgtext-white"
+          style={{
+            background: "linear-gradient(90deg, rgba(18,32,38,0.28) 0%, rgba(169,255,246,0.28) 50%, rgba(15,21,27,0.28) 100%)",
+          }}
+        >
+          {/* Left Side */}
+          <div className="flex items-center gap-3">
+            <img
+              src="/public/user.png"
+              alt="Player 1"
+              className="w-8 h-8 rounded-full"
+            />
+            <span className="text-2xl font-semibold">{leftScore}</span>
+          </div>
 
-        {/* Time */}
-        <div className="px-6 py-1 bg-[rgba(255,255,255,0.1)] rounded-md text-white/90 font-medium text-sm">
-          Time {formatTime(time)}
-        </div>
+          {/* Middle Time Section */}
+          <div
+            className="flex flex-col items-center justify-center px-10 py-2 text-black font-medium"
+            style={{
+              background: "rgba(217, 217, 217, 0.5)",
+              clipPath: "polygon(0% 0%, 100% 0%, 60% 100%, 40% 100%)",
+            }}
+          >
+            <span className="text-sm">Time</span>
+            <span className="text-lg font-semibold">{time}</span>
+          </div>
 
-        {/* Right Player */}
-        <div className="flex items-center space-x-2">
-          <span className="text-white font-semibold text-lg">{rightScore}</span>
-          <User className="text-[#12C0AD] h-6 w-6" />
+
+          {/* Right Side */}
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-semibold">{rightScore}</span>
+            <img
+              src="/public/user.png"
+              alt="Player 2"
+              className="w-8 h-8 rounded-full"
+            />
+          </div>
         </div>
       </div>
 
+      
       {/* Game Canvas */}
       <div className="w-full max-w-4xl aspect-[16/9] bg-[rgba(0,0,0,0.75)] border border-white/10 rounded-b-xl overflow-hidden shadow-xl">
         <canvas
