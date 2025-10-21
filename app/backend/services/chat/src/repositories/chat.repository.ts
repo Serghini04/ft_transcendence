@@ -1,6 +1,5 @@
 import Database from "better-sqlite3";
-import { Contact } from "../models/contact";
-// import { Message } from "../models/message";
+import { Relationship } from "../models/relationship";
 import { User, UserStatus } from "../models/user";
 import { Message } from "../models/message";
 
@@ -8,55 +7,47 @@ import { Message } from "../models/message";
 export class ChatRepository {
     constructor(private db: Database.Database) {}
 
-    getContacts(userId: number): Contact[] {
+    getContacts(userId: number): Relationship[] {
       const stmt = this.db.prepare(`
         SELECT
-          contacts.id AS contact_id,
-          users.id AS user_id,
-          users.full_name,
-          users.username,
-          users.status,
-          users.avatar_url,
-          CASE
-              WHEN relationships.type = 'blocked' THEN 1
-              ELSE 0
-          END AS is_blocked
-        FROM contacts
-        JOIN users 
-          ON users.id = CASE 
-              WHEN contacts.sender_id = ? THEN contacts.received_id
-              ELSE contacts.sender_id
-          END
-        LEFT JOIN relationships
-          ON (relationships.user1_id = ? AND relationships.user2_id = users.id)
-          OR (relationships.user2_id = ? AND relationships.user1_id = users.id)
-        WHERE ? IN (contacts.sender_id, contacts.received_id);
+          relationships.id AS relationship_id,
+          CASE 
+            WHEN relationships.user1_id = ? THEN relationships.user2_id
+            ELSE relationships.user1_id
+          END AS contact_id,
+          u.full_name AS contact_full_name,
+          u.username AS contact_username,
+          u.status AS contact_status,
+          u.avatar_url AS contact_avatar_url,
+          CASE WHEN relationships.type = 'blocked' THEN 1 ELSE 0 END AS is_blocked
+        FROM relationships
+        JOIN users AS u 
+          ON u.id = CASE 
+                      WHEN relationships.user1_id = ? THEN relationships.user2_id
+                      ELSE relationships.user1_id
+                    END
+        WHERE relationships.user1_id = ? OR relationships.user2_id = ?;
       `);
     
       const rows = stmt.all(userId, userId, userId, userId) as {
+        relationship_id: number;
         contact_id: number;
-        user_id: number;
-        full_name: string;
-        username: string;
-        status: UserStatus;
-        avatar_url: string;
+        contact_full_name: string;
+        contact_username: string;
+        contact_status: string;
+        contact_avatar_url: string;
         is_blocked: boolean;
       }[];
     
       return rows.map(row =>
-        new Contact(
-          row.contact_id,
-          new User(
-            row.user_id,
-            row.full_name,
-            row.username,
-            row.status,
-            row.avatar_url
-          ),
+        new Relationship(
+          row.relationship_id,
+          new User(row.contact_id, row.contact_full_name, row.contact_username, row.contact_status, row.contact_avatar_url),
           !!row.is_blocked
         )
       );
     }
+    
 
     getConversationBetweenUsers(currentUserId: number, otherUserId: number) {
       const stmt = this.db.prepare(`
@@ -88,7 +79,7 @@ export class ChatRepository {
 
     sendMessage(senderId: number, receivedId: number, text: string) {
       const stmt = this.db.prepare(`
-        INSERT INTO messages (sender_id, received_id, text) VALUE (?, ?, ?);
+        INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?);
       `);
       const res = stmt.run(senderId, receivedId, text);
       return {success: res.changes > 0};

@@ -1,11 +1,11 @@
 import { User } from "./user";
 
-export class Contact {
-    contactId: number;
+export class Relationship {
+    relationshipId: number;
     user: User;
     isBlocked: boolean;
     constructor(id: number, user: User, isBlocked: boolean = false) {
-        this.contactId = id;
+        this.relationshipId = id;
         this.user = user;
         this.isBlocked = isBlocked;
     }
