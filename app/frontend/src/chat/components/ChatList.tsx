@@ -65,7 +65,7 @@ export default function ChatList({closeSidebar}: any) {
                 </span>
               </div>
 
-              {(contact.unseenMessages = 5) > 0 && (
+              {contact.unseenMessages > 0 && (
                 <div className="flex items-center gap-1">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-[#1e293b] to-[#334155] text-white text-sm font-semibold">
                     {contact.unseenMessages}
