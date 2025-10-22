@@ -10,7 +10,7 @@ export class ChatRepository {
     getContacts(userId: number): Relationship[] {
       const stmt = this.db.prepare(`
         SELECT
-          relationships.id AS relationship_id,
+          relationships.id AS id,
           CASE 
             WHEN relationships.user1_id = ? THEN relationships.user2_id
             ELSE relationships.user1_id
@@ -19,7 +19,8 @@ export class ChatRepository {
           u.username AS contact_username,
           u.status AS contact_status,
           u.avatar_url AS contact_avatar_url,
-          CASE WHEN relationships.type = 'blocked' THEN 1 ELSE 0 END AS is_blocked
+          CASE WHEN relationships.type = 'blocked' THEN 1 ELSE 0 END AS is_blocked,
+          relationships.unseen_messages AS unseen_messages
         FROM relationships
         JOIN users AS u 
           ON u.id = CASE 
@@ -30,21 +31,23 @@ export class ChatRepository {
       `);
     
       const rows = stmt.all(userId, userId, userId, userId) as {
-        relationship_id: number;
+        id: number;
         contact_id: number;
         contact_full_name: string;
         contact_username: string;
         contact_status: string;
         contact_avatar_url: string;
         is_blocked: boolean;
+        unseen_messages: number
       }[];
     
       return rows.map(row =>
         new Relationship(
-          row.relationship_id,
+          row.id,
           new User(row.contact_id, row.contact_full_name, row.contact_username, row.contact_status, row.contact_avatar_url),
-          !!row.is_blocked
-        )
+          !!row.is_blocked,
+          row.unseen_messages
+        ),
       );
     }
     

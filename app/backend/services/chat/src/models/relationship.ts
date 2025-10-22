@@ -1,12 +1,14 @@
 import { User } from "./user";
 
 export class Relationship {
-    relationshipId: number;
+    id: number;
     user: User;
     isBlocked: boolean;
-    constructor(id: number, user: User, isBlocked: boolean = false) {
-        this.relationshipId = id;
+    unseenMessages:number;
+    constructor(id: number, user: User, isBlocked: boolean = false, unseenMessages:number) {
+        this.id = id;
         this.user = user;
         this.isBlocked = isBlocked;
+        this.unseenMessages = unseenMessages;
     }
 }

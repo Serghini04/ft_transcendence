@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import messageRoutes from "./routes/chat.route";
+import cors from "@fastify/cors";
 import { db } from "./db/chat.db";
 import chatRoutes from "./routes/chat.route";
 
@@ -15,6 +15,11 @@ const app = Fastify({
       },
     },
   },
+});
+
+app.register(cors, {
+  origin: "http://localhost:5173",
+  credentials: true
 });
 
 app.decorate("db", db);

@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@fastify/cors": "^11.1.0",
     "@sinclair/typebox": "^0.34.41",
     "better-sqlite3": "^12.4.1",
     "dotenv": "^17.2.3",
