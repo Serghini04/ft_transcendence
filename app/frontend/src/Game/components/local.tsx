@@ -8,9 +8,11 @@ export default function Local() {
   const [time, setTime] = useState(0);
   const [isVertical, setIsVertical] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const loopRef = useRef< () => void>(() => {});
 
   const lScoreRef = useRef(0);
   const rScoreRef = useRef(0);
+
   // Simple timer
   useEffect(() => {
     const timer = setInterval(() => {
@@ -18,11 +20,6 @@ export default function Local() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
-
-  // useEffect(() => {
-  //   if (leftScore >= 5) setWinner("left");
-  //   else if (rightScore >= 5) setWinner("right");
-  // }, [leftScore, rightScore]);
 
   // Detect scrren size to switch the layout
   useEffect(() => {
@@ -42,14 +39,6 @@ export default function Local() {
     winnerRef.current = winner;
   }, [winner]);
 
-  const loop = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || winnerRef.current) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    // game update & draw logic handled here...
-    requestAnimationFrame(loop);
-  }, []);
   const resetGame = () => {
     lScoreRef.current = 0;
     rScoreRef.current = 0;
@@ -60,7 +49,9 @@ export default function Local() {
     setTime(0);
 
     // restart loop
-    requestAnimationFrame(loop);
+    if (loopRef.current) {
+      requestAnimationFrame(loopRef.current);
+    }
   };
 
   useEffect(() => {
@@ -116,7 +107,6 @@ export default function Local() {
     const resetBall = (direction : number) => {
       const ball = ballRef.current;
       ball.visible = false;
-      // scoredRef.current = true;
       
       setTimeout(() => {
         ball.x = width / 2;
@@ -314,7 +304,7 @@ export default function Local() {
       draw();
       rafIdRef.current = requestAnimationFrame(loop);
     };
-
+    loopRef.current = loop;
 
     if (!startRef.current) {
       startRef.current = true;
@@ -424,7 +414,7 @@ export default function Local() {
             />
             {/* Winner Overlay */}
               {winner && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl">
+                <div className="rounded-tl-4xl absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl">
                   <img
                     src={winner === "left" ? "../src/assets/images/user2.jpeg" : "../src/assets/images/user1.jpeg"}
                     alt="Winner"
