@@ -38,6 +38,7 @@ export default function ContactsList({ closeSidebar }: any) {
     try {
       const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`);
       setMessages(res.data);
+      console.log(res.data);
     } catch (err) {
       console.error("Failed to load conversation: ", err);
     }

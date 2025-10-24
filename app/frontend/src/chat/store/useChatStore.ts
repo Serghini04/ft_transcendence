@@ -18,8 +18,8 @@ type Contact = {
 type Message = {
     id: number;
     text: string;
-    sent: boolean;
-    time?: string;
+    isSender: boolean;
+    timestamp?: string;
 };
 
 type ChatStore = {

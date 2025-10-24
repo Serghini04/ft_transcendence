@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Bell, Sword, UserX, RotateCcw } from "lucide-react";
 import ContactsList from "./ContactsList";
 import ChatHeader from "./ChatHeader";
+import MessagesArea from "./messagesArea";
 
 export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -28,16 +29,6 @@ export default function Chat() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  const mockMessages = [
-    { id: 1, text: "Wach akhay hani?", sent: false },
-    {
-      id: 2,
-      text: "It is a long established fact that a reader will be distracted by the readable.",
-      sent: true,
-      time: "13:32 PM",
-    },
-  ];
 
   const matches = [
     { id: 1, userScore: 4, opponentScore: 3 },
@@ -126,30 +117,8 @@ export default function Chat() {
           toggleHistory={toggleHistory}
           isHistoryOpen={isHistoryOpen}
         />
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          {mockMessages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.sent ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] md:max-w-md px-4 py-2 rounded-2xl ${
-                  msg.sent
-                    ? "bg-emerald-500/20 rounded-br-none"
-                    : "bg-white/10 rounded-bl-none"
-                }`}
-              >
-                <p className="text-sm text-white break-words">{msg.text}</p>
-                {msg.time && (
-                  <span className="text-xs text-gray-400 block mt-1 text-right">
-                    {msg.time}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        
+        <MessagesArea />
 
         {/* Input Bar */}
         <div className="flex h-16 items-center gap-2 md:gap-3 px-4 md:px-6 py-4 border-t-2 border-[#27445E]">
