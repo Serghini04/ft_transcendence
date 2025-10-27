@@ -1,6 +1,22 @@
-import { useState, useEffect, useRef, useCallback} from "react";
+import { useState, useEffect, useRef} from "react";
+import axios from "axios";
+
+interface Player {
+  id: number;
+  name: string;
+  image: string;
+}
+
+interface Players {
+  first: Player;
+  second: Player;
+}
 
 export default function Local() {
+  const [players, setPlayers] = useState<Players>({
+    first: { id: 0, name: "", image: "" },
+    second: { id: 0, name: "", image: "" },
+  });
   const [leftScore, setLeftScore] = useState(0);
   const [rightScore, setRightScore] = useState(0);
   const [winner, setWinner] = useState<"left" | "right" | null>(null);
@@ -12,6 +28,13 @@ export default function Local() {
 
   const lScoreRef = useRef(0);
   const rScoreRef = useRef(0);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:5000/api/players")
+      .then((response) => setPlayers(response.data))
+      .catch((error) => console.error("Error fetching players:", error));
+  }, []);
 
   // Simple timer
   useEffect(() => {
@@ -340,20 +363,41 @@ export default function Local() {
 
           {/* Player 1 Top */}
           <div className="flex flex-col items-center gap-2 text-white">
-            <img src="/src/assets/images/user1.jpeg" className="h-10 rounded-full" alt="Player 1" />
+            <img src={players.first.image} className="h-10 rounded-full" alt={players.first.name} />
             <span className="text-lg font-semibold">{leftScore}</span>
           </div>
 
           {/* Game */}
           <div className="relative w-[90%] max-w-[300px] aspect-[9/16] border border-white/10 rounded-xl bg-[rgba(0,0,0,0.75)] overflow-hidden shadow-xl">
             <canvas ref={canvasRef} width={300} height={533} className="w-full h-full" />
+
+            {/* Winner Overlay (Mobile) */}
+            {winner && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl p-4">
+                <img
+                  src={winner === "left" ? players.first.image : players.second.image}
+                  alt="Winner"
+                  className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 border-yellow-400 shadow-lg mb-3 object-cover"
+                />
+                <h2 className="text-white text-lg font-bold text-center leading-tight">
+                  {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
+                </h2>
+                <button
+                  onClick={resetGame}
+                  className="mt-3 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md text-sm"
+                >
+                  Play Again
+                </button>
+              </div>
+            )}
           </div>
 
+          
 
           {/* Player 2 Bottom */}
           <div className="flex flex-col items-center gap-2 text-white">
             <span className="text-lg font-semibold">{rightScore}</span>
-            <img src="../src/assets/images/user2.jpeg" className="h-10 rounded-full" alt="Player 2" />
+            <img src={players.second.image} className="h-10 rounded-full" alt={players.second.name} />
           </div>
         </>
       ) : (
@@ -370,8 +414,8 @@ export default function Local() {
               {/* Left Side */}
               <div className="flex items-center gap-3 w-20">
                 <img
-                  src="../src/assets/images/user2.jpeg"
-                  alt="Player 1"
+                  src={players.first.image}
+                  alt={players.first.name}
                   className="h-10 rounded-full"
                 />
                 <span className="text-[22px] font-semibold">{leftScore}</span>
@@ -396,8 +440,8 @@ export default function Local() {
               <div className="flex items-center gap-3 w-20">
                 <span className="text-[22px] font-semibold">{rightScore}</span>
                 <img
-                  src="../src/assets/images/user1.jpeg"
-                  alt="Player 2"
+                  src={players.second.image}
+                  alt={players.second.name}
                   className="h-10 rounded-full"
                 />
               </div>
@@ -412,26 +456,25 @@ export default function Local() {
               height={675}
               className="w-full h-full"
             />
-            {/* Winner Overlay */}
-              {winner && (
-                <div className="rounded-tl-4xl absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl">
-                  <img
-                    src={winner === "left" ? "../src/assets/images/user2.jpeg" : "../src/assets/images/user1.jpeg"}
-                    alt="Winner"
-                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4"
-                  />
-                  <h2 className="text-white text-xl sm:text-3xl font-bold">
-                    {winner === "left" ? "Player 1" : "Player 2"} won the game! 🏆
-                  </h2>
-                  <button
-                    onClick={resetGame}
-                    className="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-                  >
-                    Play Again
-                  </button>
-                </div>
-              )}
-
+            {/* Winner Overlay (Desktop) */}
+            {winner && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl p-4 sm:p-6">
+                <img
+                  src={winner === "left" ? players.first.image : players.second.image}
+                  alt="Winner"
+                  className="w-16 h-16 xs:w-20 xs:h-20 sm:w-28 sm:h-28 rounded-full border-2 sm:border-4 border-yellow-400 shadow-lg mb-3 sm:mb-4 object-cover"
+                />
+                <h2 className="text-white text-lg xs:text-xl sm:text-3xl font-bold text-center px-2 leading-tight">
+                  {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
+                </h2>
+                <button
+                  onClick={resetGame}
+                  className="mt-3 sm:mt-4 px-3 sm:px-5 py-1.5 sm:py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md text-sm sm:text-base"
+                >
+                  Play Again
+                </button>
+              </div>
+            )}
           </div>
         </>
       )
