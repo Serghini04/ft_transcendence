@@ -39,7 +39,8 @@ export default function Local() {
   // Simple timer
   useEffect(() => {
     const timer = setInterval(() => {
-      setTime((prev) => (prev + 1));
+      if (!winnerRef.current)
+        setTime((prev) => (prev + 1));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -370,16 +371,18 @@ export default function Local() {
           {/* Game */}
           <div className="relative w-[90%] max-w-[300px] aspect-[9/16] border border-white/10 rounded-xl bg-[rgba(0,0,0,0.75)] overflow-hidden shadow-xl">
             <canvas ref={canvasRef} width={300} height={533} className="w-full h-full" />
+          </div>
 
-            {/* Winner Overlay (Mobile) */}
-            {winner && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl p-4">
+          {/* Winner Overlay — Mobile */}
+          {winner && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-xl z-20 p-4">
+              <div className="flex flex-col items-center justify-center translate-x-9 sm:translate-x-0">
                 <img
                   src={winner === "left" ? players.first.image : players.second.image}
                   alt="Winner"
-                  className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 border-yellow-400 shadow-lg mb-3 object-cover"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-yellow-400 shadow-lg mb-3 object-cover"
                 />
-                <h2 className="text-white text-lg font-bold text-center leading-tight">
+                <h2 className="text-white text-lg sm:text-2xl font-bold text-center leading-snug">
                   {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
                 </h2>
                 <button
@@ -389,11 +392,8 @@ export default function Local() {
                   Play Again
                 </button>
               </div>
-            )}
-          </div>
-
-          
-
+            </div>
+          )}
           {/* Player 2 Bottom */}
           <div className="flex flex-col items-center gap-2 text-white">
             <span className="text-lg font-semibold">{rightScore}</span>
@@ -405,9 +405,11 @@ export default function Local() {
           {/* Scoreboard */}
           <div className="flex justify-center items-center w-full mt-6 mb-10">
             <div
-              className="flex justify-between items-center w-[700px] max-w-[90%] px-6 py-3 rounded-lg text-white"
+              className="flex justify-between items-center w-[700px] max-w-[90%] px-6 py-3 rounded-[15px] text-white"
               style={{
-                background: "linear-gradient(90deg, rgba(18,32,38,0.28) 0%, rgba(169,255,246,0.28) 50%, rgba(15,21,27,0.28) 100%)",
+                background: "linear-gradient(90deg, rgba(14,19,24,0.28) 0%, rgba(169,255,246,0.28) 50%, rgba(14,23,30,0.28) 100%)",
+                // background: "rgba(255, 255, 255, 0.5)",
+
                 height: "65px", 
               }}
             >
@@ -448,7 +450,7 @@ export default function Local() {
             </div>
           </div>
           {/* Game Canvas */}
-          <div  className={`border border-white/10 rounded-b-xl overflow-hidden shadow-xl bg-[rgba(0,0,0,0.75)w-full max-w-5xl aspect-[16/9]"
+          <div  className={`border border-white/10 rounded-[7px] overflow-hidden shadow-xl bg-[rgba(0,0,0,0.75)w-full max-w-5xl aspect-[16/9]"
             }`}>
             <canvas
               ref={canvasRef}
@@ -456,25 +458,27 @@ export default function Local() {
               height={675}
               className="w-full h-full"
             />
-            {/* Winner Overlay (Desktop) */}
+            
+            {/* Winner Overlay — Desktop */}
             {winner && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-xl p-4 sm:p-6">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-tl-4xl z-20 p-6">
                 <img
                   src={winner === "left" ? players.first.image : players.second.image}
                   alt="Winner"
-                  className="w-16 h-16 xs:w-20 xs:h-20 sm:w-28 sm:h-28 rounded-full border-2 sm:border-4 border-yellow-400 shadow-lg mb-3 sm:mb-4 object-cover"
+                  className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4"
                 />
-                <h2 className="text-white text-lg xs:text-xl sm:text-3xl font-bold text-center px-2 leading-tight">
+                <h2 className="text-white text-2xl sm:text-3xl font-bold text-center">
                   {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
                 </h2>
                 <button
                   onClick={resetGame}
-                  className="mt-3 sm:mt-4 px-3 sm:px-5 py-1.5 sm:py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md text-sm sm:text-base"
+                  className="mt-5 px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
                 >
                   Play Again
                 </button>
               </div>
             )}
+
           </div>
         </>
       )
