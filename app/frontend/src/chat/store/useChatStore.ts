@@ -19,7 +19,7 @@ type Message = {
     id: number;
     text: string;
     isSender: boolean;
-    timestamp?: string;
+    timestamp: string;
 };
 
 type ChatStore = {

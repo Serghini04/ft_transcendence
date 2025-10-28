@@ -9,7 +9,7 @@ async function getAllContacts(req: FastifyRequest, res: FastifyReply) {
 
     const chatRepo = new ChatRepository(req.server.db);
 
-    const contacts = chatRepo.getContacts(req.user.userId);
+    const contacts = await chatRepo.getContacts(req.user.userId);
     return res.code(200).send(contacts);
 }
 
@@ -22,11 +22,12 @@ async function getConversationBetweenUsers(req: FastifyRequest, res: FastifyRepl
     if (req.user.userId === id)
         return res.code(400).send({ error: "You cannot message yourself"});
     const userRepo = new userRepository(req.server.db);
-    if (userRepo.getUserById(id) === null)
+    const recipient = await userRepo.getUserById(id);
+    if (!recipient)
         return res.code(404).send({ error: "Received User not found" });
     
     const usreRepo = new userRepository(req.server.db);
-    const messages = chatRepo.getConversationBetweenUsers(req.user.userId, id);
+    const messages = await chatRepo.getConversationBetweenUsers(req.user.userId, id);
     return res.code(200).send(messages);
 }
 
@@ -43,11 +44,21 @@ async function sendMessage(req: FastifyRequest, res: FastifyReply) {
         return res.code(404).send({ error: "Received User not found" });
     
     const chatRepo = new ChatRepository(req.server.db);
-    const result = chatRepo.sendMessage(req.user.userId, receivedId, text);
-    if (!result?.success)
+    const result = await chatRepo.sendMessage(req.user.userId, receivedId, text);
+    if (!result.success)
         return res.code(500).send({ error: "Failed to send message" });
-  
-    return res.code(201).send({ success: true, message: "Message sent" })
+
+    return res.code(201).send({
+        success: true,
+        message: "Message sent",
+        data: {
+          id: result.messageId,
+          text,
+          senderId: req.user.userId,
+          receivedId,
+          timestamp: new Date().toISOString(),
+        },
+      });
 }
 
 export const chatController = {

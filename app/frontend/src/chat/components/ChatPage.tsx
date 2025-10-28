@@ -1,9 +1,10 @@
-import { MessageSquareMore, Send, CircleX } from "lucide-react";
+import { MessageSquareMore, CircleX } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Bell, Sword, UserX, RotateCcw } from "lucide-react";
 import ContactsList from "./ContactsList";
 import ChatHeader from "./ChatHeader";
-import MessagesArea from "./messagesArea";
+import MessagesArea from "./MessagesArea";
+import InputBar from "./InputBar";
 
 export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -121,19 +122,7 @@ export default function Chat() {
         <MessagesArea />
 
         {/* Input Bar */}
-        <div className="flex h-16 items-center gap-2 md:gap-3 px-4 md:px-6 py-4 border-t-2 border-[#27445E]">
-          <input
-            type="text"
-            placeholder="Type your message..."
-            className="w-full flex-1 bg-white/10 rounded-full px-4 md:px-5 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 placeholder-gray-400"
-          />
-          <button
-            className="!p-2.5 !rounded-full !bg-[#00912E] hover:!bg-[#007A26] transition-colors flex-shrink-0"
-            aria-label="Send message"
-          >
-            <Send size={20} className="text-white" />
-          </button>
-        </div>
+        <InputBar />
       </section>
 
       {/* Mobile Overlay for History Panel - only cover area OUTSIDE the panel */}

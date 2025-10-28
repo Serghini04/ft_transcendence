@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { axiosInstance } from "../app/axios";
 import { useChatStore } from "../store/useChatStore";
+import { toast } from "react-toastify";
 
 type Contact = {
   id: number;
@@ -25,6 +26,7 @@ export default function ContactsList({ closeSidebar }: any) {
         const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts");
         setContacts(response.data);
       } catch (err) {
+        toast.error("Failed to fetch contacts.");
         console.error("Failed to fetch contacts: ", err);
       }
     };
@@ -40,6 +42,7 @@ export default function ContactsList({ closeSidebar }: any) {
       setMessages(res.data);
       console.log(res.data);
     } catch (err) {
+      toast.error("Failed to load conversation.");
       console.error("Failed to load conversation: ", err);
     }
   };

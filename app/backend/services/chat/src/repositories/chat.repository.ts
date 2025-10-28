@@ -85,6 +85,6 @@ export class ChatRepository {
         INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?);
       `);
       const res = stmt.run(senderId, receivedId, text);
-      return {success: res.changes > 0};
+      return {success: res.changes > 0, messageId: res.lastInsertRowid};
     }
 }
