@@ -13,18 +13,10 @@ const socketPlugin  = fp(async (fastify: FastifyInstance) => {
     })
     fastify.decorate("io", io);
 
-    // Simulate what the API Gateway will do later :
-    io.use((socket: Socket, next) => {
-        (socket as any).user = {
-            userId: 1,
-            fullName: "Mehdi Serghini",
-        }
-        next();
-    });
-
     io.on("connection", (socket) =>{
-        fastify.log.info(`User connected: ${socket.id}`);
-        
+        const user = socket.handshake.auth;
+        fastify.log.info(`User connected: ${socket.id}, userId: ${user.userId}`);
+
         socket.on("disconnect", () => {
             fastify.log.info(`User disconnected: ${socket.id}`);
         });

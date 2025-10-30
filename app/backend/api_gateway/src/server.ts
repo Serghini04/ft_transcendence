@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import authMiddleware from "./middleware/auth.middleware";
 import { chatService } from "./services/chat.service";
+import { setupSocketGateway } from "./socket.gateway";
 
 const app = Fastify({
   logger: {
@@ -25,6 +26,7 @@ app.register(chatService);
 const start = async () => {
   try {
     await app.listen({ port: 8080 });
+    await setupSocketGateway(app);
     app.log.info("🚀 API Gateway running at http://localhost:8080");
   } catch (err) {
     app.log.error(err);

@@ -19,8 +19,6 @@ export default async function authMiddleware(req: FastifyRequest, res: FastifyRe
     }
     req.user = decoded;
     */
-
-    // 🔧 Temporary mock until gateway JWT implemented
     req.user = { userId: 1, fullName: "Mehdi Serghini" };
   } catch (err) {
     res.code(401).send({ error: "Unauthorized" });
