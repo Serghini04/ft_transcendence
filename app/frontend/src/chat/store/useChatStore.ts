@@ -26,12 +26,20 @@ type ChatStore = {
     selectedContact: Contact | null;
     setSelectedContact: (contact: Contact | null) => void;
     messages: Message[];
+    contacts: ContactUser[];
     setMessages: (message: Message[]) => void;
     addMessage: (message: Message) => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
     selectedContact: null,
+    socket: null,
+    contacts: [],
+
+    connectSocket: () => {
+        
+    },
+
     setSelectedContact: (contact) => set({selectedContact: contact}),
     messages: [],
     setMessages: (messages) => set({messages}),

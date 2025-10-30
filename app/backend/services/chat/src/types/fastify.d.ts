@@ -1,4 +1,5 @@
 import { Database } from "better-sqlite3";
+import { Server } from "socket.io";
  
 declare module "fastify" {
   interface FastifyRequest {
@@ -10,5 +11,6 @@ declare module "fastify" {
 
   interface FastifyInstance {
     db: Database;
+    io: Sever;
   }
 }

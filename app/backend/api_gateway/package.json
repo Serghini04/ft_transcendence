@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@fastify/http-proxy": "^11.3.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "fastify": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "ts-node-dev": "^2.0.0"
+  },
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/server.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "pino-pretty": "^13.1.2"
+  }
+}

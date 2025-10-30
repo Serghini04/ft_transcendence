@@ -1,7 +1,9 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { db } from "./db/chat.db";
+import { db } from "./plugins/chat.db";
 import chatRoutes from "./routes/chat.route";
+import socketPlugin from "./plugins/socket";
+
 
 const app = Fastify({
   logger: {
@@ -23,6 +25,7 @@ app.register(cors, {
 });
 
 app.decorate("db", db);
+app.register(socketPlugin);
 app.register(chatRoutes, { prefix: "/api/v1/chat"});
 
 const start = async () => {
