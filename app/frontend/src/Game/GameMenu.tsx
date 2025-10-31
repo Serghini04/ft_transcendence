@@ -91,7 +91,7 @@ export default function GameMenu() {
                     <span className="pr-2 sm:pr-3">{mode.button}</span>
 
                     {/* Arrow Link */}
-                    <Link to={mode.route}>
+                    <Link to={`/game/setup?${mode.route}`}>
                       <div
                         className="
                           flex items-center justify-center
