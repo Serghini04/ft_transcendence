@@ -6,7 +6,7 @@ import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputBar from "./InputBar";
 
-export default function Chat() {
+export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 

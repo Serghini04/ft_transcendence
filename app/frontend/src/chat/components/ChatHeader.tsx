@@ -6,22 +6,22 @@ export default function ChatHeader({
   isSidebarOpen,
   toggleHistory,
   isHistoryOpen,
+  leftSidebarId,
 }: any) {
   const { selectedContact } = useChatStore();
-
+  
   return (
     <div className="flex h-16 justify-between items-center px-4 md:px-6 py-4 border-b-2 border-[#27445E]">
       <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
         <button
           onClick={toggleSidebar}
-          className="md:hidden !p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
+          className="lg:hidden !p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
           aria-label="Toggle sidebar"
           aria-expanded={isSidebarOpen}
-          aria-controls="chat-left-sidebar"
+          aria-controls={leftSidebarId}
         >
           <PanelLeftOpen size={26} className="text-gray-400 hover:text-white" />
         </button>
-
         {selectedContact ? (
           <>
             {/* User Avatar */}
@@ -59,7 +59,6 @@ export default function ChatHeader({
           </div>
         )}
       </div>
-
       <button
         onClick={toggleHistory}
         className="!p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
