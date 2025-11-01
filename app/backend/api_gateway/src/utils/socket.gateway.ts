@@ -5,7 +5,7 @@ import { io as ClientIO } from "socket.io-client";
 export async function setupSocketGateway(app: FastifyInstance) {
     const io = new Server(app.server, {
         cors: {
-            origin: "http://localhost:5173",
+            origin: "*",
             credentials: true,
         }
     });

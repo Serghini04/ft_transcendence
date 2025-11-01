@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import authMiddleware from "./middleware/auth.middleware";
 import { chatService } from "./services/chat.service";
-import { setupSocketGateway } from "./socket.gateway";
+import { setupSocketGateway } from "./utils/socket.gateway";
 
 const app = Fastify({
   logger: {

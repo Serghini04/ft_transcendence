@@ -5,9 +5,8 @@ import { axiosInstance } from "../app/axios";
 import { toast } from "react-toastify";
 
 export default function InputBar() {
-    const {selectedContact, addMessage} = useChatStore();
+    const {selectedContact, addMessage, socket} = useChatStore();
     const [newMessage, setNewMessage] = useState<string>("");
-    const [recordAudio, setRecordAudio] = useState<boolean>(false);
 
     const handleSendMessage = async () => {
       if (!selectedContact || !newMessage.trim()) {
@@ -21,6 +20,11 @@ export default function InputBar() {
         });
         const { id, timestamp } = res.data.data; 
         addMessage({id: id, text: newMessage, isSender: true, timestamp});
+        socket?.emit("message:send", {
+          to: selectedContact.user.id,
+          message: newMessage,
+        });
+        
         setNewMessage("");
       } catch (err) {
         toast.error("Failed to send message.");
