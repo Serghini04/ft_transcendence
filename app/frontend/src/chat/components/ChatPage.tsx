@@ -5,31 +5,57 @@ import ContactsList from "./ContactsList";
 import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputBar from "./InputBar";
+import { useChatStore } from "../store/useChatStore";
+import { useParams } from "react-router-dom";
 
 export default function ChatPage() {
+  const { id } = useParams<{ id: string }>();
+  const { connectSocket, disconnectSocket } = useChatStore();
+
+  useEffect(() => {
+    if (id) {
+      connectSocket(Number(id));
+    }
+    return () => disconnectSocket();
+  }, [id, connectSocket, disconnectSocket]);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const HISTORY_AUTO_CLOSE_WIDTH = 950;
+  const BOTH_PANELS_MIN_WIDTH = 1200; // Minimum width to keep both panels open
 
   // Keep a ref in sync with the current open state to avoid stale closure
   const historyOpenRef = useRef(false);
-  
+
   useEffect(() => {
     historyOpenRef.current = isHistoryOpen;
   }, [isHistoryOpen]);
 
-  // Close the history panel only when a resize happens to <= threshold
+  // Close panels based on screen size to prevent layout conflicts
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= HISTORY_AUTO_CLOSE_WIDTH && historyOpenRef.current) {
-        setIsHistoryOpen(false);
+      const screenWidth = window.innerWidth;
+      
+      // Close history panel if screen is too small
+      if (screenWidth <= HISTORY_AUTO_CLOSE_WIDTH && historyOpenRef.current) {
         setIsHistoryOpen(false);
       }
+      
+      // If both panels are open and screen is too small, prioritize contacts on mobile
+      if (screenWidth < BOTH_PANELS_MIN_WIDTH && isSidebarOpen && isHistoryOpen) {
+        setIsHistoryOpen(false); // Keep contacts, close history
+      }
+      
+      // On very small screens, close sidebar when opening history
+      if (screenWidth < 768 && isHistoryOpen && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
     };
+    
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [isSidebarOpen, isHistoryOpen]);
 
   const matches = [
     { id: 1, userScore: 4, opponentScore: 3 },
@@ -38,8 +64,30 @@ export default function ChatPage() {
     { id: 4, userScore: 4, opponentScore: 0 },
   ];
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  const toggleHistory = () => setIsHistoryOpen(!isHistoryOpen);
+  const toggleSidebar = () => {
+    const newSidebarState = !isSidebarOpen;
+    setIsSidebarOpen(newSidebarState);
+    
+    // On small screens, close history panel when opening sidebar
+    if (newSidebarState && isHistoryOpen && window.innerWidth < 768) {
+      setIsHistoryOpen(false);
+    }
+  };
+  
+  const toggleHistory = () => {
+    const newHistoryState = !isHistoryOpen;
+    setIsHistoryOpen(newHistoryState);
+    
+    // On small screens, close sidebar when opening history
+    if (newHistoryState && isSidebarOpen && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+    
+    // On medium screens, close history if both would be open and screen too small
+    if (newHistoryState && isSidebarOpen && window.innerWidth < BOTH_PANELS_MIN_WIDTH) {
+      setIsSidebarOpen(false);
+    }
+  };
   const closeSidebar = () => setIsSidebarOpen(false);
   const closeHistory = () => setIsHistoryOpen(false);
 
@@ -58,6 +106,7 @@ export default function ChatPage() {
         border-[#27445E]
         inset-0
         flex
+        overflow-hidden
       "
     >
       {/* Mobile Overlay for Left Sidebar */}
@@ -110,7 +159,11 @@ export default function ChatPage() {
       </aside>
 
       {/* MAIN CHAT AREA */}
-      <section className="flex-1 flex flex-col min-w-0">
+      <section className={`flex-1 flex flex-col relative transition-all duration-300
+        min-w-[300px] max-w-full
+        ${isHistoryOpen && isSidebarOpen ? 'lg:min-w-[400px]' : ''}
+        ${isHistoryOpen ? 'lg:max-w-[calc(100vw-640px)] md:max-w-[calc(100vw-400px)]' : ''}
+      `}>
         {/* Chat Header */}
         <ChatHeader
           toggleSidebar={toggleSidebar}
@@ -118,7 +171,7 @@ export default function ChatPage() {
           toggleHistory={toggleHistory}
           isHistoryOpen={isHistoryOpen}
         />
-        
+
         <MessagesArea />
 
         {/* Input Bar */}

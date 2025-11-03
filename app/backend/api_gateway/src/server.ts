@@ -20,13 +20,12 @@ app.register(cors, {
 });
 
 app.addHook("onRequest", authMiddleware);
-
 app.register(chatService);
 
 const start = async () => {
   try {
-    await app.listen({ port: 8080 });
     await setupSocketGateway(app);
+    await app.listen({ port: 8080 });
     app.log.info("🚀 API Gateway running at http://localhost:8080");
   } catch (err) {
     app.log.error(err);

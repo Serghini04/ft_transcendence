@@ -3,6 +3,9 @@ import verifyToken from "../utils/verifyToken";
 
 export default async function authMiddleware(req: FastifyRequest, res: FastifyReply) {
   try {
+    const mockUserId = req.headers["x-user-id"];
+    req.userId = Number(mockUserId);
+
     // Uncomment this when JWT is ready
     /*
     const authHeader = req.headers.authorization;
@@ -17,9 +20,8 @@ export default async function authMiddleware(req: FastifyRequest, res: FastifyRe
       res.code(401).send({ error: "Invalid token" });
       return;
     }
-    req.user = decoded;
+    req.userId = decoded;
     */
-    req.user = { userId: 1, fullName: "Mehdi Serghini" };
   } catch (err) {
     res.code(401).send({ error: "Unauthorized" });
   }

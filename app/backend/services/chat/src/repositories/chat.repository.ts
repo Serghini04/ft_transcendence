@@ -80,11 +80,11 @@ export class ChatRepository {
                   ));
     }
 
-    sendMessage(senderId: number, receivedId: number, text: string) {
+    sendMessage(senderId: number, receivedId: number, text: string, timestamp: string) {
       const stmt = this.db.prepare(`
-        INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?);
+        INSERT INTO messages (sender_id, received_id, text, timestamp) VALUES (?, ?, ?, ?);
       `);
-      const res = stmt.run(senderId, receivedId, text);
+      const res = stmt.run(senderId, receivedId, text, timestamp);
       return {success: res.changes > 0, messageId: res.lastInsertRowid};
     }
 }

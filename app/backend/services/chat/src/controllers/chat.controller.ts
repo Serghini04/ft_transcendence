@@ -6,6 +6,7 @@ import { userRepository } from "../repositories/user.repository";
 async function getAllContacts(req: FastifyRequest, res: FastifyReply) {
     const chatRepo = new ChatRepository(req.server.db);
 
+    console.error("From Backend :>>" + Number(req.headers['x-user-id']));
     const contacts = await chatRepo.getContacts(Number(req.headers['x-user-id']));
     return res.code(200).send(contacts);
 }
@@ -15,6 +16,7 @@ async function getConversationBetweenUsers(req: FastifyRequest, res: FastifyRepl
     const {id} = req.params as {id:number}
     const userId = Number(req.headers['x-user-id']);
     
+    console.error("From Backend :>>" + Number(req.headers['x-user-id']));
     if (userId === id)
         return res.code(400).send({ error: "You cannot message yourself"});
     const userRepo = new userRepository(req.server.db);
@@ -32,6 +34,7 @@ async function sendMessage(req: FastifyRequest, res: FastifyReply) {
     const {text} = req.body as {text: string};
     const userId = Number(req.headers['x-user-id']);
     
+    console.error("From Backend :>>" + Number(req.headers['x-user-id']));
     if (userId === receivedId)
         return res.code(400).send({ error: "You cannot message yourself" });
     const userRepo = new userRepository(req.server.db);

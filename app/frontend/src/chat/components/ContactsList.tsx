@@ -18,27 +18,38 @@ type Contact = {
 
 export default function ContactsList({ closeSidebar }: any) {
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const { selectedContact, setSelectedContact, setMessages } = useChatStore();
+  const { selectedContact, setSelectedContact, setMessages, loginId } = useChatStore();
 
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts");
+        const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
+          headers: {
+            "x-user-id": loginId,
+          },
+        });
         setContacts(response.data);
       } catch (err) {
         toast.error("Failed to fetch contacts.");
         console.error("Failed to fetch contacts: ", err);
       }
     };
-    fetchContacts();
-  }, []);
+    
+    if (loginId) fetchContacts();
+  }, [loginId]);
 
   const handleSelectContact = async (contact: Contact) => {
+    // Clear messages first to prevent leaking
+    setMessages([]);
     setSelectedContact(contact);
     closeSidebar();
 
     try {
-      const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`);
+      const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
+        headers: {
+          "x-user-id": loginId,
+        },
+      });
       setMessages(res.data);
       console.log(res.data);
     } catch (err) {
@@ -78,13 +89,13 @@ export default function ContactsList({ closeSidebar }: any) {
 
           <div className="flex-1 min-w-0">
             <p className="font-medium text-white truncate">{contact.user.fullName}</p>
-            <span className="text-sm text-[#14311d] truncate block">
+            <span className="text-sm text-gray-400 truncate block">
               {contact.user.status}
             </span>
           </div>
 
           {contact.unseenMessages > 0 && (
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#1e293b] text-white text-sm font-semibold">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-semibold">
               {contact.unseenMessages}
             </span>
           )}

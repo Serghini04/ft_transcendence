@@ -4,7 +4,7 @@ import ChatPage from "../chat/components/ChatPage";
 export default function AppRoutes() {
     return (
         <Routes>
-          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
         </Routes>
       );
 }

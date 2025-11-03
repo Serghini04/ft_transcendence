@@ -20,7 +20,10 @@ const app = Fastify({
 });
 
 app.register(cors, {
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173", 
+    "https://improved-dollop-rvxq5jxj4rp25g74-5173.app.github.dev"
+  ],
   credentials: true
 });
 
