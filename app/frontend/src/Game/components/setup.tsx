@@ -5,8 +5,10 @@ export default function OnlineSetup() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const params = new URLSearchParams(location.search);
-    const mode = params.get("mode") || "local";
+    // const params = new URLSearchParams(location.search);
+    const query = location.search.replace("?", "");
+    const mode = query || "local";
+    console.log("Selected mode:", mode);
     
     const handleStart = () => {
         navigate(`/game/${mode}`, {

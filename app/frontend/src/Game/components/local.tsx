@@ -120,9 +120,8 @@ export default function Local() {
     const paddle1Ref = { current: { x: 0, y: height / 2 - 45 * scale, width: 10 * scale, height: 90 * scale, speed: 6 * scale} };
     const paddle2Ref = { current: { x: width - 10 * scale, y: height / 2 - 45 * scale, width: 10 * scale, height: 90 * scale, speed: 6 *scale} };
 
-    // 🟢 Add this new power-up paddle reference:
     const powerUpRef = {
-      current: { x: width / 2 - 20, y: height / 2 - 40, width: 12 * scale, height: 150 * scale, visible: false },
+      current: { x: width / 2 - 20 * scale, y: height / 2 - 40 * scale, width: 12 * scale, height: 150 * scale, visible: false },
     };
 
     if (isVertical)
@@ -139,6 +138,9 @@ export default function Local() {
 
       ballRef.current.dx = 3 * scale * speedMultiplier[speed];
       ballRef.current.dy = 4 * scale * speedMultiplier[speed];
+
+      powerUpRef.current.width = 150 * scale;
+      powerUpRef.current.height = 12 * scale;
     }
 
     const startRef = { current: false };
@@ -163,8 +165,8 @@ export default function Local() {
     const powerUpInterval = 5000; // reappears every 5s
 
     const spawnPowerUp = () => {
-      powerUpRef.current.x = width / 2 + (Math.random() * 100 - 50); // ±50px around center
-      powerUpRef.current.y = height / 2 + (Math.random() * 100 - 50);
+      powerUpRef.current.x = width / 2 + (Math.random() * 100 - 100);
+      powerUpRef.current.y = height / 2 + (Math.random() * 100 - 100);
       powerUpRef.current.visible = true;
 
       setTimeout(() => {
@@ -241,16 +243,14 @@ export default function Local() {
       ctx.roundRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height, 8);
       ctx.fill();
 
-      // 🟢 Draw power-up paddle if visible
+      //Draw power-up paddle
       if (powerUps && powerUpRef.current.visible) {
-        ctx.save(); // isolate style changes
+        ctx.save();
 
         const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
-
         ctx.globalAlpha = pulse;
         ctx.shadowBlur = 20 * pulse;
         ctx.shadowColor = theme.color;
-        // ctx.fillStyle = theme.color;
         const hueShift = (Date.now() / 15) % 360;
         ctx.fillStyle = `hsl(${hueShift}, 80%, 60%)`;
 
@@ -352,14 +352,14 @@ export default function Local() {
         }
       }
 
-      // 🟢 Handle Power-up appearance timing
+      //Power-up appearance timing
       const now = performance.now();
       if (now - lastPowerUpTime >= powerUpInterval + powerUpDuration) {
         spawnPowerUp();
         lastPowerUpTime = now;
       }
 
-      // 🟢 Handle collision with Power-up paddle
+      //collision with Power-up paddle
       if (powerUps && powerUpRef.current.visible) {
         const p = powerUpRef.current;
         if (
