@@ -1,9 +1,11 @@
 {
+  "type": "module",
   "dependencies": {
+    "@fastify/cors": "^11.1.0",
     "@fastify/websocket": "^11.2.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "fastify": "^5.6.1",
-    "type": "module"
+    "socket.io": "^4.8.1"
   }
 }

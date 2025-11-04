@@ -1,12 +1,21 @@
 import Fastify from "fastify";
-import websocketPlugin from "@fastify/websocket";
+import cors from "@fastify/cors";
+import { Server } from "socket.io";
 
 const fastify = Fastify();
-await fastify.register(websocketPlugin);
+await fastify.register(cors, { origin: "*" });
 
-let waitingPlayer = null;
+// Create HTTP server for Socket.IO
+const server = fastify.server;
+const io = new Server(server, {
+  cors: { origin: "*" },
+});
+
+// Structure to hold waiting players based on customization
+const waitingPlayers = new Map(); // key = JSON.stringify({map,powerUps,speed}) -> socket
 const rooms = new Map();
 
+// ---------------- Game Logic ----------------
 function initGameState() {
   return {
     ball: { x: 400, y: 250, vx: 3, vy: 2 },
@@ -14,78 +23,105 @@ function initGameState() {
   };
 }
 
-function createRoom(p1, p2) {
+function createRoom(p1, p2, configKey) {
   const id = Date.now().toString();
-  rooms.set(id, { players: [p1, p2], state: initGameState() });
-  p1.roomId = id;
-  p2.roomId = id;
+  const state = initGameState();
+  rooms.set(id, { players: [p1, p2], state, configKey });
 
-  p1.send(JSON.stringify({ type: "start", side: "left", roomId: id }));
-  p2.send(JSON.stringify({ type: "start", side: "right", roomId: id }));
+  p1.join(id);
+  p2.join(id);
 
-  console.log(`✅ Room ${id} created`);
+  p1.data.side = "left";
+  p2.data.side = "right";
+  p1.data.roomId = id;
+  p2.data.roomId = id;
+
+  p1.emit("start", { side: "left", roomId: id });
+  p2.emit("start", { side: "right", roomId: id });
+
+  console.log(`✅ Room ${id} created for config ${configKey}`);
+  console.log(`   ↳ ${p1.id} (left) vs ${p2.id} (right)`);
 }
 
-function updateGame(room) {
+function updateGame(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
   const { ball, paddles } = room.state;
+
+  // Basic physics
   ball.x += ball.vx;
   ball.y += ball.vy;
-
   if (ball.y <= 0 || ball.y >= 500) ball.vy *= -1;
   if (ball.x <= 20 && Math.abs(ball.y - paddles.left - 50) < 60) ball.vx *= -1;
   if (ball.x >= 780 && Math.abs(ball.y - paddles.right - 50) < 60) ball.vx *= -1;
 
-  room.players.forEach((p) => {
-    if (p.readyState === 1)
-      p.send(JSON.stringify({ type: "state", ball, paddles }));
-  });
+  io.to(roomId).emit("state", { ball, paddles });
 }
 
+// Run game updates every 16ms (~60 FPS)
 setInterval(() => {
-  for (const room of rooms.values()) updateGame(room);
+  for (const roomId of rooms.keys()) updateGame(roomId);
 }, 16);
 
-fastify.get("/ws", { websocket: true }, (connection) => {
-  const ws = connection.socket;
+// ---------------- Socket.IO Events ----------------
+io.on("connection", (socket) => {
+  console.log(`🟢 ${socket.id} connected`);
 
-  console.log("🟢 New client connected");
+  // Player joins queue with selected configuration
+  socket.on("joinGame", ({ map = "Classic", powerUps = false, speed = "Normal" }) => {
+    const configKey = JSON.stringify({ map, powerUps, speed });
 
-  // Only assign as waiting player if there is none
-  if (waitingPlayer === null) {
-    waitingPlayer = ws;
-    console.log("🕓 Player is waiting...");
-    ws.send(JSON.stringify({ type: "waiting" }));
-  } else {
-    // Found opponent, create room
-    const opponent = waitingPlayer;
-    waitingPlayer = null; // clear waiting slot
-    console.log("🎯 Found opponent! Creating room...");
-    createRoom(opponent, ws);
-  }
+    console.log(`🎮 ${socket.id} wants to play -> ${configKey}`);
 
-  ws.on("message", (msg) => {
-    const data = JSON.parse(msg);
-    const room = rooms.get(ws.roomId);
-    if (!room) return;
+    const waiting = waitingPlayers.get(configKey);
 
-    if (data.type === "move") {
-      if (data.side === "left") room.state.paddles.left += data.dy;
-      else room.state.paddles.right += data.dy;
+    if (!waiting) {
+      // No one waiting for this config
+      waitingPlayers.set(configKey, socket);
+      socket.emit("waiting");
+      console.log(`🕓 ${socket.id} is waiting for a match...`);
+    } else {
+      // Found opponent with same config
+      const opponent = waiting;
+      waitingPlayers.delete(configKey);
+      console.log(`🎯 Match found: ${socket.id} vs ${opponent.id} for ${configKey}`);
+      createRoom(opponent, socket, configKey);
+      
     }
   });
 
-  ws.on("close", () => {
-    console.log("🔴 Client disconnected");
-    if (waitingPlayer === ws) {
-      waitingPlayer = null;
-      console.log("🕓 Waiting player left");
+  socket.on("move", ({ dy }) => {
+    const room = rooms.get(socket.data.roomId);
+    if (!room) return;
+    if (socket.data.side === "left") room.state.paddles.left += dy;
+    else room.state.paddles.right += dy;
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`🔴 ${socket.id} disconnected`);
+ 
+    // Remove from waiting queue if present
+    for (const [key, s] of waitingPlayers.entries()) {
+      if (s.id === socket.id) {
+        waitingPlayers.delete(key);
+        console.log(`🕓 Removed ${socket.id} from waiting queue`);
+        break;
+      }
     }
-    if (ws.roomId) {
-      rooms.delete(ws.roomId);
-      console.log(`🗑️ Room ${ws.roomId} deleted`);
+
+    // Clean up room if inside one
+    if (socket.data?.roomId) {
+      const roomId = socket.data.roomId;
+      const room = rooms.get(roomId);
+      if (room) {
+        io.to(roomId).emit("end");
+        rooms.delete(roomId);
+        console.log(`🗑️ Room ${roomId} deleted`);
+      }
     }
   });
 });
 
+// ---------------- Start Server ----------------
 await fastify.listen({ port: 8080 });
-console.log("🚀 Fastify WebSocket server running on ws://localhost:8080/ws");
+console.log("🚀 Socket.IO server running on ws://localhost:8080");
