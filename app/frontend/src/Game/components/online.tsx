@@ -4,10 +4,12 @@ import { useLocation } from "react-router-dom";
 import axios from "axios";
 
 interface GameState {
+  canvas: { width: number, height: number,};
   ball: { x: number; y: number, radius: number, vx: number, vy: number, speed: number, visible: boolean };
   paddles: { left: { x: number; y: number; width: number; height: number; speed: number }, right: { x: number; y: number; width: number; height: number; speed: number } };
   scores: { left: number; right: number };
-  powerUp: { visible: boolean; x: number; y: number; radius: number; type: string | null; duration: number; activeFor: "left" | "right" | null };
+  powerUp: { found: boolean; x: number; y: number; width: number; height: number; visible: boolean; duration: number; spawnTime: number | null};
+  winner?: "left" | "right" | null;
 }
 
 interface Player {
@@ -31,10 +33,12 @@ export default function Online() {
   const winnerRef = useRef<"left" | "right" | null>(null);
   const loopRef = useRef<() => void>(() => {});
   const [state, setState] = useState<GameState>({
+    canvas: { width: 1200, height: 675 },
     ball: { x: 600, y: 337.5, radius: 8, vx: 0, vy: 0, speed: 0, visible: true },
     paddles: { left: { x: 20, y: 200, width: 10, height: 90, speed: 10 }, right: { x: 770, y: 200, width: 10, height: 90, speed: 10 } },
     scores: { left: 0, right: 0 },
-    powerUp: { visible: false, x: 0, y: 0, radius: 0, type: null, duration: 0, activeFor: null },
+    powerUp: { found: false, x: 0, y: 0, width: 0, height: 0, visible: false, duration: 0, spawnTime: null },
+    winner: null,
   });
   const [players, setPlayers] = useState<Players>({
     first: { id: 0, name: "", image: "" },
@@ -48,7 +52,7 @@ export default function Online() {
     .catch((error) => console.error("Error fetching players:", error));
   }, []);
   const location = useLocation();
-  const { map = "Classic", state.powerUp.visible = false, speed = "Normal" } = location.state || {};
+  const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
 
   const gameThemes = {
     Classic: {
@@ -73,8 +77,8 @@ export default function Online() {
     const s = io("http://localhost:8080", {transports: ['websocket']});
     setSocket(s);
 
-    s.emit("joinGame", { map, state.powerUp.visible, speed });
-
+    s.emit("joinGame", { map, powerUps, speed });
+    console.log("Joining game with settings:", { map, powerUps, speed });
     s.on("connect", () => console.log("🔗 Connected:", s.id));
     s.on("waiting", () => setWaiting(true));
     s.on("start", ({ side }) => {
@@ -84,8 +88,8 @@ export default function Online() {
     });
     s.on("state", (data: GameState) => {
       setState(data);
-      if (data.scores.left >= 5) setWinner("left");
-      else if (data.scores.right >= 5) setWinner("right");
+      if (data.winner)
+        setWinner(data.winner);
     });
     s.on("end", () => {
       alert("Opponent disconnected");
@@ -101,13 +105,10 @@ export default function Online() {
     if (!socket || !side) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const dy =
-        e.key === "ArrowUp" || e.key === "w"
-          ? -10
-          : e.key === "ArrowDown" || e.key === "s"
-          ? 10
-          : 0;
-      if (dy !== 0) socket.emit("move", { dy });
+      if (e.key === "ArrowUp")
+        socket.emit("move", { direction : -1 });
+      else if (e.key === "ArrowDown")
+        socket.emit("move", { direction: 1 });
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -137,6 +138,7 @@ export default function Online() {
     const height = canvas.height;
 
     const draw = () => {
+
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
 
@@ -161,15 +163,15 @@ export default function Online() {
       // Draw paddles
       ctx.fillStyle = theme.color;
       ctx.beginPath();
-      ctx.roundRect(0, state.paddles.left, 10, 90, 6);
+      ctx.roundRect(0, state.paddles.left.y, 10, 90, 8);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.roundRect(width - 10, state.paddles.right, 10, 90, 6);
+      ctx.roundRect(width - 10, state.paddles.right.y, 10, 90, 8);
       ctx.fill();
 
       // Draw power-up paddle
-      if (state.powerUp && state.powerUp.visible) {
+      if (state.powerUp.found && state.powerUp.visible) {
         ctx.save();
         const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
         ctx.globalAlpha = pulse;
@@ -188,6 +190,7 @@ export default function Online() {
     };
 
     const loop = () => {
+      if (!canvasRef.current) return;
       draw();
       if (!winnerRef.current) requestAnimationFrame(loop);
     };
@@ -257,7 +260,7 @@ export default function Online() {
       <div
         className={`relative border border-white/10 rounded-[7px] overflow-hidden shadow-xl ${theme.background} w-full max-w-5xl aspect-[16/9]`}
       >
-        <canvas ref={canvasRef} width={1200} height={675} className="w-full h-full" />
+        <canvas ref={canvasRef} width={state.canvas.width} height={state.canvas.height} className="w-full h-full" />
 
         {/* Winner Overlay */}
         {winner && (
