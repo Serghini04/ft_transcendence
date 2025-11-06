@@ -15,32 +15,39 @@ const io = new Server(server, {
 const waitingPlayers = new Map(); // key = JSON.stringify({map,powerUps,speed}) -> socket
 const rooms = new Map();
 
+
+const speedMap = { Slow: 0.8, Normal: 1.3, Fast: 2.5 };
 // ---------------- Game Logic ----------------
-function initGameState() {
+function initGameState(powerUps, speed) {
+  const multiplier = speedMap[speed] || 1.3;
   return {
+    canvas: {
+      width: 1200,
+      height: 675,
+    },
     ball: {
-      x: 400,
-      y: 250,
+      x: 600,
+      y: 337.5,
       radius: 8,
-      vx: 3,
-      vy: 2,
-      speed: 1.3,        // multiplier for dynamic difficulty or “speed mode”
+      vx: 4,
+      vy: 3,
+      speed: multiplier,
       visible: true,     // can hide during power-ups or transitions
     },
     paddles: {
       left: {
-        x: 20,
-        y: 200,
+        x: 0,
+        y: 337.5 - 45,
         width: 10,
         height: 90,
-        speed: 10,       // movement per frame on key press
+        speed: 10 * multiplier,       // movement per frame on key press
       },
       right: {
-        x: 770,
-        y: 200,
+        x: 1200 - 10,
+        y: 337.5 - 45,
         width: 10,
         height: 90,
-        speed: 10,
+        speed: 10 * multiplier,
       },
     },
     scores: {
@@ -48,6 +55,7 @@ function initGameState() {
       right: 0,
     },
     powerUp: {
+      found: powerUps,
       x: 350,
       y: 200,
       width: 12,
@@ -56,13 +64,14 @@ function initGameState() {
       duration: 4000,
       spawnTime: null,
     },
+    winner : null,
   };
 }
 
 
-function createRoom(p1, p2, configKey) {
+function createRoom(p1, p2, configKey, options) {
   const id = Date.now().toString();
-  const state = initGameState();
+  const state = initGameState(options.powerUps, options.speed);
   rooms.set(id, { players: [p1, p2], state, configKey });
 
   p1.join(id);
@@ -80,11 +89,12 @@ function createRoom(p1, p2, configKey) {
   console.log(`   ↳ ${p1.id} (left) vs ${p2.id} (right)`);
 }
 
-function resetBall(ball) {
-  ball.x = 400;
-  ball.y = 250;
-  ball.vx = 3 * (Math.random() > 0.5 ? 1 : -1);
-  ball.vy = 2 * (Math.random() > 0.5 ? 1 : -1);
+function resetBall(state) {
+  const { ball } = state;
+  ball.x = state.canvas.width / 2;
+  ball.y = state.canvas.height / 2;
+  ball.vx = 4 * (Math.random() > 0.5 ? 1 : -1);
+  ball.vy = 3 * (Math.random() > 0.5 ? 1 : -1);
 }
 
 function updateGame(roomId) {
@@ -97,7 +107,7 @@ function updateGame(roomId) {
   ball.y += ball.vy * ball.speed;
 
   // Top/bottom wall collision
-  if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= 500)
+  if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= room.state.canvas.height)
     ball.vy *= -1;
 
    // Collision: left paddle
@@ -121,26 +131,36 @@ function updateGame(roomId) {
   // Scoring logic
   if (ball.x < 0) {
     scores.right += 1;
-    resetBall(ball);
-  } else if (ball.x > 800) {
+    resetBall(room.state);
+  } else if (ball.x > room.state.canvas.width) {
     scores.left += 1;
-    resetBall(ball);
+    resetBall(room.state);
   }
 
+  // win condition
+  if (scores.left >= 5) {
+    room.state.winner = "left";
+  } else if (scores.right >= 5) {
+    room.state.winner = "right";
+  }
+
+  if (room.state.winner) return;
 
   handlePowerUps(room.state);
   // Emit full state including scores so the client can render them
-  io.to(roomId).emit("state", { ball, paddles, scores });
+  io.to(roomId).emit("state", room.state);
 }
 
 function handlePowerUps(state) {
-  const { ball, powerUp } = state;
+  const { powerUp, ball } = state;
+
+  if (!powerUp.found) return;
 
   if (!powerUp.visible) {
     // Randomly spawn power-up
     if (powerUp.spawnTime === null || Date.now() - powerUp.spawnTime + powerUp.duration > 7000) {
-      powerUp.x = Math.random() * (800 - powerUp.width);
-      powerUp.y = Math.random() * (500 - powerUp.height);
+      powerUp.x = state.canvas.width / 2 + (Math.random() * 100 - 100);
+      powerUp.y = state.canvas.height / 2 + (Math.random() * 100 - 100);
       powerUp.visible = true;
       powerUp.spawnTime = Date.now();
     }
@@ -154,7 +174,7 @@ function handlePowerUps(state) {
       ball.y - ball.radius <= powerUp.y + powerUp.height
     ) {
       // Activate power-up effect (e.g., increase ball speed)
-      ball.dx *= -1;
+      ball.vx *= -1;
     }
   }
   if (powerUp.visible && Date.now() - powerUp.spawnTime > powerUp.duration) {
@@ -171,11 +191,9 @@ io.on("connection", (socket) => {
   console.log(`🟢 ${socket.id} connected`);
 
   // Player joins queue with selected configuration
-  socket.on("joinGame", ({ map = "Classic", powerUps = false, speed = "Normal" }) => {
-    const configKey = JSON.stringify({ map, powerUps, speed });
-
+  socket.on("joinGame", ( options = { map: "Classic", powerUps: false, speed: "Normal" }) => {
+    const configKey = JSON.stringify(options);
     console.log(`🎮 ${socket.id} wants to play -> ${configKey}`);
-
     const waiting = waitingPlayers.get(configKey);
 
     if (!waiting) {
@@ -188,16 +206,33 @@ io.on("connection", (socket) => {
       const opponent = waiting;
       waitingPlayers.delete(configKey);
       console.log(`🎯 Match found: ${socket.id} vs ${opponent.id} for ${configKey}`);
-      createRoom(opponent, socket, configKey);
+      createRoom(opponent, socket, configKey, options);
       
     }
   });
 
-  socket.on("move", ({ dy }) => {
+  socket.on("move", ({ direction }) => {
+    console.log("**************************");
     const room = rooms.get(socket.data.roomId);
     if (!room) return;
-    if (socket.data.side === "left") room.state.paddles.left += dy;
-    else room.state.paddles.right += dy;
+    console.log("move " + `${socket.data.side} to ${direction}`);
+    if (socket.data.side === "left")
+    {
+      room.state.paddles.left.y += direction * room.state.paddles.left.speed;
+      room.state.paddles.left.y = Math.min(room.state.paddles.left.y, room.state.canvas.height - room.state.paddles.left.height);
+    }
+    else
+    {
+      room.state.paddles.right.y += direction * room.state.paddles.right.speed;
+      room.state.paddles.right.y = Math.min(room.state.paddles.right.y, room.state.canvas.height - room.state.paddles.right.height);
+    }
+  });
+
+  socket.on("restart", () => {
+    const roomId = socket.data.roomId;
+    const room = rooms.get(roomId);
+    if (!room) return;
+    room.state = initGameState(room.state.powerUp.found, room.state.ball.speed);
   });
 
   socket.on("disconnect", () => {
