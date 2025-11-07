@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+
 
 interface GameState {
   canvas: { width: number, height: number,};
@@ -25,13 +26,19 @@ interface Players {
 
 export default function Online() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const winnerRef = useRef<"left" | "right" | null>(null);
+  const navigate = useNavigate();
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [side, setSide] = useState<"left" | "right" | null>(null);
   const [waiting, setWaiting] = useState(true);
   const [winner, setWinner] = useState<"left" | "right" | null>(null);
   const [time, setTime] = useState(0);
-  const winnerRef = useRef<"left" | "right" | null>(null);
-  const loopRef = useRef<() => void>(() => {});
+  const [restartReady, setRestartReady] = useState({ left: false, right: false });
+  const [waitingForRestart, setWaitingForRestart] = useState(false);
+  const [forfeitWin, setForfeitWin] = useState(false);
+
   const [state, setState] = useState<GameState>({
     canvas: { width: 1200, height: 675 },
     ball: { x: 600, y: 337.5, radius: 8, vx: 0, vy: 0, speed: 0, visible: true },
@@ -40,6 +47,7 @@ export default function Online() {
     powerUp: { found: false, x: 0, y: 0, width: 0, height: 0, visible: false, duration: 0, spawnTime: null },
     winner: null,
   });
+
   const [players, setPlayers] = useState<Players>({
     first: { id: 0, name: "", image: "" },
     second: { id: 0, name: "", image: "" },
@@ -51,6 +59,7 @@ export default function Online() {
     .then((response) => setPlayers(response.data))
     .catch((error) => console.error("Error fetching players:", error));
   }, []);
+
   const location = useLocation();
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
 
@@ -81,16 +90,61 @@ export default function Online() {
     console.log("Joining game with settings:", { map, powerUps, speed });
     s.on("connect", () => console.log("🔗 Connected:", s.id));
     s.on("waiting", () => setWaiting(true));
+
     s.on("start", ({ side }) => {
       console.log("🚀 Match started as:", side);
       setSide(side);
       setWaiting(false);
+      setTime(0);
+      setWinner(null);
+      winnerRef.current = null;
+      setForfeitWin(false);
     });
+
     s.on("state", (data: GameState) => {
       setState(data);
-      if (data.winner)
-        setWinner(data.winner);
     });
+
+    s.on("gameOver", ({ winner }: { winner: "left" | "right" }) => {
+      if (side == winner)
+        console.log("🏆 You won!");
+      else
+        console.log("😞 You lost.");
+      setWinner(winner);
+      winnerRef.current = winner;
+    });
+
+    s.on("restartReady", ({ leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
+      setRestartReady({ left: leftReady, right: rightReady });
+      console.log("Restart ready status:", { leftReady, rightReady });
+    });
+
+    s.on("gameRestarted", () => {
+      console.log("🔄 Game restarted!");
+      setWinner(null);
+      winnerRef.current = null;
+      setTime(0);
+      setRestartReady({ left: false, right: false });
+      setWaitingForRestart(false);
+      setForfeitWin(false);
+    });
+
+    s.on("opponentDisconnected", ({ winner: forfeitWinner }: { winner: "left" | "right", reason: string }) => {
+      console.log("⚠️ Opponent disconnected");
+      setWinner(forfeitWinner);
+      winnerRef.current = forfeitWinner;
+      setWaitingForRestart(false);
+      setForfeitWin(true);
+      // Update score to reflect forfeit win
+      setState(prev => ({
+        ...prev,
+        winner: forfeitWinner,
+        scores: forfeitWinner === "left" 
+          ? { left: 5, right: prev.scores.right }
+          : { left: prev.scores.left, right: 5 }
+      }));
+    });
+
     s.on("end", () => {
       alert("Opponent disconnected");
       setWaiting(true);
@@ -100,19 +154,41 @@ export default function Online() {
     return () => s.disconnect();
   }, []);
 
-  // Handle paddle movement
+  // Handle paddle movement - continuous movement while key is held
   useEffect(() => {
     if (!socket || !side) return;
 
+    const keysPressed: Record<string, boolean> = {};
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp")
-        socket.emit("move", { direction : -1 });
-      else if (e.key === "ArrowDown")
-        socket.emit("move", { direction: 1 });
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        keysPressed[e.key] = true;
+      }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        keysPressed[e.key] = false;
+      }
+    };
+
+    // Send movement updates continuously while keys are held
+    const moveInterval = setInterval(() => {
+      if (keysPressed["ArrowUp"]) {
+        socket.emit("move", { direction: -1 });
+      } else if (keysPressed["ArrowDown"]) {
+        socket.emit("move", { direction: 1 });
+      }
+    }, 16);
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      clearInterval(moveInterval);
+    };
   }, [socket, side]);
 
   // Timer
@@ -186,23 +262,31 @@ export default function Online() {
 
         ctx.restore(); // restore globalAlpha, shadows, etc.
       }
-
     };
 
     const loop = () => {
       if (!canvasRef.current) return;
       draw();
-      if (!winnerRef.current) requestAnimationFrame(loop);
+      if (!winnerRef.current)
+        requestAnimationFrame(loop);
+      else
+      {
+        if (rafRef.current)
+          cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-    loopRef.current = loop;
     loop();
+    return () => {
+      if (rafRef.current)
+        cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
 
   }, [state]);
 
   const resetGame = () => {
-    setWinner(null);
-    winnerRef.current = null;
-    setTime(0);
+    setWaitingForRestart(true);
     socket?.emit("restart");
   };
 
@@ -216,7 +300,7 @@ export default function Online() {
     <div className="flex flex-col items-center justify-center w-full min-h-[calc(100vh-4rem)]">
       {/* Waiting overlay */}
       {waiting && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20 text-white text-2xl font-bold">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20 text-white text-2xl font-bold rounded-tl-4xl">
           Waiting for opponent...
         </div>
       )}
@@ -264,21 +348,43 @@ export default function Online() {
 
         {/* Winner Overlay */}
         {winner && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20 rounded-tl-4xl">
             <img
               src={winner === "left" ? players.first.image : players.second.image}
               alt="Winner"
               className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4"
             />
             <h2 className="text-white text-3xl font-bold text-center mb-4">
-              {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
+              {forfeitWin 
+                ? (winner === side ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
+                : (winner === side ? "🏆 You Won!" : `😞 ${winner === "left" ? players.first.name : players.second.name} Won!`)
+              }
             </h2>
-            <button
-              onClick={resetGame}
-              className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-            >
-              Play Again
-            </button>
+            {forfeitWin && (
+              <p className="text-gray-300 text-sm mb-4">Your opponent left the game</p>
+            )}
+            
+            {waitingForRestart ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-white text-xl font-semibold">
+                  Waiting for your opponent...
+                </div>
+              </div>
+            ) : forfeitWin ? (
+              <button
+                onClick={() => navigate("/game")}
+                className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
+              >
+                Return to Menu
+              </button>
+            ) : (
+              <button
+                onClick={resetGame}
+                className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
+              >
+                Play Again
+              </button>
+            )}
           </div>
         )}
       </div>

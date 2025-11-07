@@ -19,7 +19,6 @@ const rooms = new Map();
 const speedMap = { Slow: 0.8, Normal: 1.3, Fast: 2.5 };
 // ---------------- Game Logic ----------------
 function initGameState(powerUps, speed) {
-  const multiplier = speedMap[speed] || 1.3;
   return {
     canvas: {
       width: 1200,
@@ -31,7 +30,7 @@ function initGameState(powerUps, speed) {
       radius: 8,
       vx: 4,
       vy: 3,
-      speed: multiplier,
+      speed: speed,
       visible: true,     // can hide during power-ups or transitions
     },
     paddles: {
@@ -40,14 +39,14 @@ function initGameState(powerUps, speed) {
         y: 337.5 - 45,
         width: 10,
         height: 90,
-        speed: 10 * multiplier,       // movement per frame on key press
+        speed: 6 * speed,
       },
       right: {
         x: 1200 - 10,
         y: 337.5 - 45,
         width: 10,
         height: 90,
-        speed: 10 * multiplier,
+        speed: 6 * speed,
       },
     },
     scores: {
@@ -71,8 +70,13 @@ function initGameState(powerUps, speed) {
 
 function createRoom(p1, p2, configKey, options) {
   const id = Date.now().toString();
-  const state = initGameState(options.powerUps, options.speed);
-  rooms.set(id, { players: [p1, p2], state, configKey });
+  const state = initGameState(options.powerUps, speedMap[options.speed]);
+  rooms.set(id, { 
+    players: [p1, p2], 
+    state, 
+    configKey,
+    restartReady: { left: false, right: false } // Track who's ready to restart
+  });
 
   p1.join(id);
   p2.join(id);
@@ -99,25 +103,28 @@ function resetBall(state) {
 
 function updateGame(roomId) {
   const room = rooms.get(roomId);
-  if (!room) return;
+  if (!room || room.state.winner) return;
   const { ball, paddles, scores, powerUp } = room.state;
 
   // Move ball
   ball.x += ball.vx * ball.speed;
   ball.y += ball.vy * ball.speed;
 
-  // Top/bottom wall collision
-  if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= room.state.canvas.height)
-    ball.vy *= -1;
-
-   // Collision: left paddle
+  
+  // Collision: left paddle
   const left = paddles.left;
   if (
     ball.x - ball.radius <= left.x + left.width &&
     ball.y >= left.y &&
     ball.y <= left.y + left.height
   )
-    ball.vx *= -1;
+  {
+    ball.vx = Math.abs(ball.vx); // Force ball to move RIGHT
+    ball.x = left.x + left.width + ball.radius; // prevent sticking
+    // ball effect I will think about it later
+    // const intersect = (ball.y - (left.y + left.height / 2)) / (left.height / 2);
+    // ball.vy = intersect * 3; // adjust bounce angle
+  }
   
   // Collision: right paddle
   const right = paddles.right;
@@ -126,8 +133,17 @@ function updateGame(roomId) {
     ball.y >= right.y &&
     ball.y <= right.y + right.height
   )
-    ball.vx *= -1;
-
+  {
+    ball.vx = -Math.abs(ball.vx); // Force ball to move LEFT
+    ball.x = right.x - ball.radius; // prevent sticking
+    // ball effect I will think about it later
+    // const intersect = (ball.y - (right.y + right.height / 2)) / (right.height / 2);
+    // ball.vy = intersect * 3; // adjust bounce angle
+  }
+  // Top/bottom wall collision
+  if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= room.state.canvas.height)
+    ball.vy *= -1;
+  
   // Scoring logic
   if (ball.x < 0) {
     scores.right += 1;
@@ -140,11 +156,11 @@ function updateGame(roomId) {
   // win condition
   if (scores.left >= 5) {
     room.state.winner = "left";
+    io.to(roomId).emit("gameOver", { winner: "left" });
   } else if (scores.right >= 5) {
     room.state.winner = "right";
+    io.to(roomId).emit("gameOver", { winner: "right" });
   }
-
-  if (room.state.winner) return;
 
   handlePowerUps(room.state);
   // Emit full state including scores so the client can render them
@@ -158,7 +174,7 @@ function handlePowerUps(state) {
 
   if (!powerUp.visible) {
     // Randomly spawn power-up
-    if (powerUp.spawnTime === null || Date.now() - powerUp.spawnTime + powerUp.duration > 7000) {
+    if (powerUp.spawnTime === null || Date.now() - powerUp.spawnTime > 8000) {
       powerUp.x = state.canvas.width / 2 + (Math.random() * 100 - 100);
       powerUp.y = state.canvas.height / 2 + (Math.random() * 100 - 100);
       powerUp.visible = true;
@@ -173,8 +189,21 @@ function handlePowerUps(state) {
       ball.y + ball.radius >= powerUp.y &&
       ball.y - ball.radius <= powerUp.y + powerUp.height
     ) {
-      // Activate power-up effect (e.g., increase ball speed)
-      ball.vx *= -1;
+      // Reflect ball only once by checking direction
+      const ballCenterX = ball.x;
+      const powerUpCenterX = powerUp.x + powerUp.width / 2;
+      
+      // Determine which side of the power-up was hit
+      if ((ballCenterX < powerUpCenterX && ball.vx > 0) || 
+          (ballCenterX > powerUpCenterX && ball.vx < 0)) {
+        ball.vx *= -1;
+      }
+      
+      // affect on y I'll think about it later
+      // const intersect = (ball.y - (powerUp.y + powerUp.height / 2)) / (powerUp.height / 2);
+      // ball.vy = intersect * 3; // adjust bounce angle
+      
+      powerUp.visible = false; // Disappear after collision
     }
   }
   if (powerUp.visible && Date.now() - powerUp.spawnTime > powerUp.duration) {
@@ -212,19 +241,19 @@ io.on("connection", (socket) => {
   });
 
   socket.on("move", ({ direction }) => {
-    console.log("**************************");
     const room = rooms.get(socket.data.roomId);
     if (!room) return;
-    console.log("move " + `${socket.data.side} to ${direction}`);
     if (socket.data.side === "left")
     {
       room.state.paddles.left.y += direction * room.state.paddles.left.speed;
       room.state.paddles.left.y = Math.min(room.state.paddles.left.y, room.state.canvas.height - room.state.paddles.left.height);
+      room.state.paddles.left.y = Math.max(room.state.paddles.left.y, 0);
     }
     else
     {
       room.state.paddles.right.y += direction * room.state.paddles.right.speed;
       room.state.paddles.right.y = Math.min(room.state.paddles.right.y, room.state.canvas.height - room.state.paddles.right.height);
+      room.state.paddles.right.y = Math.max(room.state.paddles.right.y, 0);
     }
   });
 
@@ -232,7 +261,28 @@ io.on("connection", (socket) => {
     const roomId = socket.data.roomId;
     const room = rooms.get(roomId);
     if (!room) return;
-    room.state = initGameState(room.state.powerUp.found, room.state.ball.speed);
+    
+    const playerSide = socket.data.side;
+    
+    // Mark this player as ready to restart
+    room.restartReady[playerSide] = true;
+    
+    console.log(`🔄 ${socket.id} (${playerSide}) is ready to restart`);
+    
+    // Notify the other player that this player is ready
+    io.to(roomId).emit("restartReady", { 
+      side: playerSide,
+      leftReady: room.restartReady.left,
+      rightReady: room.restartReady.right
+    });
+    
+    // If both players are ready, restart the game
+    if (room.restartReady.left && room.restartReady.right) {
+      console.log(`✅ Both players ready, restarting room ${roomId}`);
+      room.state = initGameState(room.state.powerUp.found, room.state.ball.speed);
+      room.restartReady = { left: false, right: false }; // Reset ready states
+      io.to(roomId).emit("gameRestarted");
+    }
   });
 
   socket.on("disconnect", () => {
@@ -252,9 +302,17 @@ io.on("connection", (socket) => {
       const roomId = socket.data.roomId;
       const room = rooms.get(roomId);
       if (room) {
-        io.to(roomId).emit("end");
+        const disconnectedSide = socket.data.side;
+        const opponentSide = disconnectedSide === "left" ? "right" : "left";
+        
+        // Notify opponent that they won by forfeit
+        io.to(roomId).emit("opponentDisconnected", { 
+          winner: opponentSide,
+          reason: "disconnect"
+        });
+        
         rooms.delete(roomId);
-        console.log(`🗑️ Room ${roomId} deleted`);
+        console.log(`🗑️ Room ${roomId} deleted - ${disconnectedSide} player disconnected`);
       }
     }
   });
