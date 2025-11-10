@@ -13,9 +13,8 @@ export default function ChatPage() {
   const { connectSocket, disconnectSocket } = useChatStore();
 
   useEffect(() => {
-    if (id) {
+    if (id)
       connectSocket(Number(id));
-    }
     return () => disconnectSocket();
   }, [id, connectSocket, disconnectSocket]);
 
@@ -23,34 +22,19 @@ export default function ChatPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const HISTORY_AUTO_CLOSE_WIDTH = 950;
-  const BOTH_PANELS_MIN_WIDTH = 1200; // Minimum width to keep both panels open
 
-  // Keep a ref in sync with the current open state to avoid stale closure
   const historyOpenRef = useRef(false);
 
   useEffect(() => {
     historyOpenRef.current = isHistoryOpen;
   }, [isHistoryOpen]);
 
-  // Close panels based on screen size to prevent layout conflicts
   useEffect(() => {
     const handleResize = () => {
       const screenWidth = window.innerWidth;
-      
-      // Close history panel if screen is too small
-      if (screenWidth <= HISTORY_AUTO_CLOSE_WIDTH && historyOpenRef.current) {
+
+      if (screenWidth <= HISTORY_AUTO_CLOSE_WIDTH && historyOpenRef.current)
         setIsHistoryOpen(false);
-      }
-      
-      // If both panels are open and screen is too small, prioritize contacts on mobile
-      if (screenWidth < BOTH_PANELS_MIN_WIDTH && isSidebarOpen && isHistoryOpen) {
-        setIsHistoryOpen(false); // Keep contacts, close history
-      }
-      
-      // On very small screens, close sidebar when opening history
-      if (screenWidth < 768 && isHistoryOpen && isSidebarOpen) {
-        setIsSidebarOpen(false);
-      }
     };
     
     window.addEventListener("resize", handleResize);
@@ -68,26 +52,14 @@ export default function ChatPage() {
     const newSidebarState = !isSidebarOpen;
     setIsSidebarOpen(newSidebarState);
     
-    // On small screens, close history panel when opening sidebar
-    if (newSidebarState && isHistoryOpen && window.innerWidth < 768) {
+    if (newSidebarState && isHistoryOpen && window.innerWidth < 768)
       setIsHistoryOpen(false);
-    }
   };
   
   const toggleHistory = () => {
-    const newHistoryState = !isHistoryOpen;
-    setIsHistoryOpen(newHistoryState);
-    
-    // On small screens, close sidebar when opening history
-    if (newHistoryState && isSidebarOpen && window.innerWidth < 768) {
-      setIsSidebarOpen(false);
-    }
-    
-    // On medium screens, close history if both would be open and screen too small
-    if (newHistoryState && isSidebarOpen && window.innerWidth < BOTH_PANELS_MIN_WIDTH) {
-      setIsSidebarOpen(false);
-    }
+    setIsHistoryOpen(!isHistoryOpen);
   };
+  
   const closeSidebar = () => setIsSidebarOpen(false);
   const closeHistory = () => setIsHistoryOpen(false);
 
@@ -114,16 +86,12 @@ export default function ChatPage() {
         <div
           className="md:hidden fixed inset-0 bg-black/50 z-40"
           onClick={closeSidebar}
-          aria-hidden="true"
         />
       )}
 
       {/* LEFT SIDEBAR */}
       <aside
         id={leftSidebarId}
-        role="dialog"
-        aria-modal={isSidebarOpen ? true : undefined}
-        aria-label="Messages sidebar"
         className={`
           fixed md:relative
           top-20 md:top-0 left-0
@@ -147,8 +115,6 @@ export default function ChatPage() {
           <button
             onClick={closeSidebar}
             className="md:hidden !p-2 mt-1 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors"
-            aria-label="Close sidebar"
-            aria-controls={leftSidebarId}
           >
             <CircleX size={26} className="text-gray-400 border-none hover:text-white" />
           </button>
@@ -167,9 +133,7 @@ export default function ChatPage() {
         {/* Chat Header */}
         <ChatHeader
           toggleSidebar={toggleSidebar}
-          isSidebarOpen={isSidebarOpen}
           toggleHistory={toggleHistory}
-          isHistoryOpen={isHistoryOpen}
         />
 
         <MessagesArea />
@@ -183,16 +147,12 @@ export default function ChatPage() {
         <div
           className="md:hidden fixed inset-0 right-80 bg-black/50 z-40"
           onClick={closeHistory}
-          aria-hidden="true"
         />
       )}
 
       {/* HISTORY PANEL (Right Side) */}
       <aside
         id={historyPanelId}
-        role="dialog"
-        aria-modal={isHistoryOpen ? true : undefined}
-        aria-label="History panel"
         className={`
           fixed md:relative
           top-20 md:top-0 right-0
@@ -214,8 +174,6 @@ export default function ChatPage() {
           <button
             onClick={toggleHistory}
             className="absolute top-4 right-4 !p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors"
-            aria-label="Close history panel"
-            aria-controls={historyPanelId}
           >
             <CircleX size={26} className="text-gray-400 hover:text-white" />
           </button>

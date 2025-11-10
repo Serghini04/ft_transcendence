@@ -3,10 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 
 export default function ChatHeader({
   toggleSidebar,
-  isSidebarOpen,
   toggleHistory,
-  isHistoryOpen,
-  leftSidebarId,
 }: any) {
   const { selectedContact } = useChatStore();
   
@@ -15,10 +12,7 @@ export default function ChatHeader({
       <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
         <button
           onClick={toggleSidebar}
-          className="lg:hidden !p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
-          aria-label="Toggle sidebar"
-          aria-expanded={isSidebarOpen}
-          aria-controls={leftSidebarId}
+          className="md:hidden !p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
         >
           <PanelLeftOpen size={26} className="text-gray-400 hover:text-white" />
         </button>
@@ -53,21 +47,28 @@ export default function ChatHeader({
             </div>
           </>
         ) : (
-          <div className="flex flex-col">
-            <p className="text-white font-medium">Select a contact</p>
-            <span className="text-gray-400 text-sm">Start a conversation 💬</span>
+          <div className="flex items-center gap-3">
+            <div
+              className="relative w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-[0_0_18px_-4px_rgba(16,185,129,0.55)]"
+              aria-hidden="true"
+            >
+              <span className="text-white text-lg">💬</span>
+            </div>
+
+            <div className="flex flex-col">
+              <p className="text-white font-medium">Select a contact</p>
+              <span className="text-gray-400 text-sm">Start a conversation and say hi</span>
+            </div>
           </div>
         )}
-      </div>
-      <button
-        onClick={toggleHistory}
-        className="!p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
-        aria-label="Toggle history panel"
-        aria-expanded={isHistoryOpen}
-        aria-controls="chat-history-panel"
-      >
-        <CircleEllipsis className="text-gray-400 hover:text-white" size={30} />
-      </button>
+      </div> {selectedContact && (
+        <button
+          onClick={toggleHistory}
+          className="!p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"
+        >
+          <CircleEllipsis className="text-gray-400 hover:text-white" size={30} />
+        </button>
+      )}
     </div>
   );
 }

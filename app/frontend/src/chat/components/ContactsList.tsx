@@ -24,9 +24,7 @@ export default function ContactsList({ closeSidebar }: any) {
     const fetchContacts = async () => {
       try {
         const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
-          headers: {
-            "x-user-id": loginId,
-          },
+          headers: { "x-user-id": loginId }
         });
         setContacts(response.data);
       } catch (err) {
@@ -35,23 +33,21 @@ export default function ContactsList({ closeSidebar }: any) {
       }
     };
     
-    if (loginId) fetchContacts();
+    if (loginId)
+      fetchContacts();
   }, [loginId]);
 
   const handleSelectContact = async (contact: Contact) => {
-    // Clear messages first to prevent leaking
     setMessages([]);
     setSelectedContact(contact);
     closeSidebar();
 
     try {
       const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
-        headers: {
-          "x-user-id": loginId,
-        },
+        headers: { "x-user-id": loginId }
       });
       setMessages(res.data);
-      console.log(res.data);
+      // console.error("Read from backend :" +  res.data);
     } catch (err) {
       toast.error("Failed to load conversation.");
       console.error("Failed to load conversation: ", err);
@@ -60,6 +56,20 @@ export default function ContactsList({ closeSidebar }: any) {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {contacts.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-3 py-12">
+        <div className="w-44 h-44 md:w-48 md:h-50 rounded-4xl overflow-hidden ring-1 ring-[#27445E] shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+          <img
+            src="/friends.jpg"
+            alt="Empty contacts illustration"
+            className="w-full h-full object-cover select-none"
+            draggable={false}
+          />
+        </div>
+        <p className="text-lg font-medium text-white">No contacts yet</p>
+        <p className="text-sm">Add new friends to start chatting.</p>
+      </div>
+      )}
       {contacts.map((contact) => (
         <div
           key={contact.id}

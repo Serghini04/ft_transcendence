@@ -29,38 +29,7 @@ async function getConversationBetweenUsers(req: FastifyRequest, res: FastifyRepl
     return res.code(200).send(messages);
 }
 
-async function sendMessage(req: FastifyRequest, res: FastifyReply) {
-    const {receivedId} = req.params as {receivedId: number};
-    const {text} = req.body as {text: string};
-    const userId = Number(req.headers['x-user-id']);
-    
-    console.error("From Backend :>>" + Number(req.headers['x-user-id']));
-    if (userId === receivedId)
-        return res.code(400).send({ error: "You cannot message yourself" });
-    const userRepo = new userRepository(req.server.db);
-    if (userRepo.getUserById(receivedId) === null)
-        return res.code(404).send({ error: "Received User not found" });
-    
-    const chatRepo = new ChatRepository(req.server.db);
-    const result = await chatRepo.sendMessage(userId, receivedId, text);
-    if (!result.success)
-        return res.code(500).send({ error: "Failed to send message" });
-
-    return res.code(201).send({
-        success: true,
-        message: "Message sent",
-        data: {
-          id: result.messageId,
-          text,
-          senderId: userId,
-          receivedId,
-          timestamp: new Date().toISOString(),
-        },
-      });
-}
-
 export const chatController = {
     getAllContacts,
-    getConversationBetweenUsers,
-    sendMessage
+    getConversationBetweenUsers
 }
