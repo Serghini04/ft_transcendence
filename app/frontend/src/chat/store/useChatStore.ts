@@ -38,6 +38,7 @@ type ChatStore = {
 
     connectSocket: (userId: number) => void;
     disconnectSocket: () => void;
+    resetStore: () => void;
     setSelectedContact: (contact: Contact | null) => void;
     setMessages: (messages: Message[]) => void;
     addMessage: (message: Message) => void;
@@ -67,23 +68,52 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     connectionStatus: 'disconnected',
 
     connectSocket: (userId) => {
+        console.log("🔌 Attempting to connect socket with userId:", userId);
         const currentSocket = get().socket;
+        const currentLoginId = get().loginId;
         
-        if (currentSocket && currentSocket.connected)
+        // If switching users, completely reset the store
+        if (currentLoginId && currentLoginId !== userId) {
+            console.log("🔄 Switching users, resetting store");
+            if (currentSocket) {
+                currentSocket.removeAllListeners();
+                currentSocket.disconnect();
+            }
+            // Reset entire store state for new user
+            set({
+                loginId: null,
+                selectedContact: null,
+                socket: null,
+                contacts: [],
+                messages: [],
+                onlineUsers: [],
+                connectionStatus: 'disconnected'
+            });
+        }
+        
+        if (currentSocket && currentSocket.connected && currentLoginId === userId) {
+            console.log("⚠️ Socket already connected for this user, skipping");
             return;
+        }
 
         if (currentSocket) {
+            console.log("🔄 Disconnecting existing socket");
             currentSocket.removeAllListeners();
             currentSocket.disconnect();
         }
 
+        console.log("📝 Setting loginId to:", userId);
         set({ 
             loginId: userId, 
             connectionStatus: 'connecting',
-            messages: []
+            messages: [], // Always clear messages when connecting
+            selectedContact: null // Clear selected contact
         });
 
-        const socket = io("http://localhost:3000", {
+        // Use the correct backend URL for Codespace
+        const backendUrl = "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev";
+        console.log("🚀 Creating socket.io connection to", backendUrl, "with userId:", userId);
+        const socket = io(backendUrl, {
             withCredentials: true,
             auth: { userId },
             reconnection: true,
@@ -150,6 +180,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         }
     },
 
+    resetStore: () => {
+        console.log("🔄 Resetting chat store completely");
+        const socket = get().socket;
+        if (socket) {
+            socket.removeAllListeners();
+            socket.disconnect();
+        }
+        set({
+            loginId: null,
+            selectedContact: null,
+            socket: null,
+            contacts: [],
+            messages: [],
+            onlineUsers: [],
+            connectionStatus: 'disconnected'
+        });
+    },
+
     setSelectedContact: (contact) => {
         const { socket, loginId, selectedContact } = get();
 
@@ -158,24 +206,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             socket.emit("chat:leave", oldChatId);
         }
 
+        // Always clear messages when switching contacts
+        // ContactsList will fetch fresh messages from API
+        set({ 
+            selectedContact: contact,
+            messages: [] // Always clear - let ContactsList fetch fresh data
+        });
+
         if (contact && socket && loginId) {
             const newChatId = getChatId(loginId, contact.user.id);
             socket.emit("chat:join", newChatId);
-
-            const contactMessages = get().messages.filter(msg => 
-                (msg.from === contact.user.id && msg.to === loginId) ||
-                (msg.from === loginId && msg.to === contact.user.id)
-            );
-            
-            set({ 
-                selectedContact: contact,
-                messages: contactMessages
-            });
-        } else {
-            set({ 
-                selectedContact: contact,
-                messages: []
-            });
         }
     },
 
@@ -185,6 +225,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     },
 
     addMessage: (message) => {
+        console.log("📝 Adding message to store:", message);
         set((state) => ({ messages: [...state.messages, message] }));
         get().deduplicateMessages();
     },
@@ -192,8 +233,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     sendMessage: (text, receiverId) => {
         const { socket, loginId } = get();
         
-        if (!socket || !loginId)
+        console.log("📤 Attempting to send message:", { text, receiverId, socket: !!socket, loginId });
+        
+        if (!socket) {
+            console.error("❌ No socket connection available");
             return;
+        }
+        
+        if (!loginId) {
+            console.error("❌ No loginId available");
+            return;
+        }
 
         const messageId = generateMessageId();
         const timestamp = new Date().toISOString();
@@ -210,6 +260,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
         get().addMessage(optimisticMessage);
 
+        console.log("🚀 Emitting message:send event:", {
+            id: messageId,
+            to: receiverId,
+            message: text,
+            timestamp
+        });
+
         socket.emit("message:send", {
             id: messageId,
             to: receiverId,
@@ -222,22 +279,46 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         const { from, message, timestamp, id } = messageData;
         const { selectedContact, loginId } = get();
         
-        const newMessage: Message = {
-            id: id || generateMessageId(),
-            text: message,
-            isSender: false,
-            timestamp,
-            from,
-            to: loginId || undefined
-        };
-
-        if (selectedContact && selectedContact.user.id === from)
+        console.log("📥 Incoming message:", { from, to: loginId, selectedContact: selectedContact?.user.id, message });
+        
+        // Only add message if it's for the currently selected conversation
+        if (selectedContact && selectedContact.user.id === from && loginId) {
+            const newMessage: Message = {
+                id: id || generateMessageId(),
+                text: message,
+                isSender: false,
+                timestamp,
+                from,
+                to: loginId
+            };
+            
+            console.log("✅ Adding message to current conversation");
             get().addMessage(newMessage);
+        } else {
+            console.log("🚫 Message ignored - not for current conversation or no contact selected");
+        }
     },
 
     handleMessageSent: (messageData) => {
         const { id: realId, message, timestamp, from, to } = messageData;
         const { selectedContact, loginId } = get();
+        
+        console.log("📤 Message sent confirmation:", { realId, from, to, selectedContact: selectedContact?.user.id });
+        
+        // Only process if this message belongs to the current conversation
+        if (!selectedContact || !loginId) {
+            console.log("🚫 No active conversation, ignoring sent confirmation");
+            return;
+        }
+        
+        const isCurrentConversation = 
+            (from === loginId && to === selectedContact.user.id) || 
+            (from === selectedContact.user.id && to === loginId);
+            
+        if (!isCurrentConversation) {
+            console.log("🚫 Message not for current conversation, ignoring");
+            return;
+        }
         
         const existingMessage = get().messages.find(msg => 
             msg.id === realId || 
@@ -245,6 +326,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         );
 
         if (existingMessage) {
+            console.log("✅ Updating optimistic message");
             // Update existing optimistic message
             set((state) => ({
                 messages: state.messages.map(msg => {

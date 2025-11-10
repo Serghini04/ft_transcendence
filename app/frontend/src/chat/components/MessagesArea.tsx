@@ -16,21 +16,44 @@ export default function MessagesArea() {
   };
 
   const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const previousMessageCountRef = useRef(0);
 
-  const scrollToBottom = () => {
-    if (messageEndRef.current)
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (force = false) => {
+    if (messageEndRef.current) {
+      // For new messages, use instant scroll for better UX
+      const behavior = force ? "auto" : "smooth";
+      messageEndRef.current.scrollIntoView({ behavior });
+    }
   };
 
+  // Scroll when selecting a contact
   useEffect(() => {
-    if (selectedContact)
-      setTimeout(() => scrollToBottom(), 100);
+    if (selectedContact) {
+      previousMessageCountRef.current = 0; // Reset counter
+      setTimeout(() => scrollToBottom(true), 100);
+    }
   }, [selectedContact]);
 
+  // Scroll when new messages are added
   useEffect(() => {
-    if (messages.length > 0)
-      scrollToBottom();
-  }, [messages.length]);
+    const currentMessageCount = messages.length;
+    
+    if (currentMessageCount > 0) {
+      // Check if this is a new message (count increased)
+      const isNewMessage = currentMessageCount > previousMessageCountRef.current;
+      previousMessageCountRef.current = currentMessageCount;
+      
+      if (isNewMessage) {
+        console.log("🔽 Auto-scrolling to new message");
+        // New message added - scroll immediately
+        setTimeout(() => scrollToBottom(true), 50);
+      } else {
+        console.log("📜 Initial scroll to bottom");
+        // Initial load or contact switch - smooth scroll
+        setTimeout(() => scrollToBottom(), 100);
+      }
+    }
+  }, [messages]);
 
   let lastMessageDate: Date | null = null;
 

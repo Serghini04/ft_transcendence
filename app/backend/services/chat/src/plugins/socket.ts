@@ -16,24 +16,36 @@ export function isUserOnline(userId: number): boolean {
 }
 
 const socketPlugin = fp(async (fastify: FastifyInstance) => {
-  const io = new Server(fastify.server, {
+    const io = new Server(fastify.server, {
     path: "/socket.io",
     cors: {
       origin: [
-        "http://localhost:5173"
+        "https://orange-spork-gwpjvgpgxjwfvxx9-5173.app.github.dev",
+        "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
       ],
       credentials: true,
-      methods: ["GET", "POST"],
     },
   });
 
   fastify.decorate("io", io);
 
+  fastify.log.info("🔌 Socket.IO server is ready for connections");
+  
+  // Debug: Listen to all socket.io events
+  io.engine.on("connection_error", (err) => {
+    fastify.log.error(`🚨 Socket.IO connection error: ${err.req?.url} - ${err.message}`);
+  });
+
   io.on("connection", (socket) => {
+    fastify.log.info(`🔗 New connection attempt from ${socket.handshake.address}`);
     const userId = socket.handshake.auth.userId;
     
+    fastify.log.info(`🔐 Auth userId: ${userId}`);
+    
     if (!userId || isNaN(Number(userId))) {
-      fastify.log.warn("⚠️ Connection attempt without valid userId");
+      fastify.log.warn("⚠️ Connection attempt without valid userId, disconnecting");
       socket.disconnect();
       return;
     }
@@ -77,10 +89,12 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         message,
         timestamp: messageTimestamp,
       };
-
       try {
+
         const chatRep = new ChatRepository(fastify.db);
         const saveResult = await chatRep.sendMessage(userIdNum, receiverUserId, message, messageTimestamp);
+        console.log("============================================================================================================");
+        console.log("Save in database :" + saveResult);
         
         if (!saveResult.success)
           throw new Error("Failed to save message to database");

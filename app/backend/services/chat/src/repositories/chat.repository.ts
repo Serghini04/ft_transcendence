@@ -63,9 +63,10 @@ export class ChatRepository {
           text,
           timestamp
         FROM messages
-        WHERE ? IN (messages.sender_id, messages.received_id);
+        WHERE (sender_id = ? AND received_id = ?) OR (sender_id = ? AND received_id = ?)
+        ORDER BY timestamp ASC;
       `);
-      const rows = stmt.all(currentUserId, otherUserId) as {
+      const rows = stmt.all(currentUserId, currentUserId, otherUserId, otherUserId, currentUserId) as {
         id: number;
         timestamp: Date;
         text: string;
