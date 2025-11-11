@@ -1,0 +1,109 @@
+# Alertmanager Configuration
+global:
+  resolve_timeout: 5m
+  # SMTP configuration (optional - configure if you want email alerts)
+  # smtp_smarthost: 'smtp.gmail.com:587'
+  # smtp_from: 'alertmanager@example.com'
+  # smtp_auth_username: 'your-email@gmail.com'
+  # smtp_auth_password: 'your-app-password'
+  # smtp_require_tls: true
+
+# Templates for notifications
+templates:
+  - '/etc/alertmanager/*.tmpl'
+
+# Route configuration
+route:
+  # Default receiver
+  receiver: 'default'
+  
+  # Group alerts
+  group_by: ['alertname', 'cluster', 'service']
+  
+  # Wait before sending initial notification
+  group_wait: 10s
+  
+  # Wait before sending notification about new alerts
+  group_interval: 10s
+  
+  # Wait before resending notification
+  repeat_interval: 12h
+  
+  # Child routes
+  routes:
+    # Critical alerts route
+    - match:
+        severity: critical
+      receiver: 'critical'
+      continue: true
+      group_wait: 10s
+      repeat_interval: 5m
+    
+    # Warning alerts route
+    - match:
+        severity: warning
+      receiver: 'warning'
+      continue: true
+      group_wait: 30s
+      repeat_interval: 1h
+    
+    # Kafka specific alerts
+    - match_re:
+        alertname: '^Kafka.*'
+      receiver: 'kafka-team'
+      continue: false
+      group_wait: 10s
+      repeat_interval: 30m
+
+# Receivers configuration
+receivers:
+  # Default receiver (logs only)
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:9093/webhook/default'
+        send_resolved: true
+
+  # Critical alerts receiver
+  - name: 'critical'
+    webhook_configs:
+      - url: 'http://localhost:9093/webhook/critical'
+        send_resolved: true
+    # Email configuration example (uncomment and configure)
+    # email_configs:
+    #   - to: 'team@example.com'
+    #     subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+    #     html: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+  # Warning alerts receiver
+  - name: 'warning'
+    webhook_configs:
+      - url: 'http://localhost:9093/webhook/warning'
+        send_resolved: true
+
+  # Kafka team receiver
+  - name: 'kafka-team'
+    webhook_configs:
+      - url: 'http://localhost:9093/webhook/kafka'
+        send_resolved: true
+    # Slack configuration example (uncomment and configure)
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#kafka-alerts'
+    #     title: 'Kafka Alert: {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+# Inhibit rules - suppress certain alerts when others are active
+inhibit_rules:
+  # Suppress warning if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+  
+  # Suppress all alerts if the service is down
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: '.*'
+    equal: ['instance']

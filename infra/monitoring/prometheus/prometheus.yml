@@ -1,0 +1,78 @@
+# Prometheus Configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'ft_transcendence'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - 'alert.rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Alertmanager
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+        labels:
+          service: 'alertmanager'
+
+  # Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+
+  # Zookeeper JMX Exporter
+  - job_name: 'zookeeper'
+    static_configs:
+      - targets: ['zookeeper:7072']
+        labels:
+          service: 'zookeeper'
+
+  # Kafka JMX Exporter
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:7071']
+        labels:
+          service: 'kafka'
+
+  # Kafka Producer
+  - job_name: 'kafka-producer'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['kafka-producer:3001']
+        labels:
+          service: 'kafka-producer'
+
+  # Kafka Consumer
+  - job_name: 'kafka-consumer'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['kafka-consumer:3002']
+        labels:
+          service: 'kafka-consumer'
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
