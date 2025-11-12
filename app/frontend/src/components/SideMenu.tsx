@@ -13,7 +13,7 @@ interface SideMenuProps {
   onClose: () => void;
 }
 
-export default function SideMenu({ open, onClose}: SideMenuProps) {
+export default function SideMenu({ open }: SideMenuProps) {
   const location = useLocation();
 
   return (
@@ -27,7 +27,7 @@ export default function SideMenu({ open, onClose}: SideMenuProps) {
         />
       </div>
 
-      {/* --- Sidebar content (only visible on desktop or when open on mobile) --- */}
+      {/*Sidebar content (only visible on desktop or when open on mobile) --- */}
       <aside
         className={`fixed left-0 top-20 h-[calc(100%-5rem)] w-20 bg-[rgba(13,34,52,0.65)] flex flex-col items-center py-3 z-20 backdrop-blur-md border-r border-white/10 shadow-lg transform transition-transform duration-300
         ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}

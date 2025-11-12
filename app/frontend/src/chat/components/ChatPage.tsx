@@ -1,6 +1,5 @@
 import { MessageSquareMore, CircleX } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Bell, Sword, UserX, RotateCcw } from "lucide-react";
 import ContactsList from "./ContactsList";
 import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
@@ -41,13 +40,6 @@ export default function ChatPage() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [isSidebarOpen, isHistoryOpen]);
-
-  const matches = [
-    { id: 1, userScore: 4, opponentScore: 3 },
-    { id: 2, userScore: 3, opponentScore: 2 },
-    { id: 3, userScore: 5, opponentScore: 2 },
-    { id: 4, userScore: 4, opponentScore: 0 },
-  ];
 
   const toggleSidebar = () => {
     const newSidebarState = !isSidebarOpen;
