@@ -62,6 +62,13 @@ test-consumer:
 	@curl -s http://localhost:3002/messages/latest 2>&1 | grep -o '{.*}' | jq '.' || curl http://localhost:3002/messages/latest
 	@bash -c 'source $(MESSAGES) && msg_test_consumer_complete'
 
+dev:
+	@echo "🔧 Starting Frontend Development Mode..."
+	@docker-compose --profile development up frontend-dev
+
+dev-full:
+	@echo "🚀 Starting Full Development Stack..."
+	@docker-compose --profile development up -d
 
 stop-all:
 	@bash -c 'source $(MESSAGES) && msg_stop_all_start'

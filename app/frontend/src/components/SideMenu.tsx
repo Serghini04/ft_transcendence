@@ -13,7 +13,7 @@ interface SideMenuProps {
   onClose: () => void;
 }
 
-export default function SideMenu({ open, onClose}: SideMenuProps) {
+export default function SideMenu({ open }: SideMenuProps) {
   const location = useLocation();
 
   return (
