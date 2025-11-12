@@ -18,7 +18,7 @@ type Contact = {
 
 export default function ContactsList({ closeSidebar }: any) {
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const { selectedContact, setSelectedContact, setMessages, loginId } = useChatStore();
+  const { selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, initializeUnseenCounts } = useChatStore();
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -27,6 +27,9 @@ export default function ContactsList({ closeSidebar }: any) {
           headers: { "x-user-id": loginId }
         });
         setContacts(response.data);
+        
+        // Initialize unseen message counts from backend data
+        initializeUnseenCounts(response.data);
       } catch (err) {
         toast.error("Failed to fetch contacts.");
         console.error("Failed to fetch contacts: ", err);
@@ -47,7 +50,6 @@ export default function ContactsList({ closeSidebar }: any) {
         headers: { "x-user-id": loginId }
       });
       setMessages(res.data);
-      // console.error("Read from backend :" +  res.data);
     } catch (err) {
       toast.error("Failed to load conversation.");
       console.error("Failed to load conversation: ", err);
@@ -92,7 +94,7 @@ export default function ContactsList({ closeSidebar }: any) {
             )}
             <span
               className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-[rgba(13,34,52,0.75)] ${
-                contact.user.status === "online" ? "bg-emerald-500" : "bg-gray-500"
+                onlineUsers.has(contact.user.id) ? "bg-emerald-500" : "bg-gray-500"
               }`}
             ></span>
           </div>
@@ -100,13 +102,13 @@ export default function ContactsList({ closeSidebar }: any) {
           <div className="flex-1 min-w-0">
             <p className="font-medium text-white truncate">{contact.user.fullName}</p>
             <span className="text-sm text-gray-400 truncate block">
-              {contact.user.status}
+              {onlineUsers.has(contact.user.id) ? "online" : "offline"}
             </span>
           </div>
 
-          {contact.unseenMessages > 0 && (
+          {(unseenMessageCounts.get(contact.user.id) || 0) > 0 && (
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-semibold">
-              {contact.unseenMessages}
+              {unseenMessageCounts.get(contact.user.id)}
             </span>
           )}
         </div>

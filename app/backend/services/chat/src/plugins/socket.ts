@@ -31,18 +31,11 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
   fastify.decorate("io", io);
 
-  fastify.log.info("🔌 Socket.IO server is ready for connections");
-  
-  // Debug: Listen to all socket.io events
-  io.engine.on("connection_error", (err) => {
-    fastify.log.error(`🚨 Socket.IO connection error: ${err.req?.url} - ${err.message}`);
-  });
+  fastify.log.info("Socket.IO server is ready for connections");
 
   io.on("connection", (socket) => {
-    fastify.log.info(`🔗 New connection attempt from ${socket.handshake.address}`);
+    fastify.log.info(`New connection attempt from ${socket.handshake.address}`);
     const userId = socket.handshake.auth.userId;
-    
-    fastify.log.info(`🔐 Auth userId: ${userId}`);
     
     if (!userId || isNaN(Number(userId))) {
       fastify.log.warn("⚠️ Connection attempt without valid userId, disconnecting");
@@ -57,17 +50,12 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
     userSockets.get(userIdNum)!.add(socket.id);
     
     socketUsers.set(socket.id, userIdNum);
-    
-    // join user-specific room for multi-tab sync
+
     socket.join(`user_${userIdNum}`);
     
-    fastify.log.info(`✅ User ${userIdNum} connected: ${socket.id} (${userSockets.get(userIdNum)?.size} active tabs)`);
-    
-    // broadcast online users to all clients
-    const onlineUserIds = Array.from(userSockets.keys()).filter(id => isUserOnline(id));
+    const onlineUserIds = Array.from(userSockets.keys());
     io.emit("users:online", onlineUserIds);
 
-    // handle incoming messages
     socket.on("message:send", async (data) => {
       const { to, message, timestamp } = data;
       
@@ -75,12 +63,21 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         fastify.log.warn(`⚠️ Invalid message data from ${userIdNum}`);
         return;
       }
+      
+      if (typeof message !== 'string' || message.trim().length === 0)
+        return;
+      
+      if (message.length > 1000) {
+        socket.emit("message:error", { 
+          messageId: data.id, 
+          error: "Message too long (max 1000 characters)" 
+        });
+        return;
+      }
 
       const receiverUserId = Number(to);
       const messageTimestamp = timestamp || new Date().toISOString();
       const messageId = Date.now() + Math.random();
-      
-      fastify.log.info(`📨 Message from ${userIdNum} to ${receiverUserId}: ${message.substring(0, 50)}...`);
       
       const messageData = {
         id: messageId,
@@ -89,12 +86,10 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         message,
         timestamp: messageTimestamp,
       };
-      try {
 
+      try {
         const chatRep = new ChatRepository(fastify.db);
         const saveResult = await chatRep.sendMessage(userIdNum, receiverUserId, message, messageTimestamp);
-        console.log("============================================================================================================");
-        console.log("Save in database :" + saveResult);
         
         if (!saveResult.success)
           throw new Error("Failed to save message to database");
@@ -104,12 +99,8 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
           id: saveResult.messageId,
         };
 
-        if (isUserOnline(receiverUserId)) {
+        if (isUserOnline(receiverUserId))
           io.to(`user_${receiverUserId}`).emit("message:receive", finalMessageData);
-          fastify.log.info(`✅ Message delivered to user ${receiverUserId} (${getUserSockets(receiverUserId).length} tabs)`);
-        } else {
-          fastify.log.info(`📱 User ${receiverUserId} offline, message saved for later`);
-        }
 
         io.to(`user_${userIdNum}`).emit("message:sent", {
           ...finalMessageData,
@@ -117,7 +108,6 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         });
 
       } catch (error) {
-        fastify.log.error(`❌ Error handling message: ${error}`);
         socket.emit("message:error", { 
           messageId, 
           error: "Failed to send message" 
@@ -127,12 +117,10 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
     socket.on("chat:join", (chatId) => {
       socket.join(`chat_${chatId}`);
-      fastify.log.info(`👥 User ${userIdNum} joined chat ${chatId}`);
     });
 
     socket.on("chat:leave", (chatId) => {
       socket.leave(`chat_${chatId}`);
-      fastify.log.info(`👋 User ${userIdNum} left chat ${chatId}`);
     });
 
     socket.on("typing:start", (data) => {
@@ -162,18 +150,13 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         const userSocketSet = userSockets.get(userIdNum);
         if (userSocketSet) {
           userSocketSet.delete(socket.id);
-          if (userSocketSet.size === 0) {
+          if (userSocketSet.size === 0)
             userSockets.delete(userIdNum);
-            fastify.log.info(`❌ User ${userIdNum} fully disconnected`);
-          } else {
-            fastify.log.info(`📱 User ${userIdNum} tab disconnected: ${socket.id} (${userSocketSet.size} tabs remaining)`);
-          }
         }
         
         socketUsers.delete(socket.id);
         
-        // broadcast updated online users
-        const onlineUserIds = Array.from(userSockets.keys()).filter(id => isUserOnline(id));
+        const onlineUserIds = Array.from(userSockets.keys());
         io.emit("users:online", onlineUserIds);
       }
     });

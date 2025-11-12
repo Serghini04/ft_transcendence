@@ -20,38 +20,29 @@ export default function MessagesArea() {
 
   const scrollToBottom = (force = false) => {
     if (messageEndRef.current) {
-      // For new messages, use instant scroll for better UX
       const behavior = force ? "auto" : "smooth";
       messageEndRef.current.scrollIntoView({ behavior });
     }
   };
 
-  // Scroll when selecting a contact
   useEffect(() => {
     if (selectedContact) {
-      previousMessageCountRef.current = 0; // Reset counter
+      previousMessageCountRef.current = 0;
       setTimeout(() => scrollToBottom(true), 100);
     }
   }, [selectedContact]);
 
-  // Scroll when new messages are added
   useEffect(() => {
     const currentMessageCount = messages.length;
     
     if (currentMessageCount > 0) {
-      // Check if this is a new message (count increased)
       const isNewMessage = currentMessageCount > previousMessageCountRef.current;
       previousMessageCountRef.current = currentMessageCount;
       
-      if (isNewMessage) {
-        console.log("🔽 Auto-scrolling to new message");
-        // New message added - scroll immediately
+      if (isNewMessage)
         setTimeout(() => scrollToBottom(true), 50);
-      } else {
-        console.log("📜 Initial scroll to bottom");
-        // Initial load or contact switch - smooth scroll
+      else
         setTimeout(() => scrollToBottom(), 100);
-      }
     }
   }, [messages]);
 
@@ -61,11 +52,14 @@ export default function MessagesArea() {
     <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-2 min-h-0">
       {!selectedContact ? (
         <div className="h-full flex flex-col items-center justify-center text-gray-400">
-          <img src="/empty-chat.svg" alt="No chat" className="w-48 mb-4 opacity-70" />
+          <img src="/emptyContacts.png" alt="No chat" className="w-60 h-60 -mt-40 mb-4 opacity-70 rounded-3xl object-cover" />
           <p className="text-lg font-outfit">Select a contact to start chatting 💬</p>
         </div>
       ) : messages.length === 0 ? (
-        <p className="text-gray-400 text-center mt-20">No messages yet. Say hi 👋</p>
+        <div className="h-full flex flex-col items-center -mt-20 justify-center text-gray-400">
+          <img src="/sayHey.jpg" alt="No chat" className="w-58 h-58 mb-4 opacity-70 rounded-3xl object-cover" />
+          <p className="text-center">No messages yet. Say hi 👋</p>
+        </div>
       ) : (
         messages.map((msg) => {
           const currentDate = new Date(msg.timestamp);

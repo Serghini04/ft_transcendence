@@ -5,7 +5,7 @@ export default function ChatHeader({
   toggleSidebar,
   toggleHistory,
 }: any) {
-  const { selectedContact } = useChatStore();
+  const { selectedContact, onlineUsers } = useChatStore();
   
   return (
     <div className="flex h-16 justify-between items-center px-4 md:px-6 py-4 border-b-2 border-[#27445E]">
@@ -33,7 +33,7 @@ export default function ChatHeader({
               )}
               <span
                 className={`absolute bottom-0 right-0 w-3 h-3 ${
-                  selectedContact.user.status === "online" ? "bg-emerald-500" : "bg-gray-500"
+                  onlineUsers.has(selectedContact.user.id) ? "bg-emerald-500" : "bg-gray-500"
                 } rounded-full ring-2 ring-[rgba(10,20,30,0.7)]`}
               ></span>
             </div>
@@ -41,8 +41,8 @@ export default function ChatHeader({
               <p className="text-base text-white truncate font-outfit">
                 {selectedContact.user.fullName}
               </p>
-              <span className={`text-sm ${selectedContact.user.status === "online" ? "text-[#00912E]" : "text-gray-500"}`}>
-                {selectedContact.user.status}
+              <span className={`text-sm ${onlineUsers.has(selectedContact.user.id) ? "text-[#00912E]" : "text-gray-500"}`}>
+                {onlineUsers.has(selectedContact.user.id) ? "online" : "offline"}
               </span>
             </div>
           </>
@@ -61,7 +61,9 @@ export default function ChatHeader({
             </div>
           </div>
         )}
-      </div> {selectedContact && (
+      </div> 
+      
+      {selectedContact && (
         <button
           onClick={toggleHistory}
           className="!p-2 hover:!bg-white/10 !rounded-full !border-none !bg-transparent transition-colors flex-shrink-0"

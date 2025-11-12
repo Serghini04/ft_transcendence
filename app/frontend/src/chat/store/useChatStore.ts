@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
+import { axiosInstance } from "../app/axios";
 
 type ContactUser = {
     id: number;
@@ -33,8 +34,10 @@ type ChatStore = {
     selectedContact: Contact | null;
     messages: Message[];
     contacts: ContactUser[];
-    onlineUsers: number[];
+    onlineUsers: Set<number>;
     connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+    unseenMessageCounts: Map<number, number>;
+    isNotificationsMuted: boolean;
 
     connectSocket: (userId: number) => void;
     disconnectSocket: () => void;
@@ -43,6 +46,10 @@ type ChatStore = {
     setMessages: (messages: Message[]) => void;
     addMessage: (message: Message) => void;
     sendMessage: (text: string, receiverId: number) => void;
+    markMessagesAsSeen: (contactId: number) => void;
+    incrementUnseenMessages: (contactId: number) => void;
+    initializeUnseenCounts: (contacts: Contact[]) => void;
+    toggleNotificationsMute: () => void;
 
     handleIncomingMessage: (messageData: any) => void;
     handleMessageSent: (messageData: any) => void;
@@ -51,7 +58,7 @@ type ChatStore = {
     deduplicateMessages: () => void;
 };
 
-const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
 const getChatId = (userId1: number, userId2: number) => {
     const sortedIds = [userId1, userId2].sort((a, b) => a - b);
@@ -64,67 +71,38 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     socket: null,
     contacts: [],
     messages: [],
-    onlineUsers: [],
+    onlineUsers: new Set<number>(),
     connectionStatus: 'disconnected',
+    unseenMessageCounts: new Map<number, number>(),
+    isNotificationsMuted: false,
 
     connectSocket: (userId) => {
-        console.log("🔌 Attempting to connect socket with userId:", userId);
         const currentSocket = get().socket;
-        const currentLoginId = get().loginId;
         
-        // If switching users, completely reset the store
-        if (currentLoginId && currentLoginId !== userId) {
-            console.log("🔄 Switching users, resetting store");
-            if (currentSocket) {
-                currentSocket.removeAllListeners();
-                currentSocket.disconnect();
-            }
-            // Reset entire store state for new user
-            set({
-                loginId: null,
-                selectedContact: null,
-                socket: null,
-                contacts: [],
-                messages: [],
-                onlineUsers: [],
-                connectionStatus: 'disconnected'
-            });
-        }
-        
-        if (currentSocket && currentSocket.connected && currentLoginId === userId) {
-            console.log("⚠️ Socket already connected for this user, skipping");
+        if (currentSocket && currentSocket.connected)
             return;
-        }
-
-        if (currentSocket) {
-            console.log("🔄 Disconnecting existing socket");
-            currentSocket.removeAllListeners();
-            currentSocket.disconnect();
-        }
-
-        console.log("📝 Setting loginId to:", userId);
         set({ 
             loginId: userId, 
             connectionStatus: 'connecting',
-            messages: [], // Always clear messages when connecting
-            selectedContact: null // Clear selected contact
+            messages: [],
+            selectedContact: null
         });
 
-        // Use the correct backend URL for Codespace
-        const backendUrl = "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev";
-        console.log("🚀 Creating socket.io connection to", backendUrl, "with userId:", userId);
+        const isCodespace = window.location.hostname.includes('app.github.dev');
+        const backendUrl = isCodespace 
+            ? "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev"
+            : "http://localhost:3000";
+        
         const socket = io(backendUrl, {
             withCredentials: true,
             auth: { userId },
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 10,
+            transports: ['polling', 'websocket'],
             path: '/socket.io',
         });
 
         socket.on("connect", () => {
-            console.log(`Connected to socket server: ${socket.id}`);
             set({ connectionStatus: 'connected' });
 
             const { selectedContact } = get();
@@ -134,23 +112,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             }
         });
 
-        socket.on("connect_error", (error) => {
-            console.warn("Socket connection error:", error);
-            set({ connectionStatus: 'error' });
-        });
-
-        socket.on("disconnect", (reason) => {
-            console.log(`Disconnected from socket server: ${reason}`);
+        socket.on("disconnect", () => {
             set({ connectionStatus: 'disconnected' });
         });
 
         socket.on("message:receive", (messageData) => {
-            console.log("Received message:", messageData);
             get().handleIncomingMessage(messageData);
         });
 
         socket.on("message:sent", (messageData) => {
-            console.log("Message sent confirmation:", messageData);
             get().handleMessageSent(messageData);
         });
 
@@ -161,7 +131,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
         socket.on("users:online", (userIds) => {
             console.log("Online users updated:", userIds);
-            set({ onlineUsers: userIds });
+            set({ onlineUsers: new Set(userIds) });
         });
         set({ socket });
     },
@@ -175,7 +145,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             set({ 
                 socket: null, 
                 connectionStatus: 'disconnected',
-                onlineUsers: []
+                onlineUsers: new Set<number>()
             });
         }
     },
@@ -193,9 +163,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             socket: null,
             contacts: [],
             messages: [],
-            onlineUsers: [],
-            connectionStatus: 'disconnected'
+            onlineUsers: new Set<number>(),
+            connectionStatus: 'disconnected',
+            unseenMessageCounts: new Map<number, number>(),
+            isNotificationsMuted: false
         });
+    },
+
+    toggleNotificationsMute: () => {
+        const { isNotificationsMuted } = get();
+        set({ isNotificationsMuted: !isNotificationsMuted });
+        console.log(`🔔 Notifications ${!isNotificationsMuted ? 'muted' : 'unmuted'}`);
     },
 
     setSelectedContact: (contact) => {
@@ -206,16 +184,25 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             socket.emit("chat:leave", oldChatId);
         }
 
-        // Always clear messages when switching contacts
-        // ContactsList will fetch fresh messages from API
         set({ 
             selectedContact: contact,
-            messages: [] // Always clear - let ContactsList fetch fresh data
+            messages: []
         });
 
         if (contact && socket && loginId) {
             const newChatId = getChatId(loginId, contact.user.id);
             socket.emit("chat:join", newChatId);
+            
+            get().markMessagesAsSeen(contact.user.id);
+            
+            axiosInstance.patch(`api/v1/chat/messages/${contact.user.id}/seen`, {}, {
+                headers: {
+                    'x-user-id': loginId.toString(),
+                    'Content-Type': 'application/json'
+                }
+            }).catch(error => {
+                console.error('Failed to mark messages as seen on server:', error);
+            });
         }
     },
 
@@ -278,10 +265,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     handleIncomingMessage: (messageData) => {
         const { from, message, timestamp, id } = messageData;
         const { selectedContact, loginId } = get();
-        
-        console.log("📥 Incoming message:", { from, to: loginId, selectedContact: selectedContact?.user.id, message });
-        
-        // Only add message if it's for the currently selected conversation
+
+        if (from === loginId) 
+            return;
+
         if (selectedContact && selectedContact.user.id === from && loginId) {
             const newMessage: Message = {
                 id: id || generateMessageId(),
@@ -291,34 +278,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 from,
                 to: loginId
             };
-            
-            console.log("✅ Adding message to current conversation");
             get().addMessage(newMessage);
-        } else {
-            console.log("🚫 Message ignored - not for current conversation or no contact selected");
-        }
+        } else
+            get().incrementUnseenMessages(from);
     },
 
     handleMessageSent: (messageData) => {
         const { id: realId, message, timestamp, from, to } = messageData;
         const { selectedContact, loginId } = get();
         
-        console.log("📤 Message sent confirmation:", { realId, from, to, selectedContact: selectedContact?.user.id });
-        
-        // Only process if this message belongs to the current conversation
-        if (!selectedContact || !loginId) {
-            console.log("🚫 No active conversation, ignoring sent confirmation");
+        if (!selectedContact || !loginId)
             return;
-        }
         
         const isCurrentConversation = 
             (from === loginId && to === selectedContact.user.id) || 
             (from === selectedContact.user.id && to === loginId);
             
-        if (!isCurrentConversation) {
-            console.log("🚫 Message not for current conversation, ignoring");
+        if (!isCurrentConversation)
             return;
-        }
         
         const existingMessage = get().messages.find(msg => 
             msg.id === realId || 
@@ -326,15 +303,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         );
 
         if (existingMessage) {
-            console.log("✅ Updating optimistic message");
-            // Update existing optimistic message
             set((state) => ({
                 messages: state.messages.map(msg => {
                     if (msg.id === existingMessage.id || 
                         (msg.text === message && msg.status === 'sending')) {
                         return {
                             ...msg,
-                            id: realId, // update with real database ID
+                            id: realId,
                             status: 'sent' as const
                         };
                     }
@@ -342,8 +317,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 })
             }));
         } else {
-            // This is a message sent from another tab of the same user
-            // Add it as a new message if it's for the current chat
             if (selectedContact && 
                 ((from === loginId && to === selectedContact.user.id) || 
                  (from === selectedContact.user.id && to === loginId))) {
@@ -386,19 +359,35 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 seen.add(key);
                 return true;
             });
-            
-            // Sort by timestamp
+
             uniqueMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
             
             return { messages: uniqueMessages };
         });
+    },
+
+    markMessagesAsSeen: (contactId) => {
+        set((state) => {
+            const newCounts = new Map(state.unseenMessageCounts);
+            newCounts.set(contactId, 0);
+            return { unseenMessageCounts: newCounts };
+        });
+    },
+
+    incrementUnseenMessages: (contactId) => {
+        set((state) => {
+            const newCounts = new Map(state.unseenMessageCounts);
+            const currentCount = newCounts.get(contactId) || 0;
+            newCounts.set(contactId, currentCount + 1);
+            return { unseenMessageCounts: newCounts };
+        });
+    },
+
+    initializeUnseenCounts: (contacts: Contact[]) => {
+        const newCounts = new Map<number, number>();
+        contacts.forEach(contact => {
+            newCounts.set(contact.user.id, contact.unseenMessages);
+        });
+        set({ unseenMessageCounts: newCounts });
     }
 }));
-
-// Auto-cleanup on page unload
-if (typeof window !== 'undefined') {
-    window.addEventListener('beforeunload', () => {
-        const store = useChatStore.getState();
-        store.disconnectSocket();
-    });
-}

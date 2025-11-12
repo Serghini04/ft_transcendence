@@ -23,13 +23,27 @@ async function getConversationBetweenUsers(req: FastifyRequest, res: FastifyRepl
     const recipient = await userRepo.getUserById(id);
     if (!recipient)
         return res.code(404).send({ error: "Received User not found" });
-    
-    const usreRepo = new userRepository(req.server.db);
     const messages = await chatRepo.getConversationBetweenUsers(userId, id);
+    
+    chatRepo.markMessagesAsSeen(userId, id);
+    
     return res.code(200).send(messages);
+}
+
+async function markMessagesAsSeen(req: FastifyRequest, res: FastifyReply) {
+    const chatRepo = new ChatRepository(req.server.db);
+    const {id} = req.params as {id:number}
+    const userId = Number(req.headers['x-user-id']);
+    
+    if (userId === id)
+        return res.code(400).send({ error: "You cannot mark messages with yourself as seen"});
+    
+    chatRepo.markMessagesAsSeen(userId, id);
+    return res.code(200).send({ success: true });
 }
 
 export const chatController = {
     getAllContacts,
-    getConversationBetweenUsers
+    getConversationBetweenUsers,
+    markMessagesAsSeen
 }

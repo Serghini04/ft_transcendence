@@ -1,7 +1,8 @@
-[ ] check code
+[x] fix show icon
+[x] fix show history icon
+[x] add img and check if fetch failed
+[x] add counter of new messages
 [ ] refactor code
-[ ] fix show icon
-[ ] fix show history icon
-[ ] add img and check if fetch failed
-[ ] add counter of new messages
-[ ] add bock featcher
+[ ] add block feature
+[ ] add Launch a feature featcher
+[ ] add protection in backend

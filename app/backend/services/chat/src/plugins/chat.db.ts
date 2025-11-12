@@ -31,7 +31,8 @@ db.exec(`
     user2_id INTEGER NOT NULL,
     type VARCHAR(20) NOT NULL CHECK(type IN ('friend', 'blocked', 'pending')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    unseen_messages INTEGER NOT NULL DEFAULT 0,
+    user1_unseen_messages INTEGER NOT NULL DEFAULT 0,
+    user2_unseen_messages INTEGER NOT NULL DEFAULT 0,
     UNIQUE(user1_id, user2_id),
     FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE
