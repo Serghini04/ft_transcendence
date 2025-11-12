@@ -1,4 +1,3 @@
-// import AppRoutes from "./components/AppRoutes";
 import HeaderBar from "./components/HeaderBar";
 import SideMenu from "./components/SideMenu";
 import UrTask from "./urtask/components/index";
