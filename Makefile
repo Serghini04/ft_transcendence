@@ -64,7 +64,7 @@ test-consumer:
 
 dev:
 	@echo "🔧 Starting Frontend Development Mode..."
-	@docker-compose --profile development up frontend-dev
+	@docker-compose --profile development up frontend-dev -d
 
 dev-full:
 	@echo "🚀 Starting Full Development Stack..."
