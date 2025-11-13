@@ -83,14 +83,17 @@ stop-all:
 
 delete-all: stop-all
 	@bash -c 'source $(MESSAGES) && msg_delete_all_start'
-	@if [ -n "$$(docker volume ls -q)" ]; then \
-		docker volume rm $$(docker volume ls -q) 2>/dev/null || true; \
+	@echo "⚠️  NOTE: this 'delete-all' target has been limited to project-specific artifacts only. It will NOT remove global/system images or unrelated volumes."
+	# Remove only known project docker-compose volumes (if present)
+	@if [ -n "$$(docker volume ls -q -f name=prometheus-data -f name=alertmanager-data -f name=grafana-data -f name=elasticsearch-data)" ]; then \
+		docker volume rm $$(docker volume ls -q -f name=prometheus-data -f name=alertmanager-data -f name=grafana-data -f name=elasticsearch-data) 2>/dev/null || true; \
 		bash -c 'source $(MESSAGES) && msg_delete_all_volumes_done'; \
 	else \
 		bash -c 'source $(MESSAGES) && msg_delete_all_volumes_none'; \
 	fi
 	@bash -c 'source $(MESSAGES) && msg_delete_all_images'
-	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|loki|promtail|kafka-producer|kafka-consumer|kafka-ui):" | xargs -r docker rmi -f 2>/dev/null || true
+	# Remove only images built by this project to avoid deleting shared infra images
+	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(service-a|service-b|service-c|service-d|frontend|frontend-dev|kafka-ui|kafka-producer|kafka-consumer):" | xargs -r docker rmi -f 2>/dev/null || true
 	@bash -c 'source $(MESSAGES) && msg_delete_all_complete'
 
 

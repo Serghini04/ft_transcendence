@@ -38,8 +38,8 @@ app.register(chatRoutes, { prefix: "/api/v1/chat"});
 const start = async () => {
   try {
     await app.listen({ port: 3003, host: '0.0.0.0' });
-    app.log.info("🚀 Chat Service running at http://0.0.0.0:3000");
-    app.log.info("🌐 Public URL: https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev");
+    app.log.info("🚀 Chat Service running at http://0.0.0.0:3003");
+    app.log.info("🌐 Public URL: https://orange-spork-gwpjvgpgxjwfvxx9-3003.app.github.dev");
   } catch (err) {
     app.log.error(err);
     process.exit(1);
