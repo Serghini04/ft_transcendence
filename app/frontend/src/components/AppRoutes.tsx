@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
-import Chat from "../chat/components/Chat";
+import MainComponent from "../userAuth/LoginAndSignup/components/MainComponent";
+import { Chat } from "@mui/icons-material";
 
 export default function AppRoutes() {
     return (
