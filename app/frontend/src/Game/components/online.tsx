@@ -13,15 +13,11 @@ interface GameState {
   winner?: "left" | "right" | null;
 }
 
-interface Player {
-  id: number;
+interface UserProfile {
+  id: string;
   name: string;
-  image: string;
-}
-
-interface Players {
-  first: Player;
-  second: Player;
+  avatar: string;
+  side: "left" | "right";
 }
 
 export default function Online() {
@@ -38,6 +34,12 @@ export default function Online() {
   const [restartReady, setRestartReady] = useState({ left: false, right: false });
   const [waitingForRestart, setWaitingForRestart] = useState(false);
   const [forfeitWin, setForfeitWin] = useState(false);
+  
+  // User profiles
+  const [yourProfile, setYourProfile] = useState<UserProfile | null>(null);
+  const [opponentProfile, setOpponentProfile] = useState<UserProfile | null>(null);
+  const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
+  const [loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
 
   const [state, setState] = useState<GameState>({
     canvas: { width: 1200, height: 675 },
@@ -47,18 +49,6 @@ export default function Online() {
     powerUp: { found: false, x: 0, y: 0, width: 0, height: 0, visible: false, duration: 0, spawnTime: null },
     winner: null,
   });
-
-  const [players, setPlayers] = useState<Players>({
-    first: { id: 0, name: "", image: "" },
-    second: { id: 0, name: "", image: "" },
-  });
-
-  useEffect(() => {
-  axios
-    .get("http://localhost:5000/api/players")
-    .then((response) => setPlayers(response.data))
-    .catch((error) => console.error("Error fetching players:", error));
-  }, []);
 
   const location = useLocation();
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
@@ -86,14 +76,23 @@ export default function Online() {
     const s = io("http://localhost:8080", {transports: ['websocket']});
     setSocket(s);
 
-    s.emit("joinGame", { map, powerUps, speed });
+    // Get current user ID (replace with your auth system)
+    const currentUserId = localStorage.getItem('userId') || `user_${Date.now()}`;
+    
+    s.emit("joinGame", { userId: currentUserId, options: { map, powerUps, speed } });
     console.log("Joining game with settings:", { map, powerUps, speed });
     s.on("connect", () => console.log("🔗 Connected:", s.id));
     s.on("waiting", () => setWaiting(true));
 
-    s.on("start", ({ side }) => {
+    s.on("start", ({ side, opponent, you }: { side: "left" | "right", opponent: UserProfile, you: UserProfile }) => {
       console.log("🚀 Match started as:", side);
+      console.log("👤 Your profile:", you);
+      console.log("🎮 Opponent:", opponent);
       setSide(side);
+      setYourProfile(you);
+      yourProfile!.side = side;
+      setOpponentProfile(opponent);
+      opponentProfile!.side = side === "left" ? "right" : "left";
       setWaiting(false);
       setTime(0);
       setWinner(null);
@@ -105,18 +104,24 @@ export default function Online() {
       setState(data);
     });
 
-    s.on("gameOver", ({ winner }: { winner: "left" | "right" }) => {
-      if (side == winner)
-        console.log("🏆 You won!");
-      else
-        console.log("😞 You lost.");
+    s.on("gameOver", ({ winner, winnerProfile, loserProfile}: { 
+      winner: "left" | "right", 
+      winnerProfile: UserProfile,
+      loserProfile: UserProfile,
+      scores: { left: number, right: number },
+      duration: number
+    }) => {
+      console.log("🏆 Game Over!", { winner, winnerProfile, loserProfile});
       setWinner(winner);
       winnerRef.current = winner;
+      setWinnerProfile(winnerProfile);
+      setLoserProfile(loserProfile);
     });
 
-    s.on("restartReady", ({ leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
+    s.on("restartReady", ({side, leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
       setRestartReady({ left: leftReady, right: rightReady });
-      console.log("Restart ready status:", { leftReady, rightReady });
+      if (side ===  opponentProfile?.side)
+        console.log("🔄 Opponent is ready to restart");
     });
 
     s.on("gameRestarted", () => {
@@ -316,8 +321,18 @@ export default function Online() {
           }}
         >
           <div className="flex items-center gap-3 w-20">
-            <img src={players.first.image} alt="" className="h-10 rounded-full" />
-            <span className="text-[22px] font-semibold">{state.scores.left}</span>
+            {side === "left" && yourProfile && (
+              <>
+                <img src={yourProfile.avatar} alt={yourProfile.name} className="h-10 w-10 rounded-full object-cover" />
+                <span className="text-[22px] font-semibold">{state.scores.left}</span>
+              </>
+            )}
+            {side === "right" && opponentProfile && (
+              <>
+                <img src={opponentProfile.avatar} alt={opponentProfile.name} className="h-10 w-10 rounded-full object-cover" />
+                <span className="text-[22px] font-semibold">{state.scores.left}</span>
+              </>
+            )}
           </div>
 
           <div
@@ -335,7 +350,12 @@ export default function Online() {
 
           <div className="flex items-center gap-3 w-20">
             <span className="text-[22px] font-semibold">{state.scores.right}</span>
-            <img src={players.second.image} alt="" className="h-10 rounded-full" />
+            {side === "right" && yourProfile && (
+              <img src={yourProfile.avatar} alt={yourProfile.name} className="h-10 w-10 rounded-full object-cover" />
+            )}
+            {side === "left" && opponentProfile && (
+              <img src={opponentProfile.avatar} alt={opponentProfile.name} className="h-10 w-10 rounded-full object-cover" />
+            )}
           </div>
         </div>
       </div>
@@ -347,17 +367,17 @@ export default function Online() {
         <canvas ref={canvasRef} width={state.canvas.width} height={state.canvas.height} className="w-full h-full" />
 
         {/* Winner Overlay */}
-        {winner && (
+        {winner && winnerProfile && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20 rounded-tl-4xl">
             <img
-              src={winner === "left" ? players.first.image : players.second.image}
-              alt="Winner"
-              className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4"
+              src={winnerProfile.avatar}
+              alt={winnerProfile.name}
+              className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4 object-cover"
             />
             <h2 className="text-white text-3xl font-bold text-center mb-4">
               {forfeitWin 
                 ? (winner === side ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
-                : (winner === side ? "🏆 You Won!" : `😞 ${winner === "left" ? players.first.name : players.second.name} Won!`)
+                : (winner === side ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
               }
             </h2>
             {forfeitWin && (

@@ -1,9 +1,17 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Server } from "socket.io";
+import { initDatabase, saveGameResult, getUserGames, getUserStats, getRecentGames} from './database.js';
+import { getUserProfile} from './userService.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
 const fastify = Fastify();
 await fastify.register(cors, { origin: "*" });
+
+// Initialize database
+initDatabase();
 
 // Create HTTP server for Socket.IO
 const server = fastify.server;
@@ -31,7 +39,7 @@ function initGameState(powerUps, speed) {
       vx: 4,
       vy: 3,
       speed: speed,
-      visible: true,     // can hide during power-ups or transitions
+      visible: true,
     },
     paddles: {
       left: {
@@ -68,13 +76,26 @@ function initGameState(powerUps, speed) {
 }
 
 
-function createRoom(p1, p2, configKey, options) {
+async function createRoom(p1, p2, configKey, options) {
   const id = Date.now().toString();
   const state = initGameState(options.powerUps, speedMap[options.speed]);
+  
+  // Fetch user profiles
+  const [player1Profile, player2Profile] = await Promise.all([
+    getUserProfile(p1.data.userId),
+    getUserProfile(p2.data.userId)
+  ]);
+  
   rooms.set(id, { 
     players: [p1, p2], 
     state, 
     configKey,
+    options,
+    startTime: Date.now(),
+    playerProfiles: {
+      left: player1Profile,
+      right: player2Profile
+    },
     restartReady: { left: false, right: false } // Track who's ready to restart
   });
 
@@ -86,11 +107,22 @@ function createRoom(p1, p2, configKey, options) {
   p1.data.roomId = id;
   p2.data.roomId = id;
 
-  p1.emit("start", { side: "left", roomId: id });
-  p2.emit("start", { side: "right", roomId: id });
+  // Send game start with player profiles
+  p1.emit("start", { 
+    side: "left", 
+    roomId: id,
+    opponent: player2Profile,
+    you: player1Profile
+  });
+  p2.emit("start", { 
+    side: "right", 
+    roomId: id,
+    opponent: player1Profile,
+    you: player2Profile
+  });
 
   console.log(`✅ Room ${id} created for config ${configKey}`);
-  console.log(`   ↳ ${p1.id} (left) vs ${p2.id} (right)`);
+  console.log(`   ↳ ${player1Profile.name} (left) vs ${player2Profile.name} (right)`);
 }
 
 function resetBall(state) {
@@ -156,10 +188,78 @@ function updateGame(roomId) {
   // win condition
   if (scores.left >= 5) {
     room.state.winner = "left";
-    io.to(roomId).emit("gameOver", { winner: "left" });
+    const profiles = room.playerProfiles;
+    
+    // Save game result to database
+    try {
+      saveGameResult({
+        gameId: roomId,
+        mode: 'online',
+        player1: {
+          id: profiles.left.id,
+          name: profiles.left.name,
+          avatar: profiles.left.avatar,
+          score: scores.left
+        },
+        player2: {
+          id: profiles.right.id,
+          name: profiles.right.name,
+          avatar: profiles.right.avatar,
+          score: scores.right
+        },
+        winner: {
+          id: profiles.left.id
+        },
+        createdAt: room.startTime,
+      });
+      console.log(`💾 Game ${roomId} saved - Winner: ${profiles.left.name}`);
+    } catch (error) {
+      console.error('❌ Failed to save game result:', error);
+    }
+    
+    io.to(roomId).emit("gameOver", { 
+      winner: "left",
+      winnerProfile: profiles.left,
+      loserProfile: profiles.right,
+      scores: { left: scores.left, right: scores.right },
+    });
   } else if (scores.right >= 5) {
     room.state.winner = "right";
-    io.to(roomId).emit("gameOver", { winner: "right" });
+    const profiles = room.playerProfiles;
+    
+    // Save game result to database
+    try {
+      saveGameResult({
+        gameId: roomId,
+        mode: 'online',
+        player1: {
+          id: profiles.left.id,
+          name: profiles.left.name,
+          avatar: profiles.left.avatar,
+          score: scores.left
+        },
+        player2: {
+          id: profiles.right.id,
+          name: profiles.right.name,
+          avatar: profiles.right.avatar,
+          score: scores.right
+        },
+        winner: {
+          id: profiles.right.id,
+        },
+        createdAt: room.startTime,
+      });
+      console.log(`💾 Game ${roomId} saved - Winner: ${profiles.right.name}`);
+    } catch (error) {
+      console.error('❌ Failed to save game result:', error);
+    }
+    
+    io.to(roomId).emit("gameOver", { 
+      winner: "right",
+      winnerProfile: profiles.right,
+      loserProfile: profiles.left,
+      scores: { left: scores.left, right: scores.right },
+    });
   }
 
   handlePowerUps(room.state);
@@ -220,9 +320,12 @@ io.on("connection", (socket) => {
   console.log(`🟢 ${socket.id} connected`);
 
   // Player joins queue with selected configuration
-  socket.on("joinGame", ( options = { map: "Classic", powerUps: false, speed: "Normal" }) => {
+  socket.on("joinGame", async ({ userId, options = { map: "Classic", powerUps: false, speed: "Normal" } }) => {
+    // Store userId on socket
+    socket.data.userId = userId || socket.id;
+    
     const configKey = JSON.stringify(options);
-    console.log(`🎮 ${socket.id} wants to play -> ${configKey}`);
+    console.log(`🎮 ${socket.id} (${socket.data.userId}) wants to play -> ${configKey}`);
     const waiting = waitingPlayers.get(configKey);
 
     if (!waiting) {
@@ -235,7 +338,7 @@ io.on("connection", (socket) => {
       const opponent = waiting;
       waitingPlayers.delete(configKey);
       console.log(`🎯 Match found: ${socket.id} vs ${opponent.id} for ${configKey}`);
-      createRoom(opponent, socket, configKey, options);
+      await createRoom(opponent, socket, configKey, options);
       
     }
   });
@@ -319,5 +422,56 @@ io.on("connection", (socket) => {
 });
 
 // ---------------- Start Server ----------------
+// REST API endpoints
+fastify.get('/api/games/user/:userId', async (request, reply) => {
+  const { userId } = request.params;
+  const { limit = 10 } = request.query;
+  
+  try {
+    const games = getUserGames(userId, parseInt(limit));
+    return { success: true, games };
+  } catch (error) {
+    reply.code(500);
+    return { success: false, error: error.message };
+  }
+});
+
+fastify.get('/api/games/stats/:userId', async (request, reply) => {
+  const { userId } = request.params;
+  
+  try {
+    const stats = getUserStats(userId);
+    return { success: true, stats };
+  } catch (error) {
+    reply.code(500);
+    return { success: false, error: error.message };
+  }
+});
+
+fastify.get('/api/games/recent', async (request, reply) => {
+  const { limit = 10 } = request.query;
+  
+  try {
+    const games = getRecentGames(parseInt(limit));
+    return { success: true, games };
+  } catch (error) {
+    reply.code(500);
+    return { success: false, error: error.message };
+  }
+});
+
+// fastify.get('/api/games/leaderboard', async (request, reply) => {
+//   const { limit = 10 } = request.query;
+  
+//   try {
+//     const leaderboard = getLeaderboard(parseInt(limit));
+//     return { success: true, leaderboard };
+//   } catch (error) {
+//     reply.code(500);
+//     return { success: false, error: error.message };
+//   }
+// });
+
 await fastify.listen({ port: 8080 });
 console.log("🚀 Socket.IO server running on ws://localhost:8080");
+console.log("🚀 REST API running on http://localhost:8080");
