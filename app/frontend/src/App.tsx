@@ -11,7 +11,7 @@ function App() {
       <Routes>
         <Route path="/auth" element={<MainComponent />} />
         <Route path="/" element={<Navigate to="/home" />} />
-        <Route path="/home" element={<Home />} />
+        <Route path="/home/*" element={<Home />} />
       </Routes>
     </BrowserRouter>
   );

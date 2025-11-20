@@ -8,14 +8,23 @@ import { useNavigate } from "react-router-dom";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { token } = UseTokenStore();
+  const { token, setToken } = UseTokenStore();
 
   useEffect(() => {
     async function check() {
-      const valid = await isValidToken(token);
-      if (!valid) navigate("/auth");
+      console.log("Token validity check:", isValidToken(token));
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+        console.log("mnin ana:", result.valid);
+        navigate("/auth");
+      }
+      
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
     }
-  
+
     check();
   }, [token, navigate]);
     

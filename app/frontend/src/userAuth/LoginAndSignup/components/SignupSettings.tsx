@@ -30,6 +30,7 @@ export default function SignuoSettings()
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ name, email, password, cpassword }),
+			credentials: "include"
 		});
 		
 		const data = await res.json();
@@ -51,7 +52,7 @@ export default function SignuoSettings()
 			setToken(data.AccessToken);
 			// set user info
 			setUser({id: data.user.id, name: data.user.name, email: data.user.email});
-			
+
 			navigate("/home");
 			console.log("Signup successful:", data);
 		}

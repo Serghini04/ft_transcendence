@@ -1,12 +1,12 @@
 import fastify from "fastify";
 import "./db.ts";
 import db from "./db.ts"; // no extension with ts-node
-import cors from "@fastify/cors";
 import bcrypt from "bcrypt";
 import { Console, error } from "console";
 import {OAuth2Client } from "google-auth-library";
 import { request } from "http";
-import { authenticateToken, generateJwtAccessToken, generateJwtRefreshToken } from "./jwt.ts";
+import { authenticateToken, generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.ts";
+import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 
 
@@ -19,9 +19,14 @@ interface User {
 
 
 const app = fastify();
-await app.register(cors, {
-  origin: true, // for development only
+await app.register(cookie, {
+  secret: process.env.COOKIE_SECRET,
 });
+await app.register(cors, {
+  origin: "http://localhost:5173", // for development only
+  credentials: true,
+});
+
 
 
 db.prepare(`DROP TABLE IF EXISTS users`).run();
@@ -90,8 +95,16 @@ app.post("/api/auth/googleSignup", async (request, reply) => {
     const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+    console.log("Refresh Token:", RefreshToken); 
     // console.log("Generated JWT Token:", AccessToken);
-    reply.send({
+    reply.setCookie("refreshToken", RefreshToken, {
+      httpOnly: true,
+      secure: false,     
+      sameSite: "lax",
+      path: "/",          
+      maxAge: 60 * 60 * 24 * 7, 
+    })
+    .status(201).send({
         message: "Google signup success",
         AccessToken: AccessToken,
         user: userInfo,
@@ -138,7 +151,18 @@ app.post("/api/auth/googleLogin", async (request, reply) => {
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     console.log("Generated JWT Token:", AccessToken);
-    reply.send({message : "Google Login successful", AccessToken: AccessToken, user: userInfo, code: "USER_ADDED_SUCCESS" });
+    reply.setCookie("refreshToken", RefreshToken, {
+      httpOnly: true,
+      secure: false,     
+      sameSite: "lax",
+      path: "/",       
+      maxAge: 60 * 60 * 24 * 7, 
+    })
+    .status(201).send({
+      message : "Google Login successful",
+      AccessToken: AccessToken,
+      user: userInfo,
+      code: "USER_ADDED_SUCCESS" });
   }
   catch(err){
     console.error(err);
@@ -183,7 +207,18 @@ app.post("/api/auth/login", async (request, reply) => {
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     console.log("Generated JWT Token:", AccessToken);
-    reply.send({ message: "Login successful", AccessToken: AccessToken, user: userInfo, code: "USER_ADDED_SUCCESS" });
+    reply.setCookie("refreshToken", RefreshToken, {
+      httpOnly: true,
+      secure: false, 
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    })
+    .status(201).send({ 
+      message: "Login successful",
+      AccessToken: AccessToken,
+      user: userInfo,
+      code: "USER_ADDED_SUCCESS" });
 
   } catch (err) {
     console.error(err);
@@ -239,7 +274,18 @@ app.post("/api/auth/signup", async (request, reply) => {
       const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
       const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
       
-      reply.status(201).send({ message: "User added successfully", AccessToken: AccessToken, user: userInfo, code: "USER_ADDED_SUCCESS" });
+      reply.setCookie("refreshToken", RefreshToken, {
+        httpOnly: true,
+        secure: false,      
+        sameSite: "lax",
+        path: "/",           
+        maxAge: 60 * 60 * 24 * 7, 
+      })
+      .status(201).status(201).send({
+        message: "User added successfully",
+        AccessToken: AccessToken,
+        user: userInfo,
+        code: "USER_ADDED_SUCCESS" });
     } catch (err: any) {
         console.error(err);
         reply.status(500).send({ error: "Internal server error" });
@@ -248,11 +294,6 @@ app.post("/api/auth/signup", async (request, reply) => {
 
 app.get("/protect", {preHandler: authenticateToken}, async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
-});
-
-app.get("/users", async () => {
-  const users = db.prepare("SELECT * FROM users").all();
-  return users;
 });
 
 app.listen({ port: 8080 }, (err, address) => {

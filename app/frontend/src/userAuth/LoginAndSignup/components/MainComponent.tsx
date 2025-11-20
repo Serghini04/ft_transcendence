@@ -12,14 +12,17 @@ export default function MainComponent()
   const navigate = useNavigate();
   const { token } = UseTokenStore();
 
-  useEffect(() => {
-    async function check() {
-      const valid = await isValidToken(token);
-      if (valid) navigate("/home");
-    }
-  
-    check();
-  }, [token, navigate]);
+   useEffect(() => {
+      async function check() {
+        const result = await isValidToken(token);
+        if (result.valid)
+        {
+          navigate("/home");
+        }
+      }
+
+      check();
+    }, [token, navigate]);
 	return (
 		<>
 			<div className="flex flex-col  xl:flex-row overflow-y-scroll h-screen w-full bg-[url('/src/userAuth/LoginAndSignup/iconsAndImages/mainBG.png')] bg-cover">
