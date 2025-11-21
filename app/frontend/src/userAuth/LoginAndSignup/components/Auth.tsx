@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { UseTokenStore } from "../zustand/useStore";
 import { useEffect } from "react";
 
-export default function MainComponent()
+export default function Auth()
 {
 
   const navigate = useNavigate();
