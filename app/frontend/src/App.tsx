@@ -1,27 +1,26 @@
 import './index.css';
-import AppRoutes from "./components/AppRoutes";
-import HeaderBar from "./components/HeaderBar";
-import SideMenu from "./components/SideMenu";
-import { useState } from "react";
 
-import { BrowserRouter as Router } from "react-router-dom";
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import MainLayout from './components/MainLayout';
+import Home from './userAuth/dashboard/Home';
+import Settings from './userAuth/settings/components/Settings';
+import Auth from './userAuth/LoginAndSignup/components/Auth';
 
 export default function App() {
-
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const handleMenuToggle = () => setMenuOpen((prev) => !prev);
-  const handleMenuClose = () => setMenuOpen(false);
-
   return (
     <Router>
-      <div className="relative min-h-screen text-white">
-        <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
+      <Routes>
 
-        <SideMenu open={menuOpen} onClose={handleMenuClose} />
-        <HeaderBar onMenuToggle={handleMenuToggle} />
-        <AppRoutes />
-      </div>
+        {/* Auth is outside MainLayout */}
+        <Route path="/auth" element={<Auth />} />
+
+        {/* All other routes use MainLayout */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Navigate to="/home" />} />
+          <Route path="/home/*" element={<Home />} />
+          <Route path="/settings/*" element={<Settings />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }
