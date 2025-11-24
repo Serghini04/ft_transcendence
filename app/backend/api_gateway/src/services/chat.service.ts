@@ -5,7 +5,7 @@ export async function chatService(app: FastifyInstance) {
   app.log.info("Registering Chat Service proxy...");
 
   app.register(proxy, {
-    upstream: "http://localhost:3000",
+    upstream: "http://localhost:3003",
     prefix: "/api/v1/chat",
     rewritePrefix: "/api/v1/chat",
     

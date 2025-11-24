@@ -20,12 +20,7 @@ const app = Fastify({
 });
 
 app.register(cors, {
-  origin: [
-    "https://orange-spork-gwpjvgpgxjwfvxx9-5173.app.github.dev",
-    "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
-  ],
+  origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-user-id"]
@@ -39,7 +34,6 @@ const start = async () => {
   try {
     await app.listen({ port: 3003, host: '0.0.0.0' });
     app.log.info("🚀 Chat Service running at http://0.0.0.0:3003");
-    app.log.info("🌐 Public URL: https://orange-spork-gwpjvgpgxjwfvxx9-3003.app.github.dev");
   } catch (err) {
     app.log.error(err);
     process.exit(1);

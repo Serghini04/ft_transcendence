@@ -1,0 +1,50 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json.*.tmp
+
+# Build output
+dist/
+build/
+out/
+.next/
+.parcel-cache/
+.cache/
+coverage/
+
+# Environment files
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Editor/IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.iml
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.eslintcache
+*.tgz
+*.pid
+*.seed
+*.sqlite3

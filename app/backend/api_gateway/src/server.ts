@@ -15,8 +15,10 @@ const app = Fastify({
 });
 
 app.register(cors, {
-  origin: "https://orange-spork-gwpjvgpgxjwfvxx9-5173.app.github.dev/",
+  origin: true,
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-user-id"]
 });
 
 app.addHook("onRequest", authMiddleware);
@@ -24,8 +26,8 @@ app.register(chatService);
 
 const start = async () => {
   try {
+    await app.listen({ port: 8080, host:"localhost"});
     await setupSocketGateway(app);
-    await app.listen({ port: 8080 });
     app.log.info("🚀 API Gateway running at http://localhost:8080");
   } catch (err) {
     app.log.error(err);

@@ -5,7 +5,7 @@ import { io as ClientIO } from "socket.io-client";
 export function setupSocketGateway(app: FastifyInstance) {
   const io = new Server(app.server, {
     cors: {
-      origin: "https://orange-spork-gwpjvgpgxjwfvxx9-5173.app.github.dev/",
+      origin: true,
       credentials: true,
     },
   });
@@ -19,7 +19,7 @@ export function setupSocketGateway(app: FastifyInstance) {
 
     app.log.info(`🔌 User connected via Gateway: ${userId}`);
 
-    const chatSocket = ClientIO("http://localhost:3000", {
+    const chatSocket = ClientIO("http://localhost:3003", {
       withCredentials: true,
       auth: { userId },
     });

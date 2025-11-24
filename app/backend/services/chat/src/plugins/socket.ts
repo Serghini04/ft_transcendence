@@ -19,12 +19,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
     const io = new Server(fastify.server, {
     path: "/socket.io",
     cors: {
-      origin: [
-        "https://orange-spork-gwpjvgpgxjwfvxx9-5173.app.github.dev",
-        "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-      ],
+      origin: true,
       credentials: true,
     },
   });

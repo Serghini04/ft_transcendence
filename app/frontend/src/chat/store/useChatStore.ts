@@ -87,13 +87,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             messages: [],
             selectedContact: null
         });
-
-        const isCodespace = window.location.hostname.includes('app.github.dev');
-        const backendUrl = isCodespace 
-            ? "https://orange-spork-gwpjvgpgxjwfvxx9-3000.app.github.dev"
-            : "http://localhost:3000";
         
-        const socket = io(backendUrl, {
+        const socket = io("http://localhost:8080", {
             withCredentials: true,
             auth: { userId },
             reconnection: true,
