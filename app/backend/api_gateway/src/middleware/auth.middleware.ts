@@ -48,7 +48,6 @@ export default async function authMiddleware(req: FastifyRequest, reply: Fastify
   }
 
   try {
-    console.log("==================> "+ process.env.JWT_SECRET! + "<==================");
     const decoded = jwt.verify(accessToken, process.env.JWT_SECRET!) as UserPayload;
     req.user = decoded;
     req.headers["x-user-id"] = req.user.id.toString();

@@ -31,9 +31,6 @@ axiosInstance.interceptors.response.use(
 
     if (error.response) {
       const validation = await verifyToken(error.response.data);
-      console.log("-----------------> VALIDATION:", validation);
-      console.log("-----------------> ERROR RESPONSE DATA:", error.response.data);
-
       if (!validation.valid) {
         // setToken("");
         window.location.href = "/auth";
