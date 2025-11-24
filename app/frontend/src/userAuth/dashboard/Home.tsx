@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-// import AppRoutes from "../../components/AppRoutes";
-import HeaderBar from "../../components/HeaderBar";
-import SideMenu from "../../components/SideMenu";
-import isValidToken from "../globalUtils/isValidToken";
+import { useEffect} from "react";
+import isValidToken from "../../globalUtils/isValidToken";
 import { UseTokenStore } from "../LoginAndSignup/zustand/useStore";
 import { useNavigate } from "react-router-dom";
 
@@ -12,11 +9,9 @@ export default function Home() {
 
   useEffect(() => {
     async function check() {
-      console.log("Token validity check:", isValidToken(token));
       const result = await isValidToken(token);
       if (!result.valid)
       {
-        console.log("mnin ana:", result.valid);
         navigate("/auth");
       }
       
@@ -27,11 +22,6 @@ export default function Home() {
 
     check();
   }, [token, navigate]);
-    
-    const [menuOpen, setMenuOpen] = useState(false);
-  
-    const handleMenuToggle = () => setMenuOpen((prev) => !prev);
-    const handleMenuClose = () => setMenuOpen(false);
   
     return (
       <div

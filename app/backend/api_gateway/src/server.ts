@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import authMiddleware from "./middleware/auth.middleware";
 import { chatService } from "./services/chat.service";
 import { setupSocketGateway } from "./utils/socket.gateway";
+import { userAuthService } from "./services/userAuth.service";
 
 const app = Fastify({
   logger: {
@@ -23,6 +24,7 @@ app.register(cors, {
 
 app.addHook("onRequest", authMiddleware);
 app.register(chatService);
+app.register(userAuthService);
 
 const start = async () => {
   try {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
-import { axiosInstance } from "../app/axios";
+import  axiosInstance  from "../app/axios";
+import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
 
 type ContactUser = {
     id: number;
@@ -93,7 +94,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             auth: { userId },
             reconnection: true,
             reconnectionAttempts: 10,
-            transports: ['polling', 'websocket'],
+            transports: ['websocket'],
             path: '/socket.io',
         });
 
@@ -173,6 +174,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     setSelectedContact: (contact) => {
         const { socket, loginId, selectedContact } = get();
+        const { token } = UseTokenStore();
 
         if (selectedContact && socket && loginId) {
             const oldChatId = getChatId(loginId, selectedContact.user.id);
@@ -192,7 +194,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             
             axiosInstance.patch(`api/v1/chat/messages/${contact.user.id}/seen`, {}, {
                 headers: {
-                    'x-user-id': loginId.toString(),
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             }).catch(error => {

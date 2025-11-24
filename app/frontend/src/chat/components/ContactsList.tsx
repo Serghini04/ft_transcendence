@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { axiosInstance } from "../app/axios";
+import  axiosInstance  from "../app/axios";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "react-toastify";
+import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 type Contact = {
   id: number;
@@ -19,13 +20,16 @@ type Contact = {
 export default function ContactsList({ closeSidebar }: any) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const { selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, initializeUnseenCounts } = useChatStore();
+  const { token } = UseTokenStore();
 
   useEffect(() => {
     const fetchContacts = async () => {
       try {
         const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
-          headers: { "x-user-id": loginId }
+          headers: { Authorization: `Bearer ${token}` }
         });
+
+        console.log("Contacts fetched:", response.data);
         setContacts(response.data);
         
         // Initialize unseen message counts from backend data
@@ -47,7 +51,7 @@ export default function ContactsList({ closeSidebar }: any) {
 
     try {
       const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
-        headers: { "x-user-id": loginId }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(res.data);
     } catch (err) {

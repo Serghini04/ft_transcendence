@@ -6,7 +6,7 @@ import { userRepository } from "../repositories/user.repository";
 async function getAllContacts(req: FastifyRequest, res: FastifyReply) {
     const chatRepo = new ChatRepository(req.server.db);
 
-    console.error("From Backend :>>" + Number(req.headers['x-user-id']));
+    console.error("From Backend :>>>>>" + Number(req.headers['x-user-id']));
     const contacts = await chatRepo.getContacts(Number(req.headers['x-user-id']));
     return res.code(200).send(contacts);
 }

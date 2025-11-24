@@ -3,11 +3,14 @@ import { Server } from "socket.io";
 import { io as ClientIO } from "socket.io-client";
 
 export function setupSocketGateway(app: FastifyInstance) {
+  // Attach Socket.IO to the raw server
   const io = new Server(app.server, {
+    path: "/socket.io",
     cors: {
       origin: true,
       credentials: true,
     },
+    transports: ["websocket"], // force websocket, disable polling
   });
 
   io.on("connection", (socket) => {
@@ -22,6 +25,7 @@ export function setupSocketGateway(app: FastifyInstance) {
     const chatSocket = ClientIO("http://localhost:3003", {
       withCredentials: true,
       auth: { userId },
+      transports: ["websocket"], // force WebSocket
     });
 
     socket.onAny((event, data) => chatSocket.emit(event, data));

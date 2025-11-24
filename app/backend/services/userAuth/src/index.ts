@@ -50,7 +50,7 @@ const strongPassword = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}[\]|\\:;"'<>,
 const client = new OAuth2Client("917057465162-k81haa2us30sg6ddker0bu9gk4qigb9r.apps.googleusercontent.com");
 
 
-app.post("/api/auth/googleSignup", async (request, reply) => {
+app.post("/api/v1/auth/googleSignup", async (request, reply) => {
   try{
     const {accessToken} = request.body as {accessToken: string};
     
@@ -117,7 +117,7 @@ app.post("/api/auth/googleSignup", async (request, reply) => {
   }
 })
 
-app.post("/api/auth/googleLogin", async (request, reply) => {
+app.post("/api/v1/auth/googleLogin", async (request, reply) => {
   try{
     const {accessToken} = request.body as {accessToken: string};
     
@@ -170,7 +170,7 @@ app.post("/api/auth/googleLogin", async (request, reply) => {
   }
 });
 
-app.post("/api/auth/login", async (request, reply) => {
+app.post("/api/v1/auth/login", async (request, reply) => {
   try {
     const { username, password } = request.body as { username: string; password: string };
 
@@ -226,7 +226,7 @@ app.post("/api/auth/login", async (request, reply) => {
   }
 });
 
-app.post("/api/auth/signup", async (request, reply) => {
+app.post("/api/v1/auth/signup", async (request, reply) => {
     try {
       const { name, email, password, cpassword } = request.body as { name: string; email: string; password: string; cpassword: string};
     
@@ -292,11 +292,11 @@ app.post("/api/auth/signup", async (request, reply) => {
     }
   });
 
-app.get("/protect", {preHandler: authenticateToken}, async (request, reply) => {
+app.get("/api/v1/auth/protect", {preHandler: authenticateToken}, async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
 
-app.listen({ port: 8080 }, (err, address) => {
+app.listen({ port: 3004 }, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

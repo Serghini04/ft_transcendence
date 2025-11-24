@@ -18,8 +18,8 @@ export default function App() {
         {/* All other routes use MainLayout */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/chat:id" element={<ChatPage />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
           <Route path="/settings/*" element={<Settings />} />
         </Route>
       </Routes>

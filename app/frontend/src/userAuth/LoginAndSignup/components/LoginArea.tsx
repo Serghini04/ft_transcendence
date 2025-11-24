@@ -9,7 +9,7 @@ export default function LoginArea()
 		<>
 			<LoginSettings />
 			<OrLine />
-			<GoogleButton text="Login with google" route="/api/auth/googleLogin"/>
+			<GoogleButton text="Login with google" route="/api/v1/auth/googleLogin"/>
 		</>
 	)
 
