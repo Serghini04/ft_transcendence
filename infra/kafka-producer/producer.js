@@ -66,6 +66,7 @@ fastify.get('/health', async (request, reply) => {
 });
 
 fastify.post('/send', async (request, reply) => {
+  console.log('Received request to /send with body:', request.body);
   try {
     if (!isConnected) {
       reply.code(503);

@@ -70,6 +70,77 @@ dev-full:
 	@echo "🚀 Starting Full Development Stack..."
 	@docker-compose --profile development up -d
 
+services:
+	@echo "🔧 Starting Microservices (A, B, C, D)..."
+	@docker-compose up -d service-a service-b service-c service-d
+
+services-logs:
+	@echo "📋 Showing logs for all microservices..."
+	@docker-compose logs -f service-a service-b service-c service-d
+
+test-services:
+	@echo "🧪 Testing Service A -> B, C, D message flow..."
+	@echo "Starting consumers first..."
+	@docker-compose up -d service-b service-c service-d
+	@sleep 5
+	@echo "Sending message from Service-A..."
+	@docker-compose up service-a
+	@sleep 2
+	@echo "\n📊 Check logs with: make services-logs"
+
+send-message:
+	@echo "📤 Sending message via Service-A API..."
+	@curl -X POST http://localhost:3010/send \
+		-H "Content-Type: application/json" \
+		-d '{"userId": 101, "userName": "Ali", "event": "USER_CREATED"}' | jq '.'
+
+test-service-a:
+	@echo "🧪 Testing Service-A HTTP API..."
+	@echo "Health check:"
+	@curl -s http://localhost:3010/health | jq '.'
+	@echo "\nSending test message:"
+	@curl -s -X POST http://localhost:3010/send \
+		-H "Content-Type: application/json" \
+		-d '{"userId": 999, "userName": "Test User", "event": "USER_REGISTERED"}' | jq '.'
+
+test-service-b:
+	@echo "🧪 Testing Service-B HTTP API..."
+	@echo "Health check:"
+	@curl -s http://localhost:3011/health | jq '.'
+	@echo "\nLatest message:"
+	@curl -s http://localhost:3011/messages/latest | jq '.'
+	@echo "\nStats:"
+	@curl -s http://localhost:3011/stats | jq '.'
+
+test-service-c:
+	@echo "🧪 Testing Service-C HTTP API..."
+	@echo "Health check:"
+	@curl -s http://localhost:3012/health | jq '.'
+	@echo "\nLatest message:"
+	@curl -s http://localhost:3012/messages/latest | jq '.'
+	@echo "\nStats:"
+	@curl -s http://localhost:3012/stats | jq '.'
+
+test-service-d:
+	@echo "🧪 Testing Service-D HTTP API..."
+	@echo "Health check:"
+	@curl -s http://localhost:3013/health | jq '.'
+	@echo "\nLatest message:"
+	@curl -s http://localhost:3013/messages/latest | jq '.'
+	@echo "\nStats:"
+	@curl -s http://localhost:3013/stats | jq '.'
+
+test-all-services:
+	@echo "🧪 Testing All Microservices..."
+	@echo "\n=== SERVICE-A (Producer) ==="
+	@make test-service-a
+	@echo "\n=== SERVICE-B (Consumer) ==="
+	@make test-service-b
+	@echo "\n=== SERVICE-C (Consumer) ==="
+	@make test-service-c
+	@echo "\n=== SERVICE-D (Consumer) ==="
+	@make test-service-d
+
 stop-all:
 	@bash -c 'source $(MESSAGES) && msg_stop_all_start'
 	@docker-compose down
@@ -83,14 +154,16 @@ stop-all:
 
 delete-all: stop-all
 	@bash -c 'source $(MESSAGES) && msg_delete_all_start'
-	@if [ -n "$$(docker volume ls -q)" ]; then \
-		docker volume rm $$(docker volume ls -q) 2>/dev/null || true; \
-		bash -c 'source $(MESSAGES) && msg_delete_all_volumes_done'; \
-	else \
-		bash -c 'source $(MESSAGES) && msg_delete_all_volumes_none'; \
-	fi
-	@bash -c 'source $(MESSAGES) && msg_delete_all_images'
-	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|loki|promtail|kafka-producer|kafka-consumer|kafka-ui):" | xargs -r docker rmi -f 2>/dev/null || true
+	@echo "🗑️  Removing all Docker containers..."
+	@docker rm -f $$(docker ps -aq) 2>/dev/null || echo "No containers to remove"
+	@echo "🗑️  Removing all Docker volumes..."
+	@docker volume rm $$(docker volume ls -q) 2>/dev/null || echo "No volumes to remove"
+	@echo "🗑️  Removing all Docker images..."
+	@docker rmi -f $$(docker images -q) 2>/dev/null || echo "No images to remove"
+	@echo "🗑️  Removing all Docker networks (except defaults)..."
+	@docker network rm $$(docker network ls -q -f type=custom) 2>/dev/null || echo "No custom networks to remove"
+	@echo "🧹 Pruning Docker system..."
+	@docker system prune -af --volumes
 	@bash -c 'source $(MESSAGES) && msg_delete_all_complete'
 
 

@@ -329,7 +329,7 @@ services:
     image: frontend
     container_name: frontend
     ports:
-      - "8888:80"
+      - "0.0.0.0:8888:80"
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -369,6 +369,136 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  service-a:
+    build:
+      context: ./app/backend/services
+      dockerfile: service-a/Dockerfile
+    image: service-a
+    container_name: service-a
+    ports:
+      - "3010:3010"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=userManagement
+      - PORT=3010
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  service-b:
+    build:
+      context: ./app/backend/services
+      dockerfile: service-b/Dockerfile
+    image: service-b
+    container_name: service-b
+    ports:
+      - "3011:3011"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=userManagement
+      - PORT=3011
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - service-a
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  service-c:
+    build:
+      context: ./app/backend/services
+      dockerfile: service-c/Dockerfile
+    image: service-c
+    container_name: service-c
+    ports:
+      - "3012:3012"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=userManagement
+      - PORT=3012
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - service-a
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  service-d:
+    build:
+      context: ./app/backend/services
+      dockerfile: service-d/Dockerfile
+    image: service-d
+    container_name: service-d
+    ports:
+      - "3013:3013"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=userManagement
+      - PORT=3013
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - service-a
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tictac-game:
+    build:
+      context: ./app/backend/services/tictac
+      dockerfile: Dockerfile
+    image: tictac-game
+    container_name: tictac-game
+    ports:
+      - "0.0.0.0:3003:3003"
+    environment:
+      - PORT=3003
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/tictac.db
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_TIMEWINDOW=60000
+      - MATCHMAKING_TIMEOUT=60000
+      - SKILL_RANGE=100
+      - CORS_ORIGIN=http://localhost:5173,http://localhost:8888,http://10.32.138.11:5173,http://10.32.138.11:8888
+    volumes:
+      - tictac-data:/app/data
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   ft_Transc:
     driver: bridge
@@ -378,3 +508,4 @@ volumes:
   alertmanager-data:
   grafana-data:
   elasticsearch-data:
+  tictac-data:

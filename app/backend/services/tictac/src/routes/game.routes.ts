@@ -1,0 +1,118 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { GameModel } from '../models/game.model.js';
+import { GameService } from '../services/game.service.js';
+
+export async function gameRoutes(fastify: FastifyInstance) {
+  // Get game by ID
+  fastify.get('/games/:gameId', async (request: FastifyRequest<{
+    Params: { gameId: string }
+  }>, reply: FastifyReply) => {
+    const { gameId } = request.params;
+
+    try {
+      const game = GameModel.findById(gameId);
+
+      if (!game) {
+        return reply.code(404).send({ error: 'Game not found' });
+      }
+
+      return reply.code(200).send({ game });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Failed to get game' });
+    }
+  });
+
+  // Make a move
+  fastify.post('/games/:gameId/move', async (request: FastifyRequest<{
+    Params: { gameId: string };
+    Body: { playerId: string; position: number }
+  }>, reply: FastifyReply) => {
+    const { gameId } = request.params;
+    const { playerId, position } = request.body;
+
+    if (position === undefined || position < 0 || position > 8) {
+      return reply.code(400).send({ error: 'Invalid position' });
+    }
+
+    if (!playerId) {
+      return reply.code(400).send({ error: 'Player ID required' });
+    }
+
+    try {
+      const result = GameService.makeMove(gameId, playerId, position);
+
+      if (!result.success) {
+        return reply.code(400).send({ error: result.error });
+      }
+
+      return reply.code(200).send({ game: result.game });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Failed to make move' });
+    }
+  });
+
+  // Forfeit game
+  fastify.post('/games/:gameId/forfeit', async (request: FastifyRequest<{
+    Params: { gameId: string };
+    Body: { playerId: string }
+  }>, reply: FastifyReply) => {
+    const { gameId } = request.params;
+    const { playerId } = request.body;
+
+    if (!playerId) {
+      return reply.code(400).send({ error: 'Player ID required' });
+    }
+
+    try {
+      const result = GameService.forfeitGame(gameId, playerId);
+
+      if (!result.success) {
+        return reply.code(400).send({ error: result.error });
+      }
+
+      return reply.code(200).send({ game: result.game });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Failed to forfeit game' });
+    }
+  });
+
+  // Get player's active game
+  fastify.get('/games/player/:playerId/active', async (request: FastifyRequest<{
+    Params: { playerId: string }
+  }>, reply: FastifyReply) => {
+    const { playerId } = request.params;
+
+    try {
+      const game = GameModel.findActiveByPlayer(playerId);
+
+      if (!game) {
+        return reply.code(404).send({ error: 'No active game found' });
+      }
+
+      return reply.code(200).send({ game });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Failed to get active game' });
+    }
+  });
+
+  // Get player's games
+  fastify.get('/games/player/:playerId', async (request: FastifyRequest<{
+    Params: { playerId: string };
+    Querystring: { limit?: string }
+  }>, reply: FastifyReply) => {
+    const { playerId } = request.params;
+    const limit = parseInt(request.query.limit || '20');
+
+    try {
+      const games = GameModel.getPlayerGames(playerId, limit);
+      return reply.code(200).send({ games });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Failed to get games' });
+    }
+  });
+}
