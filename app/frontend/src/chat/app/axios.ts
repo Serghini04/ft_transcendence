@@ -1,4 +1,3 @@
-// axios.ts
 import axios from "axios";
 import verifyToken from "../../globalUtils/verifyToken";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
@@ -10,8 +9,7 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.response.use(
   async (response) => {
-    console.log("Response intercepted:", response);
-    const { setToken } = UseTokenStore.getState();   // FIXED
+    const { setToken } = UseTokenStore.getState();
 
     const validation = await verifyToken(response.data);
 

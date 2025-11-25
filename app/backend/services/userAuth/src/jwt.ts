@@ -27,7 +27,7 @@ export function generateJwtAccessToken({id, name, email}: {id: number; name:stri
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined");
     }
-    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "15m" })
+    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "10s" })
     return token;
 }
 
@@ -35,7 +35,7 @@ export function generateJwtRefreshToken({id, name, email}: {id: number; name:str
   if (!process.env.JWT_REFRESH) {
     throw new Error("JWT_REFRESH is not defined");
   }
-  const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_REFRESH, { expiresIn: "7d" })
+  const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_REFRESH, { expiresIn: "15s" })
   return token;
 }
 

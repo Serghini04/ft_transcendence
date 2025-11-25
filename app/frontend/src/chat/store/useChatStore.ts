@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
 import  axiosInstance  from "../app/axios";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
+import verifyToken from '../../globalUtils/verifyToken';
 
 type ContactUser = {
     id: number;
@@ -76,8 +77,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     connectionStatus: 'disconnected',
     unseenMessageCounts: new Map<number, number>(),
     isNotificationsMuted: false,
-
+    
     connectSocket: (userId) => {
+        const { token} = UseTokenStore.getState();
         const currentSocket = get().socket;
         
         if (currentSocket && currentSocket.connected)
@@ -91,10 +93,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         
         const socket = io("http://localhost:8080", {
             withCredentials: true,
-            auth: { userId },
+            auth: { token },
             reconnection: true,
             reconnectionAttempts: 10,
-            transports: ['websocket'],
+            transports: ['polling', 'websocket'],
             path: '/socket.io',
         });
 
@@ -129,6 +131,29 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             console.log("Online users updated:", userIds);
             set({ onlineUsers: new Set(userIds) });
         });
+
+
+        // socket.on("connect_error", async (err) => {
+        //     if (err.message === "TOKEN_REFRESHED") {
+        //         console.log()
+        //         verifyToken(err.accesToken);
+        //     //   await refreshAccessToken();
+        
+        //       const { token: newToken } = UseTokenStore.getState();
+        
+        //       socket.auth = { token: newToken };
+        //       socket.connect();
+        //     }
+        // });
+
+        socket.on("TOKEN_REFRESHED", ({ accessToken }) => {
+            console.log("🔄 Token refreshed via socket");
+            UseTokenStore.getState().setToken(accessToken);
+        
+            socket.auth = { token: accessToken };
+            socket.connect();
+        });
+        
         set({ socket });
     },
 

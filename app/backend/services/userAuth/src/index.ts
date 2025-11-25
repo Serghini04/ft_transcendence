@@ -1,11 +1,10 @@
 import fastify from "fastify";
-import "./db.ts";
-import db from "./db.ts"; // no extension with ts-node
+import db from "./db";
 import bcrypt from "bcrypt";
 import { Console, error } from "console";
 import {OAuth2Client } from "google-auth-library";
 import { request } from "http";
-import { authenticateToken, generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.ts";
+import { authenticateToken, generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 
