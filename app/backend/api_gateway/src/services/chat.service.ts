@@ -11,8 +11,8 @@ export async function chatService(app: FastifyInstance) {
     
     preHandler: async (req: FastifyRequest, reply: FastifyReply) => {
       try {
-        // req.headers["x-user-id"] = String(req.user?.id);
-        req.headers["x-user-id"] = String(1);
+        req.headers["x-user-id"] = String(req.user?.id);
+        // req.headers["x-user-id"] = String(1);
       } catch (error) {
         const err = error as Error;
         app.log.error(`Error in preHandler: ${err.message}`);

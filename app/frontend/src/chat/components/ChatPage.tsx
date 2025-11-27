@@ -7,16 +7,18 @@ import InputBar from "./InputBar";
 import { useChatStore } from "../store/useChatStore";
 import { useParams } from "react-router-dom";
 import HistoryPanel from "./HistoryPanel";
+import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 export default function ChatPage() {
-  const { id } = useParams<{ id: string }>();
+  // const { id } = useParams<{ id: string }>();
+  const { userId } = UseTokenStore();
   const { connectSocket, disconnectSocket } = useChatStore();
 
   useEffect(() => {
-    if (id)
-      connectSocket(Number(id));
+    if (userId)
+      connectSocket(Number(userId));
     return () => disconnectSocket();
-  }, [id, connectSocket, disconnectSocket]);
+  }, [userId, connectSocket, disconnectSocket]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);

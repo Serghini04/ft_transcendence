@@ -74,8 +74,7 @@ export default function ContactsList({ closeSidebar }: any) {
       }
     };
     
-    if (loginId)
-      fetchContacts();
+    fetchContacts();
   }, [loginId, token, navigate]);
 
   const handleSelectContact = async (contact: Contact) => {

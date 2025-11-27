@@ -19,7 +19,7 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
-          <Route path="/chat/:id" element={<ChatPage />} />
+          <Route path="/chat" element={<ChatPage />} />
           <Route path="/settings/*" element={<Settings />} />
         </Route>
       </Routes>
