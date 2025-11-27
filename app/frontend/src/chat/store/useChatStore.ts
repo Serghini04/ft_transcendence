@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
-import  axiosInstance  from "../app/axios";
+import axiosInstance from "../app/axios";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
-import verifyToken from '../../globalUtils/verifyToken';
+import { isValid } from 'date-fns';
+import isValidToken from '../../globalUtils/isValidToken';
 
 type ContactUser = {
     id: number;
@@ -28,7 +29,6 @@ type Message = {
     to?: number;
     status?: 'sending' | 'sent' | 'failed';
 };
-
 
 type ChatStore = {
     loginId: number | null;
@@ -78,89 +78,178 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     unseenMessageCounts: new Map<number, number>(),
     isNotificationsMuted: false,
     
-    connectSocket: (userId) => {
-        const { token} = UseTokenStore.getState();
-        const currentSocket = get().socket;
+connectSocket: (userId) => {
+    const { token } = UseTokenStore.getState();
+    const currentSocket = get().socket;
+    
+    // Prevent duplicate connections
+    if (currentSocket?.connected) {
+        console.log("✅ Socket already connected");
+        return;
+    }
+
+    // Disconnect existing socket if present
+    if (currentSocket) {
+        console.log("🔄 Disconnecting existing socket");
+        currentSocket.removeAllListeners();
+        currentSocket.disconnect();
+    }
+
+    if (!token) {
+        console.error("❌ No token available for socket connection");
+        // setToken("");
+        window.location.href = "/auth";
+        set({ connectionStatus: 'error' });
+        return;
+    }
+    
+    set({ 
+        loginId: userId, 
+        connectionStatus: 'connecting',
+        messages: [],
+        selectedContact: null
+    });
+
+    console.log("🔌 Connecting to socket with userId:", userId);
+    console.log("🔑 Token:", token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+    
+    const socket = io("http://localhost:8080", {
+        withCredentials: true,
+        auth: { 
+            token: token  // ✅ SEND TOKEN - gateway will extract userId from it
+        },
+        reconnection: true,
+        reconnectionAttempts: 10,
+        transports: ['polling', 'websocket'],
+        path: '/socket.io',
+    });
+
+    // Debug transport
+    socket.io.on("error", (error) => {
+        console.error("🔥 Socket.IO Manager Error:", error);
+    });
+
+    socket.io.engine.on("packet", ({ type, data }) => {
+        console.log(`📦 Engine packet: ${type}`, data);
+    });
+
+    socket.io.engine.on("packetCreate", ({ type, data }) => {
+        console.log(`📤 Engine sending: ${type}`, data);
+    });
+
+    // Connection successful
+    socket.on("connect", () => {
+        console.log("✅ Socket connected successfully");
+        console.log("🔌 Transport:", socket.io.engine.transport.name);
+        console.log("🆔 Socket ID:", socket.id);
+        set({ connectionStatus: 'connected' });
+
+        const { selectedContact } = get();
+        if (selectedContact) {
+            const chatId = getChatId(userId, selectedContact.user.id);
+            console.log("📨 Rejoining chat:", chatId);
+            socket.emit("chat:join", chatId);
+        }
+    });
+
+    // Connection error
+    socket.on("connect_error", (error) => {
+        console.error("❌ Socket connection error:", error.message);
+        console.error("❌ Error details:", {
+            message: error.message,
+            description: error.description,
+            context: error.context,
+            type: error.type
+        });
+        set({ connectionStatus: 'error' });
+
+        // Handle specific auth errors
+        if (error.message === "NO_TOKEN" || 
+            error.message === "INVALID_TOKEN" || 
+            error.message === "REFRESH_INVALID") {
+            console.error("🔒 Authentication failed, redirecting to login");
+            UseTokenStore.getState().setToken("");
+            window.location.href = "/auth";
+        }
+    });
+
+    // Token refreshed by server
+    socket.on("token_refreshed", ({ accessToken }) => {
+        console.log("🔄 Token refreshed by server");
+        UseTokenStore.getState().setToken(accessToken);
         
-        if (currentSocket && currentSocket.connected)
-            return;
-        set({ 
-            loginId: userId, 
-            connectionStatus: 'connecting',
-            messages: [],
-            selectedContact: null
-        });
-        
-        const socket = io("http://localhost:8080", {
-            withCredentials: true,
-            auth: { token },
-            reconnection: true,
-            reconnectionAttempts: 10,
-            transports: ['polling', 'websocket'],
-            path: '/socket.io',
-        });
+        // Update socket auth with new token only
+        socket.auth = { 
+            token: accessToken  // ✅ Only token
+        };
+    });
 
-        socket.on("connect", () => {
-            set({ connectionStatus: 'connected' });
+    // Reconnection attempts
+    socket.io.on("reconnect_attempt", (attempt) => {
+        console.log(`🔄 Reconnection attempt ${attempt}`);
+        const newToken = UseTokenStore.getState().token;
+        if (newToken) {
+            socket.auth = { token: newToken };  // ✅ Only token
+        }
+        set({ connectionStatus: 'connecting' });
+    });
 
-            const { selectedContact } = get();
-            if (selectedContact) {
-                const chatId = getChatId(userId, selectedContact.user.id);
-                socket.emit("chat:join", chatId);
-            }
-        });
+    socket.io.on("reconnect", (attempt) => {
+        console.log(`✅ Reconnected after ${attempt} attempts`);
+        set({ connectionStatus: 'connected' });
+    });
 
-        socket.on("disconnect", () => {
-            set({ connectionStatus: 'disconnected' });
-        });
+    socket.io.on("reconnect_failed", () => {
+        console.error("❌ Reconnection failed");
+        set({ connectionStatus: 'error' });
+    });
 
-        socket.on("message:receive", (messageData) => {
-            get().handleIncomingMessage(messageData);
-        });
+    // Disconnection
+    socket.on("disconnect", (reason) => {
+        console.log("❌ Socket disconnected:", reason);
+        set({ connectionStatus: 'disconnected' });
 
-        socket.on("message:sent", (messageData) => {
-            get().handleMessageSent(messageData);
-        });
-
-        socket.on("message:error", (errorData) => {
-            console.error("Message error:", errorData);
-            get().handleMessageError(errorData);
-        });
-
-        socket.on("users:online", (userIds) => {
-            console.log("Online users updated:", userIds);
-            set({ onlineUsers: new Set(userIds) });
-        });
-
-
-        // socket.on("connect_error", async (err) => {
-        //     if (err.message === "TOKEN_REFRESHED") {
-        //         console.log()
-        //         verifyToken(err.accesToken);
-        //     //   await refreshAccessToken();
-        
-        //       const { token: newToken } = UseTokenStore.getState();
-        
-        //       socket.auth = { token: newToken };
-        //       socket.connect();
-        //     }
-        // });
-
-        socket.on("TOKEN_REFRESHED", ({ accessToken }) => {
-            console.log("🔄 Token refreshed via socket");
-            UseTokenStore.getState().setToken(accessToken);
-        
-            socket.auth = { token: accessToken };
+        // If server initiated disconnect, reconnect manually
+        if (reason === "io server disconnect") {
+            console.log("🔄 Server disconnected, attempting manual reconnect");
             socket.connect();
-        });
-        
-        set({ socket });
-    },
+        }
+    });
+
+    // Service error from gateway
+    socket.on("service_error", ({ message }) => {
+        console.error("⚠️ Service error:", message);
+        set({ connectionStatus: 'error' });
+    });
+
+    // Message handlers
+    socket.on("message:receive", (messageData) => {
+        console.log("📩 Message received:", messageData);
+        get().handleIncomingMessage(messageData);
+    });
+
+    socket.on("message:sent", (messageData) => {
+        console.log("✉️ Message sent confirmation:", messageData);
+        get().handleMessageSent(messageData);
+    });
+
+    socket.on("message:error", (errorData) => {
+        console.error("❌ Message error:", errorData);
+        get().handleMessageError(errorData);
+    });
+
+    socket.on("users:online", (userIds) => {
+        console.log("👥 Online users updated:", userIds);
+        set({ onlineUsers: new Set(userIds) });
+    });
+    
+    set({ socket });
+},
 
     disconnectSocket: () => {
         const socket = get().socket;
         if (socket) {
-            console.log("Disconnecting socket");
+            console.log("🔌 Disconnecting socket");
             socket.removeAllListeners();
             socket.disconnect();
             set({ 
@@ -199,10 +288,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     setSelectedContact: (contact) => {
         const { socket, loginId, selectedContact } = get();
-        const { token } = UseTokenStore();
+        // const { token } = UseTokenStore.getState();
 
+        // Leave previous chat
         if (selectedContact && socket && loginId) {
             const oldChatId = getChatId(loginId, selectedContact.user.id);
+            console.log("👋 Leaving chat:", oldChatId);
             socket.emit("chat:leave", oldChatId);
         }
 
@@ -211,20 +302,40 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             messages: []
         });
 
+        // Join new chat
         if (contact && socket && loginId) {
             const newChatId = getChatId(loginId, contact.user.id);
+            console.log("👋 Joining chat:", newChatId);
             socket.emit("chat:join", newChatId);
             
+            // Mark messages as seen
             get().markMessagesAsSeen(contact.user.id);
             
-            axiosInstance.patch(`api/v1/chat/messages/${contact.user.id}/seen`, {}, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            }).catch(error => {
-                console.error('Failed to mark messages as seen on server:', error);
-            });
+            // Notify server
+            // axiosInstance.patch(
+            //     `/api/v1/chat/messages/${contact.user.id}/seen`,
+            //     {},
+            //     {
+            //         headers: {
+            //             Authorization: `Bearer ${token}`,
+            //             'Content-Type': 'application/json'
+            //         }
+            //     }
+
+            // isValidToken(token);
+            // fetch(`http://localhost:8080/api/v1/chat/messages/${contact.user.id}/seen`, {
+            //     method: "PATCH",
+            //     credentials: "include",
+            //     body: JSON.stringify({}),
+            //     headers: {
+            //         Authorization: `Bearer ${token}`,
+            //         'Content-Type': 'application/json'
+            //     }
+            // }
+            
+            // ).catch(error => {
+            //     console.error('❌ Failed to mark messages as seen:', error);
+            // });
         }
     },
 
@@ -234,7 +345,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     },
 
     addMessage: (message) => {
-        console.log("📝 Adding message to store:", message);
+        console.log("📝 Adding message:", message);
         set((state) => ({ messages: [...state.messages, message] }));
         get().deduplicateMessages();
     },
@@ -242,15 +353,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     sendMessage: (text, receiverId) => {
         const { socket, loginId } = get();
         
-        console.log("📤 Attempting to send message:", { text, receiverId, socket: !!socket, loginId });
-        
-        if (!socket) {
-            console.error("❌ No socket connection available");
+        if (!socket?.connected) {
+            console.error("❌ Socket not connected");
             return;
         }
         
         if (!loginId) {
-            console.error("❌ No loginId available");
+            console.error("❌ No loginId");
             return;
         }
 
@@ -269,11 +378,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
         get().addMessage(optimisticMessage);
 
-        console.log("🚀 Emitting message:send event:", {
+        console.log("📤 Sending message:", {
             id: messageId,
             to: receiverId,
-            message: text,
-            timestamp
+            message: text
         });
 
         socket.emit("message:send", {
@@ -301,8 +409,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 to: loginId
             };
             get().addMessage(newMessage);
-        } else
+        } else {
             get().incrementUnseenMessages(from);
+        }
     },
 
     handleMessageSent: (messageData) => {
@@ -339,22 +448,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 })
             }));
         } else {
-            if (selectedContact && 
-                ((from === loginId && to === selectedContact.user.id) || 
-                 (from === selectedContact.user.id && to === loginId))) {
-                
-                const newMessage: Message = {
-                    id: realId,
-                    text: message,
-                    isSender: from === loginId,
-                    timestamp,
-                    from,
-                    to,
-                    status: 'sent'
-                };
-                
-                get().addMessage(newMessage);
-            }
+            const newMessage: Message = {
+                id: realId,
+                text: message,
+                isSender: from === loginId,
+                timestamp,
+                from,
+                to,
+                status: 'sent'
+            };
+            
+            get().addMessage(newMessage);
         }
     },
 
@@ -382,7 +486,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 return true;
             });
 
-            uniqueMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            uniqueMessages.sort((a, b) => 
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
             
             return { messages: uniqueMessages };
         });

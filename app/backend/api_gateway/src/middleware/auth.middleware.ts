@@ -11,7 +11,7 @@ export function generateJwtAccessToken({id, name, email}: {id: number; name:stri
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined");
     }
-    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "10s" })
+    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "15s" }) // ✅ Changed from 15s to 15m
     return token;
 }
 
@@ -21,25 +21,26 @@ export default async function authMiddleware(
   reply: FastifyReply
 ) {
   try {
-    if (req.url.startsWith("/socket.io")) return;
     if (req.url.startsWith("/api/v1/auth")) return;
-
+    if (req.url.startsWith("/socket.io")) return;
+    
     const authHeader = req.headers.authorization;
-
+    
     const accessToken = authHeader?.split(" ")[1];
-
+    
+    console.log("------------------------------> TEST AUTH MIDDLEWARE NO TOKEN: ", accessToken);
     if (!accessToken) {
       return reply.status(401).send({
         code: "NO_TOKEN",
         message: "Access token is missing",
       });
     }
-
+    
     const decoded = jwt.verify(
       accessToken,
       process.env.JWT_SECRET as string
     ) as UserPayload;
-
+    
     req.user = {
       id: decoded.id,
       name: decoded.name,
@@ -48,6 +49,7 @@ export default async function authMiddleware(
 
     req.headers["x-user-id"] = String(decoded.id);
   } catch (err) {
+    console.error("+++++++++++++++++++++++++ ERROR AUTH MIDDLEWARE: ", err);
     if (err instanceof TokenExpiredError) {
       const refreshToken = req.cookies.refreshToken;
 
@@ -69,6 +71,11 @@ export default async function authMiddleware(
           name: decodedRefresh.name,
           email: decodedRefresh.email,
         });
+        req.user = {
+          id: decodedRefresh.id,
+          name: decodedRefresh.name,
+          email: decodedRefresh.email,
+        };
 
         return reply.send({
           code: "TOKEN_REFRESHED",

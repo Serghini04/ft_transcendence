@@ -3,6 +3,8 @@ import  axiosInstance  from "../app/axios";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "react-toastify";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import isValidToken from "../../globalUtils/isValidToken";
+import { useNavigate } from "react-router-dom";
 
 type Contact = {
   id: number;
@@ -20,20 +22,38 @@ type Contact = {
 export default function ContactsList({ closeSidebar }: any) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const { selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, initializeUnseenCounts } = useChatStore();
-  const { token } = UseTokenStore();
+  const { token, setToken } = UseTokenStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
+        // const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
+        //   headers: { Authorization: `Bearer ${token}` }
+        // });
+        const result = await isValidToken(token);
+        if (!result.valid)
+        {
+          navigate("/auth");
+          return;
+        }
+        
+        if (result.newToken) {
+          setToken(result.newToken);
+        }
+        const res = await fetch("http://localhost:8080/api/v1/chat/contacts", {
+          method: "GET",
+          credentials: "include",
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        console.log("Contacts fetched:", response.data);
-        setContacts(response.data);
+        const data = await res.json();
+
+        console.log("Contacts fetched:", data);
+        setContacts(data);
         
         // Initialize unseen message counts from backend data
-        initializeUnseenCounts(response.data);
+        initializeUnseenCounts(data);
       } catch (err) {
         toast.error("Failed to fetch contacts.");
         console.error("Failed to fetch contacts: ", err);
@@ -50,10 +70,26 @@ export default function ContactsList({ closeSidebar }: any) {
     closeSidebar();
 
     try {
-      const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
+      // const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // });
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+        navigate("/auth");
+      }
+      
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
+      const res = await fetch("http://localhost:8080/api/v1/auth/protect", {
+        method: "GET",
+        credentials: "include",
         headers: { Authorization: `Bearer ${token}` }
       });
-      setMessages(res.data);
+
+      // const data = await res.json();
+      // setMessages(data);
     } catch (err) {
       toast.error("Failed to load conversation.");
       console.error("Failed to load conversation: ", err);

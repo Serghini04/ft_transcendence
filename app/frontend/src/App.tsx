@@ -1,6 +1,6 @@
 import './index.css';
 
-import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import MainLayout from './components/MainLayout';
 import Home from './userAuth/dashboard/Home';
 import Settings from './userAuth/settings/components/Settings';
