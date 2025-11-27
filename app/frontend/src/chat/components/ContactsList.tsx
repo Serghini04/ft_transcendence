@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 import isValidToken from "../../globalUtils/isValidToken";
 import { useNavigate } from "react-router-dom";
+import verifyToken from "../../globalUtils/verifyToken";
 
 type Contact = {
   id: number;
@@ -31,16 +32,16 @@ export default function ContactsList({ closeSidebar }: any) {
         // const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
         //   headers: { Authorization: `Bearer ${token}` }
         // });
-        const result = await isValidToken(token);
-        if (!result.valid)
-        {
-          navigate("/auth");
-          return;
-        }
+        // const result = await isValidToken(token);
+        // if (!result.valid)
+        // {
+        //   navigate("/auth");
+        //   return;
+        // }
         
-        if (result.newToken) {
-          setToken(result.newToken);
-        }
+        // if (result.newToken) {
+        //   setToken(result.newToken);
+        // }
         const res = await fetch("http://localhost:8080/api/v1/chat/contacts", {
           method: "GET",
           credentials: "include",
@@ -49,11 +50,24 @@ export default function ContactsList({ closeSidebar }: any) {
 
         const data = await res.json();
 
-        console.log("Contacts fetched:", data);
-        setContacts(data);
+        const isValid = verifyToken(data);
+        // if (!result.valid)
+        // {
+        //   navigate("/auth");
+        //   return;
+        // }
         
-        // Initialize unseen message counts from backend data
-        initializeUnseenCounts(data);
+        // if (result.newToken) {
+        //   setToken(result.newToken);
+        // }
+        
+        if (isValid) {
+          console.log("Contacts fetched:", data);
+          setContacts(data);
+          
+          // Initialize unseen message counts from backend data
+          initializeUnseenCounts(data);
+        }
       } catch (err) {
         toast.error("Failed to fetch contacts.");
         console.error("Failed to fetch contacts: ", err);
@@ -62,7 +76,7 @@ export default function ContactsList({ closeSidebar }: any) {
     
     if (loginId)
       fetchContacts();
-  }, [loginId]);
+  }, [loginId, token, navigate]);
 
   const handleSelectContact = async (contact: Contact) => {
     setMessages([]);
@@ -73,23 +87,34 @@ export default function ContactsList({ closeSidebar }: any) {
       // const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
       //   headers: { Authorization: `Bearer ${token}` }
       // });
-      const result = await isValidToken(token);
-      if (!result.valid)
-      {
-        navigate("/auth");
-      }
+      // const result = await isValidToken(token);
+      // if (!result.valid)
+      // {
+      //   navigate("/auth");
+      // }
       
-      if (result.newToken) {
-        setToken(result.newToken);
-      }
-      const res = await fetch("http://localhost:8080/api/v1/auth/protect", {
+      // if (result.newToken) {
+      //   setToken(result.newToken);
+      // }
+      const res = await fetch(`http://localhost:8080/api/v1/chat/conversation/${contact.user.id}`, {
         method: "GET",
         credentials: "include",
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // const data = await res.json();
-      // setMessages(data);
+      const data = await res.json();
+      const isValid = verifyToken(data);
+      // if (!result.valid)
+      // {
+      //   navigate("/auth");
+      //   return;
+      // }
+      
+      // if (result.newToken) {
+      //   setToken(result.newToken);
+      // }
+      if (isValid) 
+      setMessages(data);
     } catch (err) {
       toast.error("Failed to load conversation.");
       console.error("Failed to load conversation: ", err);

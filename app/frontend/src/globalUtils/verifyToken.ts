@@ -1,16 +1,20 @@
+// import { set } from "date-fns";
+import type { isValid } from "date-fns";
 import { UseTokenStore } from "../userAuth/LoginAndSignup/zustand/useStore";
 
-export async function isValidToken(data: any): Promise<{ valid: boolean; newToken: string | null }> {
-  const {setToken} = UseTokenStore();
+
+export function verifyToken(data: any){
+  const {  setToken } = UseTokenStore.getState();
     if (data.code === "TOKEN_REFRESHED") {
       setToken(data.accessToken);
-      return { valid: true, newToken: data.accessToken };
+      return false;
     }
   
     if (data.code === "NO_TOKEN" || data.code === "NO_REFRESH_TOKEN" || data.code === "INVALID_ACCESS_TOKEN" || data.code === "REFRESH_INVALID") {
-      return { valid: false, newToken: null };
+      window.location.href = "/auth";
+      return false;
     }
-    return { valid: true, newToken: null };
+    return true;
   }
   
-  export default isValidToken;
+  export default verifyToken;

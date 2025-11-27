@@ -28,7 +28,7 @@ await app.register(cors, {
 
 
 
-db.prepare(`DROP TABLE IF EXISTS users`).run();
+// db.prepare(`DROP TABLE IF EXISTS users`).run();
 // Create table if not exists
 
 db.prepare(`
@@ -287,11 +287,11 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
         code: "USER_ADDED_SUCCESS" });
     } catch (err: any) {
         console.error(err);
-        reply.status(500).send({ error: "Internal server error" });
+        reply.status(500).send({ error: "Internal server error!" });
     }
   });
 
-app.get("/api/v1/auth/protect", {preHandler: authenticateToken}, async (request, reply) => {
+app.get("/api/v1/auth/protect", async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
 

@@ -7,6 +7,7 @@ export default function GoogleButton(props :any) {
 	
 	const {setUser} = UseUserStore();
 	const navigate = useNavigate();
+	const {setToken} = UseTokenStore();
 
 
 	const login = useGoogleLogin({

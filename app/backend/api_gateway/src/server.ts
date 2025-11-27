@@ -1,10 +1,11 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import dotenv from "dotenv";
-import authMiddleware from "./middleware/auth.middleware";
+import {authMiddleware} from "./middleware/auth.middleware";
 import { chatService } from "./services/chat.service";
 import { setupSocketGateway } from "./utils/socket.gateway";
 import { userAuthService } from "./services/userAuth.service";
+import cookie from "@fastify/cookie"; 
 
 // Load environment variables FIRST
 dotenv.config();
@@ -47,12 +48,23 @@ app.register(cors, {
   maxAge: 86400, // Cache preflight for 24 hours
 });
 
-// app.addHook("onRequest", authMiddleware);
+app.register(cookie, {
+  secret: process.env.COOKIE_SECRET || "super-secret", 
+  hook: "onRequest"
+});
+
+
+app.addHook("preHandler", authMiddleware);
 app.register(chatService);
 app.register(userAuthService);
 
 const start = async () => {
   try {
+    // await app.register(cookie, {
+    //   secret: process.env.COOKIE_SECRET || "my-secret", // ✅ Add this
+    //   parseOptions: {}
+    // });
+
     // Setup socket gateway before listening
     await setupSocketGateway(app);
     await app.listen({ port: 8080, host: "0.0.0.0" });
