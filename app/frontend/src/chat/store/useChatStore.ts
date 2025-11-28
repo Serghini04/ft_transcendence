@@ -79,172 +79,123 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     isNotificationsMuted: false,
     
 connectSocket: (userId) => {
-    const { token } = UseTokenStore.getState();
-    const currentSocket = get().socket;
-    
-    // Prevent duplicate connections
-    if (currentSocket?.connected) {
-        console.log("✅ Socket already connected");
-        return;
+  const { token } = UseTokenStore.getState();
+  const currentSocket = get().socket;
+
+  // Prevent duplicate/parallel connections
+  if (currentSocket?.connected) {
+    console.log("✅ Socket already connected");
+    return;
+  }
+  if (currentSocket) {
+    console.log("🔄 Disconnecting existing socket before connecting");
+    currentSocket.removeAllListeners();
+    currentSocket.disconnect();
+  }
+
+  if (!token) {
+    console.error("❌ No token available for socket connection");
+    window.location.href = "/auth";
+    set({ connectionStatus: 'error' });
+    return;
+  }
+
+  set({
+    loginId: userId,
+    connectionStatus: 'connecting',
+    messages: [],
+    selectedContact: null
+  });
+
+  console.log("🔌 Connecting to Gateway with userId:", userId);
+  const socket = io("http://localhost:8080", {
+    withCredentials: true,
+    auth: { token }, // send token on handshake
+    transports: ['polling', 'websocket'],
+    path: '/socket.io',
+    reconnection: true,
+    reconnectionAttempts: 10,
+  });
+
+  // Global manager errors
+  socket.io.on("error", (err) => console.error("Socket.IO manager error", err));
+
+  socket.on("connect", () => {
+    console.log("✅ Socket connected:", socket.id, "transport:", socket.io.engine.transport.name);
+    set({ connectionStatus: 'connected' });
+
+    const { selectedContact } = get();
+    if (selectedContact) {
+      const chatId = getChatId(userId, selectedContact.user.id);
+      console.log("📨 Rejoining chat:", chatId);
+      socket.emit("chat:join", chatId);
+    }
+  });
+
+  // handle connect_error (handshake errors like NO_TOKEN, INVALID_TOKEN, REFRESH_INVALID)
+  socket.on("connect_error", (error: any) => {
+    console.error("❌ Socket connect_error:", error?.message ?? error);
+    set({ connectionStatus: 'error' });
+
+    const code = error?.message ?? "";
+
+    // If auth-related, stop client reconnection attempts and force logout/redirect
+    if (["NO_TOKEN", "INVALID_TOKEN", "REFRESH_INVALID", "NO_REFRESH_TOKEN"].includes(code)) {
+      console.warn("🔒 Auth error on socket handshake:", code);
+
+      // Prevent further reconnect attempts
+      try {
+        // stop automatic reconnects
+        (socket.io as any).opts.reconnection = false;
+      } catch (e) {
+        console.warn("⚠️ Could not toggle reconnection option:", e);
+      }
+
+      // Clean up socket and listeners
+      socket.removeAllListeners();
+      socket.disconnect();
+
+      // Clear token in store and navigate to login
+      UseTokenStore.getState().setToken("");
+      window.location.href = "/auth";
+      return;
     }
 
-    // Disconnect existing socket if present
-    if (currentSocket) {
-        console.log("🔄 Disconnecting existing socket");
-        currentSocket.removeAllListeners();
-        currentSocket.disconnect();
-    }
+    // Non-auth connect_error: keep reconnect attempts (Socket.IO client will try)
+    console.warn("⚠️ Non-auth connect_error, will attempt reconnects");
+  });
 
-    if (!token) {
-        console.error("❌ No token available for socket connection");
-        // setToken("");
-        window.location.href = "/auth";
-        set({ connectionStatus: 'error' });
-        return;
-    }
-    
-    set({ 
-        loginId: userId, 
-        connectionStatus: 'connecting',
-        messages: [],
-        selectedContact: null
-    });
+  // Server sent a new access token
+  socket.on("token_refreshed", ({ accessToken }: { accessToken: string }) => {
+    console.log("🔄 Received token_refreshed from server");
+    if (!accessToken) return;
 
-    console.log("🔌 Connecting to socket with userId:", userId);
-    console.log("🔑 Token:", token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
-    
-    const socket = io("http://localhost:8080", {
-        withCredentials: true,
-        auth: { 
-            token: token  // ✅ SEND TOKEN - gateway will extract userId from it
-        },
-        reconnection: true,
-        reconnectionAttempts: 10,
-        transports: ['polling', 'websocket'],
-        path: '/socket.io',
-    });
+    // Update token in your token store
+    UseTokenStore.getState().setToken(accessToken);
 
-    // Debug transport
-    socket.io.on("error", (error) => {
-        console.error("🔥 Socket.IO Manager Error:", error);
-    });
+    // Update socket auth for future reconnections or joins
+    socket.auth = { token: accessToken };
 
-    socket.io.engine.on("packet", ({ type, data }) => {
-        console.log(`📦 Engine packet: ${type}`, data);
-    });
+    // socket stays connected — no need to force reconnect
+    console.log("✅ Token updated locally");
+  });
 
-    socket.io.engine.on("packetCreate", ({ type, data }) => {
-        console.log(`📤 Engine sending: ${type}`, data);
-    });
+  // service-level errors forwarded by gateway
+  socket.on("service_error", ({ message }: { message: string }) => {
+    console.error("⚠️ Service error from gateway:", message);
+    set({ connectionStatus: 'error' });
+  });
 
-    // Connection successful
-    socket.on("connect", () => {
-        console.log("✅ Socket connected successfully");
-        console.log("🔌 Transport:", socket.io.engine.transport.name);
-        console.log("🆔 Socket ID:", socket.id);
-        set({ connectionStatus: 'connected' });
+  // message handlers (unchanged)
+  socket.on("message:receive", (m) => get().handleIncomingMessage(m));
+  socket.on("message:sent", (m) => get().handleMessageSent(m));
+  socket.on("message:error", (e) => get().handleMessageError(e));
+  socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
 
-        const { selectedContact } = get();
-        if (selectedContact) {
-            const chatId = getChatId(userId, selectedContact.user.id);
-            console.log("📨 Rejoining chat:", chatId);
-            socket.emit("chat:join", chatId);
-        }
-    });
-
-    // Connection error
-    socket.on("connect_error", (error) => {
-        console.error("❌ Socket connection error:", error.message);
-        console.error("❌ Error details:", {
-            message: error.message,
-            description: error.description,
-            context: error.context,
-            type: error.type
-        });
-        set({ connectionStatus: 'error' });
-
-        // Handle specific auth errors
-        if (error.message === "NO_TOKEN" || 
-            error.message === "INVALID_TOKEN" || 
-            error.message === "REFRESH_INVALID") {
-            console.error("🔒 Authentication failed, redirecting to login");
-            UseTokenStore.getState().setToken("");
-            window.location.href = "/auth";
-        }
-    });
-
-    // Token refreshed by server
-    socket.on("token_refreshed", ({ accessToken }) => {
-        console.log("🔄 Token refreshed by server");
-        UseTokenStore.getState().setToken(accessToken);
-        
-        // Update socket auth with new token only
-        socket.auth = { 
-            token: accessToken  // ✅ Only token
-        };
-    });
-
-    // Reconnection attempts
-    socket.io.on("reconnect_attempt", (attempt) => {
-        console.log(`🔄 Reconnection attempt ${attempt}`);
-        const newToken = UseTokenStore.getState().token;
-        if (newToken) {
-            socket.auth = { token: newToken };  // ✅ Only token
-        }
-        set({ connectionStatus: 'connecting' });
-    });
-
-    socket.io.on("reconnect", (attempt) => {
-        console.log(`✅ Reconnected after ${attempt} attempts`);
-        set({ connectionStatus: 'connected' });
-    });
-
-    socket.io.on("reconnect_failed", () => {
-        console.error("❌ Reconnection failed");
-        set({ connectionStatus: 'error' });
-    });
-
-    // Disconnection
-    socket.on("disconnect", (reason) => {
-        console.log("❌ Socket disconnected:", reason);
-        set({ connectionStatus: 'disconnected' });
-
-        // If server initiated disconnect, reconnect manually
-        if (reason === "io server disconnect") {
-            console.log("🔄 Server disconnected, attempting manual reconnect");
-            socket.connect();
-        }
-    });
-
-    // Service error from gateway
-    socket.on("service_error", ({ message }) => {
-        console.error("⚠️ Service error:", message);
-        set({ connectionStatus: 'error' });
-    });
-
-    // Message handlers
-    socket.on("message:receive", (messageData) => {
-        console.log("📩 Message received:", messageData);
-        get().handleIncomingMessage(messageData);
-    });
-
-    socket.on("message:sent", (messageData) => {
-        console.log("✉️ Message sent confirmation:", messageData);
-        get().handleMessageSent(messageData);
-    });
-
-    socket.on("message:error", (errorData) => {
-        console.error("❌ Message error:", errorData);
-        get().handleMessageError(errorData);
-    });
-
-    socket.on("users:online", (userIds) => {
-        console.log("👥 Online users updated:", userIds);
-        set({ onlineUsers: new Set(userIds) });
-    });
-    
-    set({ socket });
+  // Save socket
+  set({ socket });
 },
+
 
     disconnectSocket: () => {
         const socket = get().socket;
