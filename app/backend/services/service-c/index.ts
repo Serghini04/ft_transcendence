@@ -1,5 +1,5 @@
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import KafkaConsumerService, { MessageData } from '../shared/kafkaConsumer';
+import KafkaConsumerService, { MessageData } from './shared/kafkaConsumer';
 
 const fastify = Fastify({ logger: true });
 

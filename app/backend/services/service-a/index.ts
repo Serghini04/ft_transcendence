@@ -1,5 +1,5 @@
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import KafkaProducerService from '../shared/kafkaProducer';
+import KafkaProducerService from './shared/kafkaProducer';
 
 const fastify = Fastify({ logger: true });
 

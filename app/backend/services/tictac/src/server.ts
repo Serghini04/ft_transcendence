@@ -31,7 +31,7 @@ async function start() {
     // Run database migrations
     runMigrations();
 
-    // Register plugins
+    
     await fastify.register(helmet, {
       contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false
     });

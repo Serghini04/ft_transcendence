@@ -19,8 +19,8 @@ export class WebSocketHandler {
 
       socket.on('message', async (data: Buffer) => {
         try {
-          const message = JSON.parse(data.toString());
-          await this.handleMessage(socket, message, fastify);
+            const message = JSON.parse(data.toString());
+            await this.handleMessage(socket, message, fastify);
         } catch (error) {
           fastify.log.error({ err: error }, 'WebSocket message error');
           socket.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));

@@ -75,50 +75,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  kafka-producer:
-    build:
-      context: ./infra/kafka-producer
-      dockerfile: Dockerfile
-    image: kafka-producer
-    container_name: kafka-producer
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_TOPIC=test-topic
-    ports:
-      - "3001:3001"
-    depends_on:
-      - kafka
-    networks:
-      - ft_Transc
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  kafka-consumer:
-    build:
-      context: ./infra/kafka-consumer
-      dockerfile: Dockerfile
-    image: kafka-consumer
-    container_name: kafka-consumer
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_TOPIC=test-topic
-      - KAFKA_GROUP_ID=test-consumer-group
-      - KAFKA_CLIENT_ID=kafka-consumer-1
-    ports:
-      - "3002:3002"
-    depends_on:
-      - kafka
-    networks:
-      - ft_Transc
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   prometheus:
     build:
       context: ./infra/monitoring/prometheus
