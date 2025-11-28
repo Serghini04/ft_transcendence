@@ -1,0 +1,390 @@
+services:
+  zookeeper:
+    build:
+      context: ./infra/zookeeper
+      dockerfile: Dockerfile
+    image: zookeeper
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_JMX_PORT: 9998
+      KAFKA_JMX_HOSTNAME: zookeeper
+      KAFKA_OPTS: "-javaagent:/usr/share/jmx_prometheus_javaagent.jar=7072:/etc/jmx-exporter/config.yml"
+    ports:
+      - "2181:2181"
+      - "7072:7072"  # JMX Exporter metrics
+      - "9998:9998"  # JMX port
+    networks:
+      - ft_Transc
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  kafka:
+    build:
+      context: ./infra/kafka
+      dockerfile: Dockerfile
+    image: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "7071:7071"  # JMX Exporter metrics
+      - "9999:9999"  # JMX port
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka
+      KAFKA_OPTS: "-javaagent:/usr/share/jmx_prometheus_javaagent.jar=7071:/etc/jmx-exporter/config.yml"
+    depends_on:
+      - zookeeper
+    networks:
+      - ft_Transc
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  kafka-ui:
+    build:
+      context: ./infra/kafka-ui
+      dockerfile: Dockerfile
+    image: kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - ft_Transc
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  kafka-producer:
+    build:
+      context: ./infra/kafka-producer
+      dockerfile: Dockerfile
+    image: kafka-producer
+    container_name: kafka-producer
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=test-topic
+    ports:
+      - "3001:3001"
+    depends_on:
+      - kafka
+    networks:
+      - ft_Transc
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  kafka-consumer:
+    build:
+      context: ./infra/kafka-consumer
+      dockerfile: Dockerfile
+    image: kafka-consumer
+    container_name: kafka-consumer
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=test-topic
+      - KAFKA_GROUP_ID=test-consumer-group
+      - KAFKA_CLIENT_ID=kafka-consumer-1
+    ports:
+      - "3002:3002"
+    depends_on:
+      - kafka
+    networks:
+      - ft_Transc
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  chat-service:
+    build:
+      context: ./app/backend/services/chat
+      dockerfile: Dockerfile
+    image: chat-service
+    container_name: chat-service
+    ports:
+      - "3003:3003"
+    networks:
+      - ft_Transc
+
+  prometheus:
+    build:
+      context: ./infra/monitoring/prometheus
+      dockerfile: Dockerfile
+    image: prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+      - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/monitoring/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  alertmanager:
+    build:
+      context: ./infra/monitoring/alertmanager
+      dockerfile: Dockerfile
+    image: alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - alertmanager-data:/alertmanager
+      - ./infra/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  node-exporter:
+    build:
+      context: ./infra/monitoring/node-exporter
+      dockerfile: Dockerfile
+    image: node-exporter
+    container_name: node-exporter
+    ports:
+      - "9101:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    build:
+      context: ./infra/monitoring/grafana
+      dockerfile: Dockerfile
+    image: grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./infra/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_USER=hidriouc
+      - GF_SECURITY_ADMIN_PASSWORD=hidriouc
+      - GF_SECURITY_SECRET_KEY=SW2YcwTIb9zpOOhoPsMm
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    depends_on:
+      - prometheus
+      - alertmanager
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  elasticsearch:
+    build:
+      context: ./infra/monitoring/elasticsearch
+      dockerfile: Dockerfile
+    image: elasticsearch
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  logstash:
+    build:
+      context: ./infra/monitoring/logstash
+      dockerfile: Dockerfile
+    image: logstash
+    container_name: logstash
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    volumes:
+      - ./infra/monitoring/logstash/logstash.conf/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    environment:
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+      - "xpack.monitoring.enabled=true"
+      - "xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200"
+    depends_on:
+      - elasticsearch
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  kibana:
+    build:
+      context: ./infra/monitoring/kibana
+      dockerfile: Dockerfile
+    image: kibana
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  filebeat:
+    build:
+      context: ./infra/monitoring/filebeat
+      dockerfile: Dockerfile
+    image: filebeat
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./infra/monitoring/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - elasticsearch
+      - logstash
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile
+    image: frontend
+    container_name: frontend
+    ports:
+      - "8888:80"
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend-dev:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile.dev
+    image: frontend-dev
+    container_name: frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./app/frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    networks:
+      - ft_Transc
+    profiles:
+      - development
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ft_Transc:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:
+  elasticsearch-data:

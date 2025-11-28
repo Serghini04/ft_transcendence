@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 
 interface GameState {
@@ -41,6 +42,10 @@ export default function Online() {
   const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
   const [loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
 
+  // const { token } = UseTokenStore();
+  // const { user } = UseUserStore();
+
+
   const [state, setState] = useState<GameState>({
     canvas: { width: 1200, height: 675 },
     ball: { x: 600, y: 337.5, radius: 8, vx: 0, vy: 0, speed: 0, visible: true },
@@ -76,7 +81,16 @@ export default function Online() {
     const s = io("http://localhost:8080", {transports: ['websocket']});
     setSocket(s);
 
-    // Get current user ID (replace with your auth system)
+    // const res = await fetch(`http://localhost:8080/api/v1/chat/conversation/${contact.user.id}`, {
+    //         method: "POST",
+    //         credentials: "include",
+    //         headers: { Authorization: `Bearer ${token}` },
+    //         body: JSON.stringify({ userId: user.id }),
+
+    //       });
+    
+    // const data = await res.json();
+    // const isValid = verifyToken(data);
     const currentUserId = localStorage.getItem('userId') || `user_${Date.now()}`;
     
     s.emit("joinGame", { userId: currentUserId, options: { map, powerUps, speed } });

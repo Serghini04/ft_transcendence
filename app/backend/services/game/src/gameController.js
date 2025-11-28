@@ -58,6 +58,8 @@ async function createRoom(p1, p2, configKey, options) {
 	const state = initGameState(options.powerUps, speedMap[options.speed]);
 	
 	// Fetch user profiles
+
+	// get users prfile
 	const [player1Profile, player2Profile] = await Promise.all([
 	  getUserProfile(p1.data.userId),
 	  getUserProfile(p2.data.userId)

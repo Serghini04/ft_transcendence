@@ -1,0 +1,289 @@
+# Prometheus Alert Rules
+groups:
+  - name: system_alerts
+    interval: 15s
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected on {{ $labels.instance }}"
+          description: "CPU usage is above 80% (current value: {{ $value }}%)"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected on {{ $labels.instance }}"
+          description: "Memory usage is above 85% (current value: {{ $value }}%)"
+
+      # Critical memory usage
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 95% (current value: {{ $value }}%)"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is below 15% (current value: {{ $value }}%)"
+
+      # Critical disk space
+      - alert: CriticalDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}"
+          description: "Disk space is below 5% (current value: {{ $value }}%)"
+
+      # High disk I/O
+      - alert: HighDiskIO
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk I/O on {{ $labels.instance }}"
+          description: "Disk I/O is very high on device {{ $labels.device }}"
+
+      # High network traffic
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total[5m]) > 100000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network traffic on {{ $labels.instance }}"
+          description: "Network interface {{ $labels.device }} is receiving high traffic"
+
+  - name: kafka_alerts
+    interval: 15s
+    rules:
+      # Kafka broker down
+      - alert: KafkaBrokerDown
+        expr: up{job="kafka"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka broker is down"
+          description: "Kafka broker {{ $labels.instance }} has been down for more than 2 minutes"
+
+      # Zookeeper down
+      - alert: ZookeeperDown
+        expr: up{job="zookeeper"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Zookeeper is down"
+          description: "Zookeeper {{ $labels.instance }} has been down for more than 2 minutes"
+
+      # Kafka under-replicated partitions
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_server_replicamanager_underreplicatedpartitions > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka has under-replicated partitions"
+          description: "Kafka broker has {{ $value }} under-replicated partitions"
+
+      # Kafka offline partitions
+      - alert: KafkaOfflinePartitions
+        expr: kafka_controller_kafkacontroller_offlinepartitionscount > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka has offline partitions"
+          description: "Kafka has {{ $value }} offline partitions"
+
+      # Kafka producer/consumer down
+      - alert: KafkaProducerDown
+        expr: up{job="kafka-producer"} == 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka producer is down"
+          description: "Kafka producer has been down for more than 3 minutes"
+
+      - alert: KafkaConsumerDown
+        expr: up{job="kafka-consumer"} == 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer is down"
+          description: "Kafka consumer has been down for more than 3 minutes"
+
+  - name: service_alerts
+    interval: 15s
+    rules:
+      # Service down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes"
+
+      # Prometheus target down
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target {{ $labels.job }} is down"
+          description: "{{ $labels.job }} target has been down for more than 5 minutes"
+
+  - name: alertmanager_alerts
+    interval: 15s
+    rules:
+      # Alertmanager down
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager is down"
+          description: "Alertmanager has been down for more than 2 minutes"
+
+      # Alertmanager configuration reload failed
+      - alert: AlertmanagerConfigReloadFailed
+        expr: alertmanager_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager configuration reload failed"
+          description: "Alertmanager configuration reload has failed"
+
+  - name: monitoring_alerts
+    interval: 15s
+    rules:
+      # Prometheus too many restarts
+      - alert: PrometheusTooManyRestarts
+        expr: changes(process_start_time_seconds{job="prometheus"}[15m]) > 2
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus has restarted multiple times"
+          description: "Prometheus has restarted {{ $value }} times in the last 15 minutes"
+
+      # Grafana down
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Grafana is down"
+          description: "Grafana has been down for more than 5 minutes"
+
+      # Prometheus TSDB compaction failed
+      - alert: PrometheusTSDBCompactionFailed
+        expr: rate(prometheus_tsdb_compactions_failed_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus TSDB compaction failed"
+          description: "Prometheus TSDB compaction has failed"
+
+      # Prometheus configuration reload failed
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus configuration reload failed"
+          description: "Prometheus configuration reload has failed"
+
+  - name: elasticsearch_alerts
+    interval: 30s
+    rules:
+      # Elasticsearch cluster health
+      - alert: ElasticsearchClusterRed
+        expr: elasticsearch_cluster_health_status{color="red"} == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elasticsearch cluster status is RED"
+          description: "Elasticsearch cluster health is RED - some data may be unavailable"
+
+      - alert: ElasticsearchClusterYellow
+        expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch cluster status is YELLOW"
+          description: "Elasticsearch cluster health is YELLOW - replica shards are not allocated"
+
+      # Elasticsearch heap usage
+      - alert: ElasticsearchHighHeapUsage
+        expr: (elasticsearch_jvm_memory_used_bytes{area="heap"} / elasticsearch_jvm_memory_max_bytes{area="heap"}) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch heap usage is high"
+          description: "Elasticsearch JVM heap usage is above 90% (current: {{ $value }}%)"
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # Container CPU throttling
+      - alert: ContainerCPUThrottling
+        expr: rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is being CPU throttled"
+          description: "Container {{ $labels.name }} is experiencing CPU throttling"
+
+      # Container high memory usage
+      - alert: ContainerHighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container {{ $labels.name }} is using {{ $value }}% of its memory limit"
+
+      # Container restarts
+      - alert: ContainerRestarting
+        expr: rate(container_last_seen[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting frequently"
+          description: "Container {{ $labels.name }} has restarted multiple times"

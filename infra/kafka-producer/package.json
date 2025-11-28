@@ -1,0 +1,14 @@
+{
+  "name": "kafka-producer",
+  "version": "1.0.0",
+  "description": "Kafka producer service",
+  "main": "producer.js",
+  "scripts": {
+    "start": "node producer.js"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "fastify": "^4.25.2",
+    "prom-client": "^15.1.0"
+  }
+}

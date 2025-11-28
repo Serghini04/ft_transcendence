@@ -1,57 +1,45 @@
-import { useState, useEffect } from "react";
-import { BrowserRouter as Router } from "react-router-dom";
-import AppRoutes from "./components/AppRoutes";
-import HeaderBar from "./components/HeaderBar";
-import SideMenu from "./components/SideMenu";
+import './index.css';
+
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import MainLayout from './components/MainLayout';
+import Home from './userAuth/dashboard/Home';
+import Settings from './userAuth/settings/components/Settings';
+import Auth from './userAuth/LoginAndSignup/components/Auth';
+import ChatPage from './chat/components/ChatPage';
+import GameMenu from "./Game/GameMenu";
+import Game from "./Game/index";
+import Ai from "./Game/components/ai";
+import Local from "./Game/components/local";
+import Tournament from "./Game/components/tournament";
+import Online from "./Game/components/online";
+import GameSetup from "./Game/components/setup";
+import { useState } from "react";
 
 export default function App() {
-  const [menuOpen, setMenuOpen] = useState(window.innerWidth >= 768);
-
-  const handleMenuToggle = () => setMenuOpen((prev) => !prev);
-  const handleMenuClose = () => setMenuOpen(false);
-
-  // Automatically sync sidebar with screen size
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setMenuOpen(true); // open sidebar on large screens
-      } else {
-        setMenuOpen(false); // close sidebar on small screens
-      }
-    };
-
-    // Listen to resize
-    window.addEventListener("resize", handleResize);
-
-    // Run once on mount to set correct state
-    handleResize();
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <Router>
-      <div className="relative min-h-screen text-white">
-        {/* Background image */}
-        <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
+      <Routes>
 
-        {/* Sidebar */}
-        <SideMenu open={menuOpen} onClose={handleMenuClose} />
+        {/* Auth is outside MainLayout */}
+        <Route path="/auth" element={<Auth />} />
 
-        {/* Header */}
-        <HeaderBar onMenuToggle={handleMenuToggle} />
-
-        {/* Main content area */}
-        <div
-          className={`relative z-10 transition-all duration-300 ${
-            menuOpen ? "pl-[80px]" : "pl-0"
-          }`}
-        >
-          <main className="pt-20 px-10">
-            <AppRoutes menuOpen={menuOpen}/>
-          </main>
-        </div>
-      </div>
+        {/* All other routes use MainLayout */}
+        <Route element={<MainLayout menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/settings/*" element={<Settings />} />
+          <Route path="/game" element={<Game menuOpen={menuOpen} />}>
+            <Route index element={<GameMenu />} />
+            <Route path="setup" element={<GameSetup />} />
+            <Route path="tournament" element={<Tournament />} />
+            <Route path="ai" element={<Ai />} />
+            <Route path="local" element={<Local />} />
+            <Route path="online" element={<Online />} />
+          </Route>
+        </Route>
+      </Routes>
     </Router>
   );
 }

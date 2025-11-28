@@ -1,3 +1,7 @@
+/* @import "tailwindcss"; */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Smooch+Sans:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
@@ -18,3 +22,45 @@ html, body {
   overflow: hidden;
 }
 
+:root {
+	--height-tt: 200px;
+}
+
+@theme {
+	--color-primary-border: #DDDDDD;
+}
+
+@theme {
+	--color-primary: #0C7368;
+}
+
+.typing-dots {
+  display: inline-flex;
+  margin-left: 4px;
+}
+
+.typing-dots span {
+  opacity: 0.6;
+  animation: typing 1.4s ease-in-out infinite;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    opacity: 0.6;
+  }
+  30% {
+    opacity: 1;
+  }
+}
