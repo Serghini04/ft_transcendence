@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
-import axiosInstance from "../app/axios";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
-import { isValid } from 'date-fns';
-import isValidToken from '../../globalUtils/isValidToken';
 
 type ContactUser = {
     id: number;
@@ -78,129 +75,115 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     unseenMessageCounts: new Map<number, number>(),
     isNotificationsMuted: false,
     
-connectSocket: (userId) => {
-  const { token } = UseTokenStore.getState();
-  const currentSocket = get().socket;
+    connectSocket: (userId) => {
+        const { token } = UseTokenStore.getState();
+        const currentSocket = get().socket;
 
-  // Prevent duplicate/parallel connections
-  if (currentSocket?.connected) {
-    console.log("✅ Socket already connected");
-    return;
-  }
-  if (currentSocket) {
-    console.log("🔄 Disconnecting existing socket before connecting");
-    currentSocket.removeAllListeners();
-    currentSocket.disconnect();
-  }
+        if (currentSocket?.connected) {
+            console.log("Socket already connected");
+            return;
+        }
+        if (currentSocket) {
+            console.log("Disconnecting existing socket before connecting");
+            currentSocket.removeAllListeners();
+            currentSocket.disconnect();
+        }
 
-  if (!token) {
-    console.error("❌ No token available for socket connection");
-    window.location.href = "/auth";
-    set({ connectionStatus: 'error' });
-    return;
-  }
+        if (!token) {
+            console.error("No token available for socket connection");
+            window.location.href = "/auth";
+            set({ connectionStatus: 'error' });
+            return;
+        }
 
-  set({
-    loginId: userId,
-    connectionStatus: 'connecting',
-    messages: [],
-    selectedContact: null
-  });
+        set({
+            loginId: userId,
+            connectionStatus: 'connecting',
+            messages: [],
+            selectedContact: null
+        });
 
-  console.log("🔌 Connecting to Gateway with userId:", userId);
-  const socket = io("http://localhost:8080", {
-    withCredentials: true,
-    auth: { token }, // send token on handshake
-    transports: ['polling', 'websocket'],
-    path: '/socket.io',
-    reconnection: true,
-    reconnectionAttempts: 10,
-  });
+        console.log("🔌 Connecting to Gateway with userId:", userId);
+        const socket = io("http://localhost:8080", {
+            withCredentials: true,
+            auth: { token },
+            transports: ['polling', 'websocket'],
+            path: '/socket.io',
+            reconnection: true,
+            reconnectionAttempts: 10,
+        });
 
-  // Global manager errors
-  socket.io.on("error", (err) => console.error("Socket.IO manager error", err));
+        socket.io.on("error", (err) => console.error("Socket.IO manager error", err));
 
-  socket.on("connect", () => {
-    console.log("✅ Socket connected:", socket.id, "transport:", socket.io.engine.transport.name);
-    set({ connectionStatus: 'connected' });
+        socket.on("connect", () => {
+            console.log("Socket connected:", socket.id, "transport:", socket.io.engine.transport.name);
+            set({ connectionStatus: 'connected' });
 
-    const { selectedContact } = get();
-    if (selectedContact) {
-      const chatId = getChatId(userId, selectedContact.user.id);
-      console.log("📨 Rejoining chat:", chatId);
-      socket.emit("chat:join", chatId);
-    }
-  });
+            const { selectedContact } = get();
+            if (selectedContact) {
+            const chatId = getChatId(userId, selectedContact.user.id);
+            console.log("📨 Rejoining chat:", chatId);
+            socket.emit("chat:join", chatId);
+            }
+        });
 
-  // handle connect_error (handshake errors like NO_TOKEN, INVALID_TOKEN, REFRESH_INVALID)
-  socket.on("connect_error", (error: any) => {
-    console.error("❌ Socket connect_error:", error?.message ?? error);
-    set({ connectionStatus: 'error' });
+        // handle connect_error (handshake errors like NO_TOKEN, INVALID_TOKEN, REFRESH_INVALID)
+        socket.on("connect_error", (error: any) => {
+            console.error("Socket connect_error:", error?.message ?? error);
+            set({ connectionStatus: 'error' });
 
-    const code = error?.message ?? "";
+            const code = error?.message ?? "";
 
-    // If auth-related, stop client reconnection attempts and force logout/redirect
-    if (["NO_TOKEN", "INVALID_TOKEN", "REFRESH_INVALID", "NO_REFRESH_TOKEN"].includes(code)) {
-      console.warn("🔒 Auth error on socket handshake:", code);
+            if (["NO_TOKEN", "INVALID_TOKEN", "REFRESH_INVALID", "NO_REFRESH_TOKEN"].includes(code)) {
+                console.warn("Auth error on socket handshake:", code);
 
-      // Prevent further reconnect attempts
-      try {
-        // stop automatic reconnects
-        (socket.io as any).opts.reconnection = false;
-      } catch (e) {
-        console.warn("⚠️ Could not toggle reconnection option:", e);
-      }
+                try {
+                    (socket.io as any).opts.reconnection = false;
+                } catch (e) {
+                    console.warn("Could not toggle reconnection option:", e);
+                }
 
-      // Clean up socket and listeners
-      socket.removeAllListeners();
-      socket.disconnect();
+                socket.removeAllListeners();
+                socket.disconnect();
 
-      // Clear token in store and navigate to login
-      UseTokenStore.getState().setToken("");
-      window.location.href = "/auth";
-      return;
-    }
+                UseTokenStore.getState().setToken("");
+                window.location.href = "/auth";
+                return;
+            }
 
-    // Non-auth connect_error: keep reconnect attempts (Socket.IO client will try)
-    console.warn("⚠️ Non-auth connect_error, will attempt reconnects");
-  });
+            console.warn("Non-auth connect_error, will attempt reconnects");
+        });
 
-  // Server sent a new access token
-  socket.on("token_refreshed", ({ accessToken }: { accessToken: string }) => {
-    console.log("🔄 Received token_refreshed from server");
-    if (!accessToken) return;
+        socket.on("token_refreshed", ({ accessToken }: { accessToken: string }) => {
+            console.log("Received token_refreshed from server");
+            if (!accessToken)
+                return;
 
-    // Update token in your token store
-    UseTokenStore.getState().setToken(accessToken);
+            UseTokenStore.getState().setToken(accessToken);
 
-    // Update socket auth for future reconnections or joins
-    socket.auth = { token: accessToken };
+            socket.auth = { token: accessToken };
 
-    // socket stays connected — no need to force reconnect
-    console.log("✅ Token updated locally");
-  });
+            console.log("Token updated locally");
+        });
 
-  // service-level errors forwarded by gateway
-  socket.on("service_error", ({ message }: { message: string }) => {
-    console.error("⚠️ Service error from gateway:", message);
-    set({ connectionStatus: 'error' });
-  });
+        socket.on("service_error", ({ message }: { message: string }) => {
+            console.error("Service error from gateway:", message);
+            set({ connectionStatus: 'error' });
+        });
 
-  // message handlers (unchanged)
-  socket.on("message:receive", (m) => get().handleIncomingMessage(m));
-  socket.on("message:sent", (m) => get().handleMessageSent(m));
-  socket.on("message:error", (e) => get().handleMessageError(e));
-  socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
+        socket.on("message:receive", (m) => get().handleIncomingMessage(m));
+        socket.on("message:sent", (m) => get().handleMessageSent(m));
+        socket.on("message:error", (e) => get().handleMessageError(e));
+        socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
 
-  // Save socket
-  set({ socket });
-},
+        set({ socket });
+    },
 
 
     disconnectSocket: () => {
         const socket = get().socket;
         if (socket) {
-            console.log("🔌 Disconnecting socket");
+            console.log("Disconnecting socket");
             socket.removeAllListeners();
             socket.disconnect();
             set({ 
@@ -212,7 +195,7 @@ connectSocket: (userId) => {
     },
 
     resetStore: () => {
-        console.log("🔄 Resetting chat store completely");
+        console.log("Resetting chat store completely");
         const socket = get().socket;
         if (socket) {
             socket.removeAllListeners();
@@ -234,17 +217,15 @@ connectSocket: (userId) => {
     toggleNotificationsMute: () => {
         const { isNotificationsMuted } = get();
         set({ isNotificationsMuted: !isNotificationsMuted });
-        console.log(`🔔 Notifications ${!isNotificationsMuted ? 'muted' : 'unmuted'}`);
+        console.log(`Notifications ${!isNotificationsMuted ? 'muted' : 'unmuted'}`);
     },
 
     setSelectedContact: (contact) => {
         const { socket, loginId, selectedContact } = get();
-        // const { token } = UseTokenStore.getState();
 
-        // Leave previous chat
         if (selectedContact && socket && loginId) {
             const oldChatId = getChatId(loginId, selectedContact.user.id);
-            console.log("👋 Leaving chat:", oldChatId);
+            console.log("Leaving chat:", oldChatId);
             socket.emit("chat:leave", oldChatId);
         }
 
@@ -253,13 +234,12 @@ connectSocket: (userId) => {
             messages: []
         });
 
-        // Join new chat
         if (contact && socket && loginId) {
             const newChatId = getChatId(loginId, contact.user.id);
-            console.log("👋 Joining chat:", newChatId);
+            console.log("Joining chat:", newChatId);
             socket.emit("chat:join", newChatId);
             
-            // Mark messages as seen
+
             get().markMessagesAsSeen(contact.user.id);
             
             // Notify server
@@ -305,12 +285,12 @@ connectSocket: (userId) => {
         const { socket, loginId } = get();
         
         if (!socket?.connected) {
-            console.error("❌ Socket not connected");
+            console.error("Socket not connected");
             return;
         }
         
         if (!loginId) {
-            console.error("❌ No loginId");
+            console.error("No loginId");
             return;
         }
 
@@ -329,7 +309,7 @@ connectSocket: (userId) => {
 
         get().addMessage(optimisticMessage);
 
-        console.log("📤 Sending message:", {
+        console.log("Sending message:", {
             id: messageId,
             to: receiverId,
             message: text
