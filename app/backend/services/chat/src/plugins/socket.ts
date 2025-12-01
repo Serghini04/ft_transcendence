@@ -33,7 +33,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
     const userId = socket.handshake.auth.userId;
     
     if (!userId || isNaN(Number(userId))) {
-      fastify.log.warn("⚠️ Connection attempt without valid userId, disconnecting");
+      fastify.log.warn("Connection attempt without valid userId, disconnecting");
       socket.disconnect();
       return;
     }
@@ -55,7 +55,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
       const { to, message, timestamp } = data;
       
       if (!to || !message) {
-        fastify.log.warn(`⚠️ Invalid message data from ${userIdNum}`);
+        fastify.log.warn(`Invalid message data from ${userIdNum}`);
         return;
       }
       
@@ -116,26 +116,6 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
     socket.on("chat:leave", (chatId) => {
       socket.leave(`chat_${chatId}`);
-    });
-
-    socket.on("typing:start", (data) => {
-      const { chatId, receiverUserId } = data;
-      if (isUserOnline(receiverUserId)) {
-        io.to(`user_${receiverUserId}`).emit("typing:start", {
-          userId: userIdNum,
-          chatId
-        });
-      }
-    });
-
-    socket.on("typing:stop", (data) => {
-      const { chatId, receiverUserId } = data;
-      if (isUserOnline(receiverUserId)) {
-        io.to(`user_${receiverUserId}`).emit("typing:stop", {
-          userId: userIdNum,
-          chatId
-        });
-      }
     });
 
     socket.on("disconnect", () => {

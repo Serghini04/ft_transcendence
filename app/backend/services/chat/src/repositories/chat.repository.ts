@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { Relationship } from "../models/relationship";
-import { User, UserStatus } from "../models/user";
+import { User } from "../models/user";
 import { Message } from "../models/message";
 
 

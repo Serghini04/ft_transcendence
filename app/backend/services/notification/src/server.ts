@@ -1,7 +1,8 @@
-import { setupSocketServer } from "./socket";
+import socketPlugin from "./plugins/socket";
 import { notificationRoutes } from "./routes/notification.routes";
 import cors from "@fastify/cors";
 import fastify from "fastify";
+import { db } from "./plugins/notification.db";
 
 const buildApp = () => {
   const app = fastify({
@@ -20,22 +21,24 @@ const buildApp = () => {
 
   app.register(cors, {
     origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-user-id"]
   });
 
-  app.register(notificationRoutes);
+  app.decorate("db", db);
+  app.register(notificationRoutes, {prefix: "/api/v1/notifications"});
+  app.register(socketPlugin);
 
   return app;
 };
 
 const start = async () => {
   const app = buildApp();
-  const PORT = Number(process.env.NOTIF_SERVICE_PORT ?? 3004);
+  const PORT = Number(process.env.NOTIF_SERVICE_PORT ?? 3005);
 
   await app.listen({ port: PORT, host: "0.0.0.0" });
-
-  setupSocketServer(app);
-
-  console.log(`🚀 Notification Service running on port ${PORT}`);
+  console.log(`Notification Service running on port ${PORT}`);
 };
 
 start().catch((err) => {

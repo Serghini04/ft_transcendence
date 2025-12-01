@@ -1,9 +1,9 @@
-import { CircleX, RotateCcw, Sword, Bell, UserX } from "lucide-react";
+import { CircleX, RotateCcw, Sword, UserX } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, isNotificationsMuted, toggleNotificationsMute} = useChatStore();
+    const {selectedContact} = useChatStore();
     const matches = [
       { id: 1, userScore: 4, opponentScore: 3 },
       { id: 2, userScore: 3, opponentScore: 2 },
@@ -101,22 +101,6 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
               <Sword size={16} />
               Launch a challenge
             </button>
-
-            <div className="flex items-center justify-between bg-[#112434] rounded-xl py-3 px-4">
-              <div className="flex items-center gap-3">
-                <Bell size={16} />
-                Mute notifications
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={isNotificationsMuted}
-                  onChange={toggleNotificationsMute}
-                />
-                <div className="w-9 h-5 bg-gray-600 rounded-full peer peer-checked:bg-[#1EC49F] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-4 after:w-4 after:rounded-full after:transition-all peer-checked:after:translate-x-full"></div>
-              </label>
-            </div>
 
             <button className="flex items-center justify-center gap-2 !bg-[#A33B2E] hover:!bg-[#8E3125] !border-none rounded-xl py-2.5 text-sm !transition-colors">
               <UserX size={16} />

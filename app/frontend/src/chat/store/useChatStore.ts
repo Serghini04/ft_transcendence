@@ -34,7 +34,6 @@ type ChatStore = {
     messages: Message[];
     contacts: ContactUser[];
     onlineUsers: Set<number>;
-    connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
     unseenMessageCounts: Map<number, number>;
     isNotificationsMuted: boolean;
 
@@ -71,7 +70,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     contacts: [],
     messages: [],
     onlineUsers: new Set<number>(),
-    connectionStatus: 'disconnected',
     unseenMessageCounts: new Map<number, number>(),
     isNotificationsMuted: false,
     
@@ -92,18 +90,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         if (!token) {
             console.error("No token available for socket connection");
             window.location.href = "/auth";
-            set({ connectionStatus: 'error' });
             return;
         }
 
         set({
             loginId: userId,
-            connectionStatus: 'connecting',
             messages: [],
             selectedContact: null
         });
 
-        console.log("🔌 Connecting to Gateway with userId:", userId);
+        console.log("Connecting to Gateway with userId:", userId);
         const socket = io("http://localhost:8080", {
             withCredentials: true,
             auth: { token },
@@ -117,20 +113,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
         socket.on("connect", () => {
             console.log("Socket connected:", socket.id, "transport:", socket.io.engine.transport.name);
-            set({ connectionStatus: 'connected' });
 
             const { selectedContact } = get();
             if (selectedContact) {
-            const chatId = getChatId(userId, selectedContact.user.id);
-            console.log("📨 Rejoining chat:", chatId);
-            socket.emit("chat:join", chatId);
+                const chatId = getChatId(userId, selectedContact.user.id);
+                console.log("📨 Rejoining chat:", chatId);
+                socket.emit("chat:join", chatId);
             }
         });
 
         // handle connect_error (handshake errors like NO_TOKEN, INVALID_TOKEN, REFRESH_INVALID)
         socket.on("connect_error", (error: any) => {
             console.error("Socket connect_error:", error?.message ?? error);
-            set({ connectionStatus: 'error' });
 
             const code = error?.message ?? "";
 
@@ -145,7 +139,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
                 socket.removeAllListeners();
                 socket.disconnect();
-
                 UseTokenStore.getState().setToken("");
                 window.location.href = "/auth";
                 return;
@@ -154,21 +147,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             console.warn("Non-auth connect_error, will attempt reconnects");
         });
 
-        socket.on("token_refreshed", ({ accessToken }: { accessToken: string }) => {
-            console.log("Received token_refreshed from server");
-            if (!accessToken)
-                return;
-
-            UseTokenStore.getState().setToken(accessToken);
-
-            socket.auth = { token: accessToken };
-
-            console.log("Token updated locally");
-        });
-
         socket.on("service_error", ({ message }: { message: string }) => {
             console.error("Service error from gateway:", message);
-            set({ connectionStatus: 'error' });
         });
 
         socket.on("message:receive", (m) => get().handleIncomingMessage(m));
@@ -187,8 +167,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             socket.removeAllListeners();
             socket.disconnect();
             set({ 
-                socket: null, 
-                connectionStatus: 'disconnected',
+                socket: null,
                 onlineUsers: new Set<number>()
             });
         }
@@ -208,7 +187,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             contacts: [],
             messages: [],
             onlineUsers: new Set<number>(),
-            connectionStatus: 'disconnected',
             unseenMessageCounts: new Map<number, number>(),
             isNotificationsMuted: false
         });
@@ -241,32 +219,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             
 
             get().markMessagesAsSeen(contact.user.id);
-            
-            // Notify server
-            // axiosInstance.patch(
-            //     `/api/v1/chat/messages/${contact.user.id}/seen`,
-            //     {},
-            //     {
-            //         headers: {
-            //             Authorization: `Bearer ${token}`,
-            //             'Content-Type': 'application/json'
-            //         }
-            //     }
-
-            // isValidToken(token);
-            // fetch(`http://localhost:8080/api/v1/chat/messages/${contact.user.id}/seen`, {
-            //     method: "PATCH",
-            //     credentials: "include",
-            //     body: JSON.stringify({}),
-            //     headers: {
-            //         Authorization: `Bearer ${token}`,
-            //         'Content-Type': 'application/json'
-            //     }
-            // }
-            
-            // ).catch(error => {
-            //     console.error('❌ Failed to mark messages as seen:', error);
-            // });
         }
     },
 
