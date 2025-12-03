@@ -1,9 +1,8 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
-import axiosInstance from "../app/axios";
+// import { axiosInstance } from "../app/axios";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
-import { isValid } from 'date-fns';
-import isValidToken from '../../globalUtils/isValidToken';
+// import isValidToken from '../../globalUtils/isValidToken';
 
 type ContactUser = {
     id: number;
@@ -113,7 +112,7 @@ connectSocket: (userId) => {
     console.log("🔌 Connecting to socket with userId:", userId);
     console.log("🔑 Token:", token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
     
-    const socket = io("http://localhost:8080", {
+    const socket = io("http://localhost:8081", {
         withCredentials: true,
         auth: { 
             token: token  // ✅ SEND TOKEN - gateway will extract userId from it
@@ -156,10 +155,7 @@ connectSocket: (userId) => {
     socket.on("connect_error", (error) => {
         console.error("❌ Socket connection error:", error.message);
         console.error("❌ Error details:", {
-            message: error.message,
-            description: error.description,
-            context: error.context,
-            type: error.type
+            message: error.message
         });
         set({ connectionStatus: 'error' });
 

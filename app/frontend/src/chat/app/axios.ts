@@ -1,11 +1,11 @@
-import axios from "axios";
-import verifyToken from "../../globalUtils/verifyToken";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+// import axios from "axios";
+// import verifyToken from "../../globalUtils/verifyToken";
+// import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
-const axiosInstance = axios.create({
-  baseURL: "http://localhost:8080",
-  withCredentials: true,
-});
+// const axiosInstance = axios.create({
+//   baseURL: "http://localhost:8080",
+//   withCredentials: true,
+// });
 
 // Request interceptor to add token to all requests
 // axiosInstance.interceptors.request.use(
@@ -107,4 +107,4 @@ const axiosInstance = axios.create({
 //   }
 // );
 
-export default axiosInstance;
+// export default axiosInstance;

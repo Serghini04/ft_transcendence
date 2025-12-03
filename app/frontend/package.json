@@ -14,11 +14,19 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.4",
     "@mui/material": "^7.3.4",
+    "@react-oauth/google": "^0.12.2",
+    "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.25",
+    "jwt-decode": "^4.0.0",
     "lucide-react": "^0.544.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.3",
-    "tailwind-scrollbar-hide": "^4.0.0"
+    "react-toastify": "^11.0.5",
+    "socket.io-client": "^4.8.1",
+    "tailwind-scrollbar-hide": "^4.0.0",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

@@ -5,10 +5,10 @@ import IconButton from "@mui/material/IconButton";
 
 export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }) {
   return (
-    <header className="fixed top-0 left-0 md:left-20 right-0 h-20 flex items-center justify-between px-4 sm:px-6 md:px-10 bg-[rgba(13,34,52,0.8)] backdrop-blur-md z-30 border-b border-white/10">
+    <header className="fixed top-0 left-20 right-0 h-20 flex items-center justify-between px-4 sm:px-6 md:px-10 bg-transparent backdrop-blur-md z-30 overflow-visible">
       
       {/* --- Left Section (Menu icon + Search bar) --- */}
-      <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-1">
+      <div className="flex items-center gap-2 sm:gap-4 sm:gap-9 flex-1">
         {/* Menu Icon (only on small screens) */}
         <IconButton
           onClick={onMenuToggle}
@@ -19,8 +19,8 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
 
         {/* Search Bar */}
         <div
-          className="flex-1 flex items-center bg-[rgba(13,34,52,0.8)] rounded-full px-2 py-1.5 sm:px-3 sm:py-2 shadow-md backdrop-blur-sm hover:shadow-lg transition-all
-          max-w-[100px] sm:max-w-[180px] md:max-w-[350px] lg:max-w-[420px] min-w-0 border border-white/10"
+          className="flex-1 flex items-center bg-[rgba(13,34,52,0.5)] rounded-full px-2 py-1.5 sm:px-3 sm:py-2 shadow-md backdrop-blur-sm hover:shadow-lg transition-all
+          max-w-[120px] sm:max-w-[180px] md:max-w-[350px] lg:max-w-[420px] min-w-0"
         >
           <SearchIcon className="text-gray-400 mr-2 shrink-0" fontSize="medium" />
           <input
@@ -36,7 +36,7 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
         {/* Notifications */}
         <div className="relative flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6">
           <NotificationsIcon className="text-gray-300 hover:text-white transition-colors w-full h-full cursor-pointer" />
-          <span className="absolute -top-0.5 -right-0.5 bg-red-600 text-white text-[6px] sm:text-[8px] font-bold px-1 py-[1px] rounded-full border border-[#0b1b29]">
+          <span className="absolute -top-0.5 -right-0.5 bg-red-600 text-white text-[6px] sm:text-[7px] sm:text-[8px] font-bold px-1 py-[1px] rounded-full border border-[#0b1b29]">
              3
           </span>
         </div>

@@ -4,5 +4,3 @@ dist
 .env
 .git
 .DS_Store
-data/
-*.db

@@ -13,7 +13,7 @@ export default function GoogleButton(props :any) {
 	const login = useGoogleLogin({
 		onSuccess: async (tokenResponse) => {
 			try {
-				const res = await fetch(`http://localhost:8080${props.route}`, {
+				const res = await fetch(`http://localhost:8081${props.route}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ accessToken: tokenResponse.access_token }),

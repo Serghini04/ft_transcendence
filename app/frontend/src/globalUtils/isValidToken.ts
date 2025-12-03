@@ -1,11 +1,10 @@
-import { UseTokenStore } from "../userAuth/LoginAndSignup/zustand/useStore";
 
 
 export async function isValidToken(token: string | null): Promise<{ valid: boolean; newToken: string | null }> {
   if (!token) 
     return { valid: false, newToken: null };
   
-  const res = await fetch("http://localhost:8080/api/v1/auth/protect", {
+  const res = await fetch("http://localhost:8081/api/v1/auth/protect", {
     method: "GET",
     credentials: "include",
     headers: { Authorization: `Bearer ${token}` }

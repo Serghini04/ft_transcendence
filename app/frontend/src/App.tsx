@@ -1,46 +1,34 @@
-import HeaderBar from "./components/HeaderBar";
-import SideMenu from "./components/SideMenu";
-// import UrTask from "./urtask/components/index";
-import AppRoutes from "./components/AppRoutes";
-import { useState } from "react";
+import './index.css';
 
-import { BrowserRouter as Router } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import MainLayout from './components/MainLayout';
+import Home from './userAuth/dashboard/Home';
+import Settings from './userAuth/settings/components/Settings';
+import Auth from './userAuth/LoginAndSignup/components/Auth';
+import ChatPage from './chat/components/ChatPage';
+import GameSelection from './TicTac/GameSelection';
+import TicTac from './TicTac/TicTac';
+import OnlineTicTac from './TicTac/OnlineTicTac';
 
 export default function App() {
-
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const handleMenuToggle = () => setMenuOpen((prev) => !prev);
-  const handleMenuClose = () => setMenuOpen(false);
   return (
     <Router>
-      <div className="relative  text-white  overflow-y-scroll min-h-screen min-w-screen7">
-        <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
+      <Routes>
 
-        <SideMenu open={menuOpen} onClose={handleMenuClose} />
-        {/* <HeaderBar /> */}
-        <HeaderBar onMenuToggle={handleMenuToggle} />
+        {/* Auth is outside MainLayout */}
+        <Route path="/auth" element={<Auth />} />
 
-        {/* <UrTask /> */}
-
-        <main className="
-          fixed
-          pl-20
-          align-center
-          justify-center
-          bg-[rgba(15,26,36,0.5)]
-          mt-25
-          md:ml-30 ml-[-5rem]   /* push left off-screen on mobile */
-          border md:border border-t-2
-          rounded-tl-4xl
-          border-[#27445E]
-          inset-0
-          flex
-        overflow-y-scroll
-      ">
-          <AppRoutes />
-        </main>
-      </div>
+        {/* All other routes use MainLayout */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/settings/*" element={<Settings />} />
+          <Route path="/games" element={<GameSelection />} />
+          <Route path="/tictac" element={<TicTac />} />
+          <Route path="/tictac/online" element={<OnlineTicTac />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }

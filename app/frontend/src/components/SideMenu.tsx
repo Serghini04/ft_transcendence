@@ -4,7 +4,6 @@ import {
   Gamepad2,
   Settings,
   LogOut,
-  Grid3x3,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom"
 
@@ -20,7 +19,7 @@ export default function SideMenu({ open }: SideMenuProps) {
   return (
     <>
       {/* --- Logo Bar (Always visible) --- */}
-      <div className="fixed top-0 left-0 h-20 w-20 bg-[rgba(13,34,52,0.9)] md:flex flex-col items-center justify-center z-40 backdrop-blur-md border-r border-b border-white/10 shadow-lg hidden">
+      <div className="fixed top-0 left-0 h-20 w-20 bg-[rgba(13,34,52,0.65)] flex flex-col items-center justify-center z-30 backdrop-blur-md border-r border-white/10 shadow-lg">
         <img
           src="/logo.png"
           alt="Logo"
@@ -29,21 +28,13 @@ export default function SideMenu({ open }: SideMenuProps) {
       </div>
 
       {/*Sidebar content (only visible on desktop or when open on mobile) --- */}
-      {/* Mobile Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
-          onClick={() => {}} // Prevent closing on overlay click
-        />
-      )}
-
       <aside
-        className={`fixed left-0 top-0 h-full w-20 bg-[rgba(13,34,52,0.95)] flex flex-col items-center py-3 z-40 backdrop-blur-md border-r border-white/10 shadow-2xl transform transition-transform duration-300
-        ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:top-20 md:h-[calc(100%-5rem)]`}
+        className={`fixed left-0 top-20 h-[calc(100%-5rem)] w-20 bg-[rgba(13,34,52,0.65)] flex flex-col items-center py-3 z-20 backdrop-blur-md border-r border-white/10 shadow-lg transform transition-transform duration-300
+        ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
 
         {/* Navigation Icons */}
-        <nav className="flex flex-col items-center justify-center flex-1 space-y-16 w-full mt-4">
+        <nav className="flex flex-col items-center justify-center flex-1 space-y-20 w-full mt-4">
           <NavItem
             icon={<Home size={32} />}
             color="#12C0AD"
@@ -55,13 +46,6 @@ export default function SideMenu({ open }: SideMenuProps) {
             color="#12C0AD"
             to="/chat"
             active={location.pathname.startsWith("/chat")}
-          />
-          <NavItem
-            icon={<Grid3x3 size={32} />}
-            color="#F59E0B"
-            to="/tictac-select"
-            active={location.pathname.startsWith("/tictac")}
-            title="TicTacToe"
           />
           <NavItem
             icon={<Gamepad2 size={32} />}
@@ -93,13 +77,12 @@ interface NavItemProps {
   color?: string;
   to: string;
   active?: boolean;
-  title?: string;
 }
 
-function NavItem({icon, color = "#12C0AD", to, active = false, title}: NavItemProps)
+function NavItem({icon, color = "#12C0AD", to, active = false}: NavItemProps)
 {
   return (
-    <Link to={to} className="group relative flex items-center justify-center w-full cursor-pointer" title={title}>
+    <Link to={to} className="group relative flex items-center justify-center w-full cursor-pointer">
        {/* Icon */}
       <div
         className={`transition-colors duration-300 ${

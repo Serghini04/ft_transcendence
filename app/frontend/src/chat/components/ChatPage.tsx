@@ -5,12 +5,12 @@ import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputBar from "./InputBar";
 import { useChatStore } from "../store/useChatStore";
-import { useParams } from "react-router-dom";
+// import { useParams } from "react-router-dom";
 import HistoryPanel from "./HistoryPanel";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 export default function ChatPage() {
-  // const { id } = useParams<{ id: string }>();
+  // const { id } = useParams<{ id: string }>(); // Unused import removed
   const { userId } = UseTokenStore();
   const { connectSocket, disconnectSocket } = useChatStore();
 
