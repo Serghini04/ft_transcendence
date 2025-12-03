@@ -12,7 +12,6 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
         {/* Menu Icon (only on small screens) */}
         <IconButton
           onClick={onMenuToggle}
-          aria-label="Toggle menu"
           className="block md:!hidden text-white transition-colors hover:text-gray-300 bg-transparent border-none outline-none p-1 sm:p-2"
         >
           <Menu size={26} className="text-gray-400" />

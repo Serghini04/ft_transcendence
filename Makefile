@@ -52,7 +52,7 @@ test-producer:
 	@bash -c 'source $(MESSAGES) && msg_test_producer_start'
 	@curl -s -X POST http://localhost:3001/send \
 		-H "Content-Type: application/json" \
-		-d '{"message": "hicham soulaymane", "key": "souaouri"}' \
+		-d '{"message": "hicham meserghi seraghna hakma elhila9a", "key": "souaouri"}' \
 		2>&1 | grep -o '{.*}' | jq '.' || curl -X POST http://localhost:3001/send -H "Content-Type: application/json" -d '{"message": "Test message from Makefile", "key": "test-key"}'
 	@bash -c 'source $(MESSAGES) && msg_test_producer_complete'
 
@@ -64,7 +64,7 @@ test-consumer:
 
 dev:
 	@echo "🔧 Starting Frontend Development Mode..."
-	@docker-compose --profile development up frontend-dev
+	@docker-compose --profile development up frontend-dev -d
 
 dev-full:
 	@echo "🚀 Starting Full Development Stack..."
@@ -154,16 +154,14 @@ stop-all:
 
 delete-all: stop-all
 	@bash -c 'source $(MESSAGES) && msg_delete_all_start'
-	@echo "🗑️  Removing all Docker containers..."
-	@docker rm -f $$(docker ps -aq) 2>/dev/null || echo "No containers to remove"
-	@echo "🗑️  Removing all Docker volumes..."
-	@docker volume rm $$(docker volume ls -q) 2>/dev/null || echo "No volumes to remove"
-	@echo "🗑️  Removing all Docker images..."
-	@docker rmi -f $$(docker images -q) 2>/dev/null || echo "No images to remove"
-	@echo "🗑️  Removing all Docker networks (except defaults)..."
-	@docker network rm $$(docker network ls -q -f type=custom) 2>/dev/null || echo "No custom networks to remove"
-	@echo "🧹 Pruning Docker system..."
-	@docker system prune -af --volumes
+	@if [ -n "$$(docker volume ls -q)" ]; then \
+		docker volume rm $$(docker volume ls -q) 2>/dev/null || true; \
+		bash -c 'source $(MESSAGES) && msg_delete_all_volumes_done'; \
+	else \
+		bash -c 'source $(MESSAGES) && msg_delete_all_volumes_none'; \
+	fi
+	@bash -c 'source $(MESSAGES) && msg_delete_all_images'
+	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|loki|promtail|kafka-producer|kafka-consumer|kafka-ui):" | xargs -r docker rmi -f 2>/dev/null || true
 	@bash -c 'source $(MESSAGES) && msg_delete_all_complete'
 
 

@@ -455,6 +455,53 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  api_gateway:
+    build:
+      context: ./app/backend/api_gateway
+      dockerfile: dockerfile
+    image: api_gateway
+    container_name: api_gateway
+    ports:
+      - "8081:8081"
+    environment:
+      NODE_ENV: production
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - zookeeper
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  user_auth:
+    build:
+      context: ./app/backend/services/userAuth
+      dockerfile: Dockerfile
+    image: user_auth
+    container_name: user_auth
+    ports:
+      - "3020:3020"
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+      JWT_REFRESH: ${JWT_REFRESH:-your-jwt-refresh-key-change-in-production}
+      COOKIE_SECRET: ${COOKIE_SECRET:-your-cookie-secret-key-change-in-production}
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - zookeeper
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   ft_Transc:
     driver: bridge
