@@ -1,13 +1,15 @@
 import fastify from "fastify";
-import "./db.ts";
-import db from "./db.ts"; // no extension with ts-node
+import db from "./db";
 import bcrypt from "bcrypt";
 import { Console, error } from "console";
 import {OAuth2Client } from "google-auth-library";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import { request } from "http";
-import { authenticateToken, generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.ts";
+import {generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
+import { generateOTP, sendOTPEmail } from "./2FA";
+import { access } from "fs";
 
 
 interface User {
@@ -30,6 +32,7 @@ await app.register(cors, {
 
 
 db.prepare(`DROP TABLE IF EXISTS users`).run();
+
 // Create table if not exists
 
 db.prepare(`
@@ -38,8 +41,18 @@ db.prepare(`
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
-  )
-`).run();
+    )
+    `).run();
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS temp_users (
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
+        expiry INTEGER NOT NULL
+        )
+    `).run();
+        
+
 
 app.get("/", async () => {
   return { message: "SQLite DB connected" };
@@ -50,7 +63,7 @@ const strongPassword = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}[\]|\\:;"'<>,
 const client = new OAuth2Client("917057465162-k81haa2us30sg6ddker0bu9gk4qigb9r.apps.googleusercontent.com");
 
 
-app.post("/api/auth/googleSignup", async (request, reply) => {
+app.post("/api/v1/auth/googleSignup", async (request, reply) => {
   try{
     const {accessToken} = request.body as {accessToken: string};
     
@@ -117,7 +130,7 @@ app.post("/api/auth/googleSignup", async (request, reply) => {
   }
 })
 
-app.post("/api/auth/googleLogin", async (request, reply) => {
+app.post("/api/v1/auth/googleLogin", async (request, reply) => {
   try{
     const {accessToken} = request.body as {accessToken: string};
     
@@ -170,7 +183,7 @@ app.post("/api/auth/googleLogin", async (request, reply) => {
   }
 });
 
-app.post("/api/auth/login", async (request, reply) => {
+app.post("/api/v1/auth/login", async (request, reply) => {
   try {
     const { username, password } = request.body as { username: string; password: string };
 
@@ -194,6 +207,8 @@ app.post("/api/auth/login", async (request, reply) => {
       return ;
     }
 
+    
+
     //save user info for sending back to client
     const row = db.prepare("SELECT * FROM users WHERE name = ?").get(username) as User;
       const userInfo = {
@@ -202,34 +217,91 @@ app.post("/api/auth/login", async (request, reply) => {
         email: row.email
       }
 
+    //generate OTP
+    const otp = generateOTP();
+    sendOTPEmail(row.email, otp);
+
     //jwt token generation
-    const getJwtParams = db.prepare("SELECT * FROM users WHERE name = ?").get(username) as User;
-    const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-    const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-    console.log("Generated JWT Token:", AccessToken);
-    reply.setCookie("refreshToken", RefreshToken, {
-      httpOnly: true,
-      secure: false, 
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    })
-    .status(201).send({ 
+    // const getJwtParams = db.prepare("SELECT * FROM users WHERE name = ?").get(username) as User;
+    // const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+    // const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+    // console.log("Generated JWT Token:", AccessToken);
+    reply.status(201).send({ 
       message: "Login successful",
-      AccessToken: AccessToken,
       user: userInfo,
+      otp: otp,
       code: "USER_ADDED_SUCCESS" });
 
   } catch (err) {
     console.error(err);
-    reply.status(500).send({ error: "Internal server erroR" });
+    reply.status(500).send({ error: "Internal server error" });
   }
 });
 
-app.post("/api/auth/signup", async (request, reply) => {
-    try {
-      const { name, email, password, cpassword } = request.body as { name: string; email: string; password: string; cpassword: string};
-    
+app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
+  try {
+    const { emailOrName, key } = request.body as { emailOrName: string; key: string };
+
+    //stor in db
+    console.log("Verifying email for:", emailOrName, "with key:", key);
+    let row = {} as User;
+    let userInfo = {id: 0, name: "", email: ""};
+    if (key === "signup")
+    {
+      const pending = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(emailOrName) as {name: string; email: string; password: string; expiry: number} | undefined;
+
+    if (!pending) {
+      reply.status(400).send({ error: "No pending signup found for this email", code: "NO_PENDING_SIGNUP" });
+      return ;
+    }
+
+    db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)")
+      .run(pending.name, pending.email, pending.password);
+
+    // Remove from pending_users
+    db.prepare("DELETE FROM temp_users WHERE email = ?").run(emailOrName);
+
+    // save user info for sending back to client
+      row = db.prepare("SELECT * FROM users WHERE email = ?").get(emailOrName) as User;
+      userInfo = {
+        id: row.id,
+        name: row.name,
+        email: row.email
+      }
+    }
+    else if (key === "login")
+    {
+      row = db.prepare("SELECT * FROM users WHERE name = ?").get(emailOrName) as User;
+      userInfo = {
+        id: row.id,
+        name: row.name,
+        email: row.email
+      }
+    }
+      
+      const AccessToken = generateJwtAccessToken({id: row.id, name: row.name, email: row.email});
+      const RefreshToken = generateJwtRefreshToken({id: row.id, name: row.name, email: row.email});
+
+    return reply.setCookie("refreshToken", RefreshToken, {
+              httpOnly: true,
+              secure: false,      
+              sameSite: "lax",
+              path: "/",           
+              maxAge: 60 * 60 * 24 * 7, 
+            }).status(200).send({ message: "Signup completed", code: "VERIFICATION_SUCCESS", accessToken: AccessToken, user: userInfo });
+
+
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: "Internal server error!" });
+  }
+});
+
+
+app.post("/api/v1/auth/signup", async (request, reply) => {
+  try {
+    const { name, email, password, cpassword} = request.body as { name: string; email: string; password: string; cpassword: string};
+  
       if (!name || !email || !password || !cpassword) {
         reply.status(400).send({ error: "All fields are required" });
         return ;
@@ -255,48 +327,135 @@ app.post("/api/auth/signup", async (request, reply) => {
         return ;
       }
 
+      //generate OTP
+      const otp = generateOTP();
+      sendOTPEmail(email, otp);
       //hashing password
       const hashedPassword = await bcrypt.hash(password, 10);
-      
       //stor in db
-      db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)").run(name, email, hashedPassword);
+      const expiry = Date.now() + 10 * 60 * 1000; 
+      db.prepare("INSERT INTO temp_users (name, email, password, expiry) VALUES (?, ?, ?, ?)").run(name, email, hashedPassword, expiry);
 
       //save user info for sending back to client
-      const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
+      const row = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(email) as User;
       const userInfo = {
-        id: row.id,
         name: row.name,
         email: row.email
       }
       
       //jwt token generation
-      const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
-      const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-      const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-      
-      reply.setCookie("refreshToken", RefreshToken, {
-        httpOnly: true,
-        secure: false,      
-        sameSite: "lax",
-        path: "/",           
-        maxAge: 60 * 60 * 24 * 7, 
-      })
-      .status(201).status(201).send({
-        message: "User added successfully",
-        AccessToken: AccessToken,
-        user: userInfo,
-        code: "USER_ADDED_SUCCESS" });
-    } catch (err: any) {
-        console.error(err);
-        reply.status(500).send({ error: "Internal server error" });
-    }
-  });
+      // const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
+      // const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+      // const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+    
+    reply
+    .status(201).status(201).send({
+      message: "User added successfully",
+      otp: otp,
+      user: userInfo,
+      code: "USER_ADDED_SUCCESS" });
+  } catch (err: any) {
+      console.error(err);
+      reply.status(500).send({ error: "Internal server error!" });
+  }
+});
 
-app.get("/protect", {preHandler: authenticateToken}, async (request, reply) => {
+// app.post("/api/v1/auth/signup", async (request, reply) => {
+//     try {
+//       const { name, email, password, cpassword , key} = request.body as { name: string; email: string; password: string; cpassword: string; key?: string };
+    
+      
+//       let AccessToken: string = "";
+//       let RefreshToken: string = "";
+//       let userInfo: {id: number; name: string; email: string;} = {id: 0, name: "", email: ""};
+//       let otp: string = "";
+//       if (key === "KO")
+//         {
+//         if (!name || !email || !password || !cpassword) {
+//           reply.status(400).send({ error: "All fields are required" });
+//           return ;
+//         }
+//         const isNameExist = db.prepare("SELECT * FROM users WHERE name = ?").get(name);
+//         const isEmailExist = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+//         if (isNameExist || isEmailExist)
+//         {
+//           if (isNameExist)
+//             reply.status(400).send({ error: "Name already exists", code: "NAME_ALR_EXIST"});
+//           if (isEmailExist)
+//             reply.status(400).send({ error: "Email already exists", code: "EMAIL_ALR_EXIST"});
+//           return ;
+//         }
+//         if (!strongPassword.test(password))
+//         {
+//           reply.status(400).send({ error: "Min 8 chars, 1 uppercase, 1 number, 1 symbol", code: "PASSWORD_NOT_STROMG"})
+//           return ;
+//         }
+//         if (password != cpassword)
+//         {
+//           reply.status(400).send({error: "cpassword not matching", code: "CPASSWORD_NOT_MATCHING"})
+//           return ;
+//         }
+
+//         //generate OTP
+//         otp = generateOTP();
+//         sendOTPEmail(email, otp);
+//       }
+//       else{
+//         //hashing password
+//         const hashedPassword = await bcrypt.hash(password, 10);
+//         //stor in db
+//         db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)").run(name, email, hashedPassword);
+
+//         //save user info for sending back to client
+//         const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
+//         userInfo = {
+//           id: row.id,
+//           name: row.name,
+//           email: row.email
+//         }
+        
+//         //jwt token generation
+//         const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
+//         AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+//         RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+//     }
+      
+//       reply.setCookie("refreshToken", RefreshToken, {
+//         httpOnly: true,
+//         secure: false,      
+//         sameSite: "lax",
+//         path: "/",           
+//         maxAge: 60 * 60 * 24 * 7, 
+//       })
+//       .status(201).status(201).send({
+//         message: "User added successfully",
+//         AccessToken: AccessToken,
+//         otp: otp,
+//         user: userInfo,
+//         code: "USER_ADDED_SUCCESS" });
+//     } catch (err: any) {
+//         console.error(err);
+//         reply.status(500).send({ error: "Internal server error!" });
+//     }
+//   });
+
+app.get("/api/v1/auth/protect", async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
 
-app.listen({ port: 8080 }, (err, address) => {
+// app.post ("/auth/v1/verify-email", async (request, reply) => {
+//   try {
+//     const { otp } = request.body as { otp: string };
+    
+//     if (!otp) {
+//       return reply.status(400).send({ error: "OTP is required" });
+//     }
+
+//   }
+// });
+
+
+app.listen({ port: 3004 }, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

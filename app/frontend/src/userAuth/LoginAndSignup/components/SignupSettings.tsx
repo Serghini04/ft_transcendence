@@ -2,8 +2,9 @@ import { Lock, User, Mail, Eye, EyeClosed} from "lucide-react";
 import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
-import {UseErrorStore, UseTokenStore, UseUserStore} from "../zustand/useStore";
+import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore} from "../zustand/useStore";
 import { useNavigate } from "react-router-dom";
+import OtpInput from "./Otpinput";
 
 export default function SignuoSettings()
 {
@@ -14,6 +15,9 @@ export default function SignuoSettings()
 	const {errormsg, setErrorMsg} = UseErrorStore();
 	const {setUser} = UseUserStore();
 	const {setToken} = UseTokenStore();
+	const {setOtpFlag} = UseShowOtpInputStore();
+	const {setOtpOriginal} = UseOtpStore();
+	const {setFlag} = UseOtpStore();
 	const navigate = useNavigate();
 	// const [errormsg, setErrormsg] = useState("");
 	const [error, setError] = useState({
@@ -26,10 +30,10 @@ export default function SignuoSettings()
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		
-		const res = await fetch("http://localhost:8080/api/auth/signup", {
+		const res = await fetch("http://localhost:8080/api/v1/auth/signup", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name, email, password, cpassword }),
+			body: JSON.stringify({ name, email, password, cpassword}),
 			credentials: "include"
 		});
 		
@@ -49,17 +53,22 @@ export default function SignuoSettings()
 		if (data.code === "USER_ADDED_SUCCESS")
 		{
 			// set token
-			setToken(data.AccessToken);
+			// setToken(data.AccessToken);
 			// set user info
-			setUser({id: data.user.id, name: data.user.name, email: data.user.email});
-
-			navigate("/home");
+			console.log("USER: ", data.user);
+			setUser({id: data.user.id, name: name, email: email});
+			// set otp
+			setFlag("signup");
+			setOtpOriginal(data.otp);
+			setOtpFlag(true);
+			// navigate("/home");
+			// <OtpInput onChange={setOtp}/>;
 			console.log("Signup successful:", data);
 		}
 		
 	};
 	return (
-		<div className="flex flex-col items-center  gap-[2vw] w-[72%] mt-[-1.1vw]">
+		<div className="flex flex-col items-center  w-[72%] mt-[-1.1vw]">
 			<form className="flex flex-col gap-[0.4vw] w-full" onSubmit={handleSubmit}>
 				<Input text="Fullname" type="text"  error={error.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           			setName(e.target.value)}
@@ -85,7 +94,7 @@ export default function SignuoSettings()
 					<Eye size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 					<EyeClosed size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 				</Input>
-					{errormsg && <p className="absolute top-[18.8vw] text-red-500 text-xs mt-[-0.2vw] ml-[0.5vw]">{errormsg}</p>}
+					{errormsg && <p className=" text-red-500 text-[0.8vw] mt-[-0.2vw] ml-[0.5vw]">{errormsg}</p>}
 				<div className="flex justify-center mb-[-1vw] mt-[1.1vw]">
 					<LSButton  text="Sign up"/>
 				</div>

@@ -2,7 +2,7 @@ import { Eye, EyeClosed, Lock, User } from "lucide-react";
 import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
-import {UseErrorStore, UseTokenStore, UseUserStore} from "../zustand/useStore";
+import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore} from "../zustand/useStore";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginSettings()
@@ -12,6 +12,8 @@ export default function LoginSettings()
 	const {errormsg, setErrorMsg} = UseErrorStore();
 	const {setToken} = UseTokenStore();
 	const {setUser} = UseUserStore();
+	const {setOtpOriginal, setFlag} = UseOtpStore();
+	const {setOtpFlag} = UseShowOtpInputStore();
 	const navigate = useNavigate();
 	const [error, setError] = useState({
 		username: false,
@@ -22,7 +24,7 @@ export default function LoginSettings()
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		
-		const res = await fetch("http://localhost:8080/api/auth/login", {
+		const res = await fetch("http://localhost:8080/api/v1/auth/login", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ username: username, password: password }),
@@ -33,11 +35,14 @@ export default function LoginSettings()
 		if (data.code === "USER_ADDED_SUCCESS")
 		{
 			// set token
-			setToken(data.AccessToken);
 			// set user info
 			setUser({id: data.user.id, name: data.user.name, email: data.user.email});
-			navigate("/home");
-			console.log("login successful:", data);
+			// set otp
+			setFlag("login");
+			setOtpOriginal(data.otp);
+			setOtpFlag(true);
+			// navigate("/home");
+			// console.log("login successful:", data);
 		}
 		else if (data.code)
 			setErrorMsg(data.error);
@@ -51,7 +56,7 @@ export default function LoginSettings()
 	};
 		
 	return (
-		<div className="flex flex-col items-center pt-[1.2vw]  w-[72%]">
+		<div className="flex flex-col items-center mt-[2.4vw]  w-[72%] md:mt-[1.2vw]">
 			<form className="flex flex-col  gap-[1vw] w-full" onSubmit={handleSubmit}>
 				<Input text="Username" type="text" error={error.username} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>{
 					setUsername(e.target.value)

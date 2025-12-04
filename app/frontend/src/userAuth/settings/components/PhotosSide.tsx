@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 export default function PhotosSide() {
   const filrInputRef = useRef<HTMLInputElement | null>(null)
-  const [ imageDataUrl, setImageDataUrl ] = useState("");
+  const [ imageDataUrl, setImageDataUrl ] = useState("/public/profileBG.png");
     const handleChoosePhoto = () => {
         filrInputRef.current?.click();
     }
@@ -19,9 +19,14 @@ export default function PhotosSide() {
     };
     return (
       <div
-        className={`bg-[${imageDataUrl}] h-[21vw] w-full rounded-tl-4xl`}
-          onClick={handleChoosePhoto}
-      >
+        style={{
+          backgroundImage: imageDataUrl ? `url(${imageDataUrl})` : "none",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+        className="h-[21vw] w-full rounded-tl-4xl cursor-pointer"
+        onClick={handleChoosePhoto}
+    >
           <input
         type="file"
         accept="image/*"

@@ -1,61 +1,105 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { jwtDecode } from "jwt-decode";
 
 type User = {
-    id: number;
-    name: string;
-    email: string;
-  };
+  id: number;
+  name: string;
+  email: string;
+};
 
-interface ErrorState{
-    errormsg: string;
-    setErrorMsg: (msg: string) => void;
+interface ErrorState {
+  errormsg: string;
+  setErrorMsg: (msg: string) => void;
 }
 
-interface TokenState{
-    token: string;
-    setToken: (msg: string) => void;
+interface TokenState {
+  token: string;
+  userId: number | null;
+  setToken: (token: string) => void;
 }
 
 type UserState = {
-    user: User;
-    setUser: (user: User) => void;
-  };
+  user: User;
+  setUser: (user: User) => void;
+};
 
+type ShowOtpInputState = {
+  otpFlag: boolean;
+  setOtpFlag: (otpFlag: boolean) => void;
+};
 
+type OtpState = {
+  otpOriginal: string;
+  flag: string;
+  setOtpOriginal: (otp: string) => void;
+  setFlag: (flag: string) => void;
+};
+
+// ---------------------- Error Store ----------------------
 export const UseErrorStore = create<ErrorState>((set) => ({
-    errormsg: "",
-    setErrorMsg: (msg: string) => set({errormsg: msg}),
+  errormsg: "",
+  setErrorMsg: (msg) => set({ errormsg: msg }),
 }));
 
-export const UseTokenStore = create(     ///////?
-    persist<TokenState>(
-      (set) => ({
-        token: "",
-        setToken: (msg) => set({ token: msg }),
-      }),
-      {
-        name: "jwt-token",
-      }
-    )
-  );
+// ---------------------- Token Store ----------------------
+export const UseTokenStore = create(
+  persist<TokenState>(
+    (set) => ({
+      token: "",
+      userId: null,
 
-export const UseUserStore = create(     ///////?
-    persist<UserState>(
-      (set) => ({
-        user: {
-            id: 0,
-            name: "",
-            email: ""
-        },
-        setUser: (newUser) => set({ user: newUser }),
-      }),
-      {
-        name: "user-info",
-      }
-    )
-  );
+      setToken: (token: string) => {
+        let decodedId: number | null = null;
+        console.error("Setting token:", token);
 
+        // ✅ Only decode if token is not empty
+        if (token && token.trim() !== "") {
+          try {
+            const decoded = jwtDecode<{ id: number; name: string; email: string }>(token);
+            decodedId = decoded.id;
+            console.log("🔓 Token decoded successfully, userId:", decodedId);
+          } catch (err) {
+            console.error("❌ Invalid JWT token:", err);
+          }
+        } else {
+          console.warn("⚠️ Empty token provided");
+        }
 
+        set({ token, userId: decodedId });
+      },
+    }),
+    {
+      name: "jwt-token",
+    }
+  )
+);
 
+// ---------------------- User Store ----------------------
+export const UseUserStore = create(
+  persist<UserState>(
+    (set) => ({
+      user: {
+        id: 0,
+        name: "",
+        email: "",
+      },
+      setUser: (newUser) => set({ user: newUser }),
+    }),
+    {
+      name: "user-info",
+    }
+  )
+);
 
+export const UseOtpStore = create<OtpState>((set) => ({
+  otpOriginal: "",
+  flag: "",
+  setFlag: (str) => set({ flag: str }),
+  setOtpOriginal: (num) => set({ otpOriginal: num }),
+}));
+
+export const UseShowOtpInputStore = create<ShowOtpInputState>((set) => ({
+  otpFlag: false,
+  setOtpFlag: (flag) => set({ otpFlag: flag }),
+}));

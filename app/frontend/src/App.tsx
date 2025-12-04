@@ -1,12 +1,22 @@
 import './index.css';
 
-import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import MainLayout from './components/MainLayout';
 import Home from './userAuth/dashboard/Home';
 import Settings from './userAuth/settings/components/Settings';
 import Auth from './userAuth/LoginAndSignup/components/Auth';
+import ChatPage from './chat/components/ChatPage';
+import GameMenu from "./Game/GameMenu";
+import Game from "./Game/index";
+import Ai from "./Game/components/ai";
+import Local from "./Game/components/local";
+import Tournament from "./Game/components/tournament";
+import Online from "./Game/components/online";
+import GameSetup from "./Game/components/setup";
+import { useState } from "react";
 
 export default function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <Router>
       <Routes>
@@ -15,72 +25,21 @@ export default function App() {
         <Route path="/auth" element={<Auth />} />
 
         {/* All other routes use MainLayout */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Navigate to="/home" />} />
-          <Route path="/home/*" element={<Home />} />
+        <Route element={<MainLayout menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/chat" element={<ChatPage />} />
           <Route path="/settings/*" element={<Settings />} />
+          <Route path="/game" element={<Game menuOpen={menuOpen} />}>
+            <Route index element={<GameMenu />} />
+            <Route path="setup" element={<GameSetup />} />
+            <Route path="tournament" element={<Tournament />} />
+            <Route path="ai" element={<Ai />} />
+            <Route path="local" element={<Local />} />
+            <Route path="online" element={<Online />} />
+          </Route>
         </Route>
       </Routes>
     </Router>
   );
 }
-
-// import './index.css';
-// import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-// import MainComponent from './userAuth/LoginAndSignup/components/MainComponent';
-// import Home from './userAuth/dashboard/Home';
-// import Settings from './userAuth/settings/components/Settings';
-
-
-// function App() {
-//   return (
-//     <BrowserRouter>
-//       <Routes>
-//         <Route path="/auth" element={<MainComponent />} />
-//         <Route path="/" element={<Navigate to="/home" />} />
-//         <Route path="/home/*" element={<Home />} />
-//         <Route path="/settings" element={<Settings />} />
-//       </Routes>
-//     </BrowserRouter>
-//   );
-// }
-
-// export default App;
-
-
-
-
-
-// // import AppRoutes from "./components/AppRoutes";
-// import HeaderBar from "./components/HeaderBar";
-// import SideMenu from "./components/SideMenu";
-// import UrTask from "./urtask/components/index";
-// import AppRoutes from "./components/AppRoutes";
-
-// import { useState } from "react";
-
-// import { BrowserRouter as Router } from "react-router-dom";
-
-// export default function App() {
-
-//   const [menuOpen, setMenuOpen] = useState(false);
-
-//   const handleMenuToggle = () => setMenuOpen((prev) => !prev);
-//   const handleMenuClose = () => setMenuOpen(false);
-//   return (
-//     <Router>
-//       <div className="relative min-h-screen text-white">
-//         <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
-
-//         <SideMenu open={menuOpen} onClose={handleMenuClose} />
-//         {/* <HeaderBar /> */}
-//         <HeaderBar onMenuToggle={handleMenuToggle} />
-//         <UrTask />
-
-//         <main className="overflow-hidden pl-20 pt-20 p-6 relative z-10">
-//           <AppRoutes />
-//         </main>
-//       </div>
-//     </Router>
-//   );
-// }

@@ -1,11 +1,14 @@
 import { Outlet } from "react-router-dom";
 import HeaderBar from "./HeaderBar";
 import SideMenu from "./SideMenu";
-import { useState } from "react";
 
-export default function MainLayout() {
+interface MainLayoutProps {
+  menuOpen: boolean;
+  setMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
-  const [menuOpen, setMenuOpen] = useState(false);
+export default function MainLayout({ menuOpen, setMenuOpen}: MainLayoutProps) {
+
 
   const handleMenuToggle = () => setMenuOpen((prev) => !prev);
   const handleMenuClose = () => setMenuOpen(false);

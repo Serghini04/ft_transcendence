@@ -1,0 +1,16 @@
+{
+  "name": "kafka-consumer",
+  "version": "1.0.0",
+  "description": "Kafka consumer service",
+  "main": "consumer.js",
+  "scripts": {
+    "start": "node consumer.js"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "fastify": "^4.25.2",
+    "prom-client": "^15.1.0"
+  }
+}
+
+

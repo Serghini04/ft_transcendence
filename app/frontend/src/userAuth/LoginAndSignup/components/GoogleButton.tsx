@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 
 export default function GoogleButton(props :any) {
 	const {setErrorMsg} = UseErrorStore();
-	const {setToken} = UseTokenStore();
+	
 	const {setUser} = UseUserStore();
 	const navigate = useNavigate();
+	const {setToken} = UseTokenStore();
 
 
 	const login = useGoogleLogin({

@@ -1,7 +1,7 @@
 import WelcomeText from "./WelcomeText"
 import LoginSide from "./LoginSide"
 import { GoogleOAuthProvider } from "@react-oauth/google"
-import isValidToken from "../../globalUtils/isValidToken";
+import isValidToken from "../../../globalUtils/isValidToken";
 import { useNavigate } from "react-router-dom";
 import { UseTokenStore } from "../zustand/useStore";
 import { useEffect } from "react";
