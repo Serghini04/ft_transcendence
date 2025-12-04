@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { Users, User } from "lucide-react";
+import { Users, User, Sparkles, Trophy } from "lucide-react";
 
 const GameSelection = () => {
 
   
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1a24] text-white pl-20 sm:p-4 md:p-6 lg:p-8 relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1a24] text-white pl-0 md:pl-20 p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden">
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute w-64 sm:w-96 h-64 sm:h-96 bg-blue-500/5 rounded-full blur-3xl -top-32 sm:-top-48 -left-32 sm:-left-48 animate-pulse" 
@@ -16,13 +16,40 @@ const GameSelection = () => {
              style={{ animationDuration: '5s', animationDelay: '1s' }} />
       </div>
       
-      <div className="max-w-4xl w-full relative z-10">
-        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-3 sm:mb-4 md:mb-6 lg:mb-8 text-center 
-                    bg-gradient-to-r from-[#4f677f] via-[#5a7b9a] to-[#4f677f] bg-clip-text text-transparent
-                    animate-[bounce_1s_ease-in-out] hover:scale-110 transition-transform duration-300 cursor-default"
-            style={{ animationIterationCount: '1' }}>
-          🎮 TicTacToe 🎮
-        </h1>
+      <div className="max-w-5xl w-full relative z-10 px-2 sm:px-4">
+        {/* Animated Header with Grid Icon */}
+        <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8 lg:mb-10">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 blur-2xl rounded-full animate-pulse"></div>
+            <div className="relative bg-gradient-to-br from-yellow-500/30 to-orange-500/30 p-2 sm:p-3 md:p-4 rounded-2xl border border-yellow-400/50 
+                          hover:scale-110 hover:rotate-12 transition-all duration-300 cursor-pointer
+                          shadow-lg shadow-yellow-500/20">
+              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-yellow-400" />
+            </div>
+          </div>
+          
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center 
+                      bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent
+                      animate-[bounce_1s_ease-in-out] hover:scale-105 transition-transform duration-300 cursor-default
+                      drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]"
+              style={{ animationIterationCount: '1' }}>
+            TicTacToe
+          </h1>
+          
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-yellow-400/20 blur-2xl rounded-full animate-pulse" 
+                 style={{ animationDelay: '1s' }}></div>
+            <div className="relative bg-gradient-to-br from-orange-500/30 to-yellow-500/30 p-2 sm:p-3 md:p-4 rounded-2xl border border-orange-400/50 
+                          hover:scale-110 hover:-rotate-12 transition-all duration-300 cursor-pointer
+                          shadow-lg shadow-orange-500/20">
+              <Trophy className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-orange-400" />
+            </div>
+          </div>
+        </div>
+        
+        <p className="text-center text-gray-400 text-xs sm:text-sm md:text-base mb-6 sm:mb-8 max-w-2xl mx-auto">
+          Choose your battle mode and dominate the grid! 🎯
+        </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8 w-full max-w-4xl relative z-10 px-2 sm:px-3 md:px-4">
           {/* Local Game Card */}
@@ -78,7 +105,7 @@ const GameSelection = () => {
           </Link>
 
           {/* Online Game Card */}
-          <Link to="/tictac-online" className="group animate-[fadeIn_0.5s_ease-out_0.2s] opacity-0" style={{ animation: 'fadeIn 0.5s ease-out 0.2s forwards' }}>
+          <Link to="/tictac/online" className="group animate-fadeIn">
             <div className="bg-[rgba(79,103,127,0.2)] p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border-2 border-[#27445E] 
                           hover:border-green-400 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-400/20
                           backdrop-blur-sm cursor-pointer h-full relative overflow-hidden">
