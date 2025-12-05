@@ -29,12 +29,13 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
   fastify.log.info("Socket.IO server is ready for connections");
 
-  io.on("connection", (socket) => {
+  const chatNS = io.of("/chat");
+
+  chatNS.on("connection", (socket) => {
     fastify.log.info(`New connection attempt from ${socket.handshake.address}`);
     const userId = socket.handshake.auth.userId;
     
     if (!userId || isNaN(Number(userId))) {
-      fastify.log.warn("Connection attempt without valid userId, disconnecting");
       socket.disconnect();
       return;
     }
@@ -50,7 +51,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
     socket.join(`user_${userIdNum}`);
     
     const onlineUserIds = Array.from(userSockets.keys());
-    io.emit("users:online", onlineUserIds);
+    chatNS.emit("users:online", onlineUserIds);
 
     socket.on("message:send", async (data) => {
       const { to, message, timestamp } = data;
@@ -144,9 +145,9 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         }
 
         if (isUserOnline(receiverUserId))
-          io.to(`user_${receiverUserId}`).emit("message:receive", finalMessageData);
+          chatNS.to(`user_${receiverUserId}`).emit("message:receive", finalMessageData);
 
-        io.to(`user_${userIdNum}`).emit("message:sent", {
+        chatNS.to(`user_${userIdNum}`).emit("message:sent", {
           ...finalMessageData,
           isSender: true
         });
@@ -181,7 +182,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
         socketUsers.delete(socket.id);
         
         const onlineUserIds = Array.from(userSockets.keys());
-        io.emit("users:online", onlineUserIds);
+        chatNS.emit("users:online", onlineUserIds);
       }
     });
   });

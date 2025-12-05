@@ -100,7 +100,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         });
 
         console.log("Connecting to Gateway with userId:", userId);
-        const socket = io("http://localhost:8080", {
+        const socket = io("http://localhost:8080/chat", {
             withCredentials: true,
             auth: { token },
             transports: ['polling', 'websocket'],

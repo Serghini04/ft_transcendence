@@ -76,15 +76,15 @@ export class KafkaConsumerService {
     const { message, topic, partition } = payload;
     
     try {
-      console.log(`📨 Kafka message received from topic: ${topic}, partition: ${partition}`);
+      console.log(`Kafka message received from topic: ${topic}, partition: ${partition}`);
       
       if (!message.value) {
-        console.error("❌ Received empty message value");
+        console.error("Received empty message value");
         return;
       }
 
       const eventData = JSON.parse(message.value.toString()) as NotificationEvent;
-      console.log(`📋 Event data:`, eventData);
+      console.log(`Event data:`, eventData);
       
       const notificationRepo = new NotificationRepository(this.db);
       const notification = notificationRepo.createNotification(
@@ -94,20 +94,21 @@ export class KafkaConsumerService {
         eventData.type
       );
 
-      console.log(`✅ Notification saved to database for user ${eventData.userId}`);
+      console.log(`Notification saved to database for user ${eventData.userId}`);
 
       const socketIds = userSockets.get(eventData.userId);
       
       if (socketIds && socketIds.size > 0) {
+        const notificationNS = this.io.of("/notification");
         socketIds.forEach(socketId => {
-          this.io.to(socketId).emit("notification:new", notification);
+          notificationNS.to(socketId).emit("notification:new", notification);
         });
-        console.log(`🔔 Toast notification sent to online user ${eventData.userId} (${socketIds.size} socket(s))`);
+        console.log(`Toast notification sent to online user ${eventData.userId} (${socketIds.size} socket(s))`);
       } else {
-        console.log(`💤 User ${eventData.userId} is offline, notification stored for later`);
+        console.log(`User ${eventData.userId} is offline, notification stored for later`);
       }
     } catch (error) {
-      console.error("❌ Failed to process notification event:", error);
+      console.error("Failed to process notification event:", error);
       console.error("Message value:", message.value?.toString());
     }
   }

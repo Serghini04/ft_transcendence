@@ -67,7 +67,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
     set({ loginId: userId, error: null });
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(SOCKET_URL +"/notification", {
       withCredentials: true,
       auth: { token, userId },
       transports: ["websocket", "polling"],
@@ -105,7 +105,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       console.log("New notification received:", notification);
       get().addNotification(notification);
       
-      // Show toast notification
       toast.info(`${notification.title}: ${notification.message}`, {
         position: "top-right",
         autoClose: 5000,
@@ -261,7 +260,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   addNotification: (notification: Notification) => {
     const { notifications, unseenNotifications } = get();
     
-    // Avoid duplicates
     const exists = notifications.some((n) => n.id === notification.id);
     if (exists) return;
 

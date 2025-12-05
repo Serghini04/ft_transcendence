@@ -9,17 +9,14 @@ import { NotificationBell } from "../notification/components/NotificationBell";
 export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const userId = UseTokenStore((s) => s.userId);
 
-  // extract only what you need (stabilizes the functions)
   const connectSocket = useNotificationStore((s) => s.connectSocket);
   const disconnectSocket = useNotificationStore((s) => s.disconnectSocket);
 
   useEffect(() => {
-    if (!userId) return;
-
-    connectSocket(userId);
-
+    if (userId)
+      connectSocket(userId);
     return () => disconnectSocket();
-  }, [userId]); // only react to userId changes
+  }, [userId]);
 
   return (
     <header className="fixed top-0 left-20 right-0 h-20 flex items-center justify-between px-4 sm:px-6 md:px-10 bg-transparent backdrop-blur-md z-30 overflow-visible">

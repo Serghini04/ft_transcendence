@@ -16,7 +16,9 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
     fastify.decorate("io", io);
 
-    io.on("connection", (socket) => {
+    const notificationNS = io.of("/notification");
+
+    notificationNS.on("connection", (socket) => {
         const userId = socket.handshake.auth.userId;
         if (!userId || isNaN(Number(userId))) {
             socket.disconnect();
@@ -33,7 +35,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
         const onlineUserIds = Array.from(userSockets.keys());
 
-        io.emit("users:online", onlineUserIds);
+        notificationNS.emit("users:online", onlineUserIds);
 
 
         socket.on("disconnect", () => {
@@ -49,7 +51,7 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
                 
                 socketUsers.delete(socket.id);
                 const onlineUserIds = Array.from(userSockets.keys());
-                io.emit("users:online", onlineUserIds);
+                notificationNS.emit("users:online", onlineUserIds);
             }
         });
     })
