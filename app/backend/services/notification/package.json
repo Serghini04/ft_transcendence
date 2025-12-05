@@ -11,6 +11,7 @@
     "@fastify/cors": "^8.5.0",
     "better-sqlite3": "^12.5.0",
     "fastify": "^4.29.1",
+    "kafkajs": "^2.2.4",
     "pino-pretty": "^13.1.2",
     "socket.io": "^4.8.1",
     "sqlite3": "^5.1.6"

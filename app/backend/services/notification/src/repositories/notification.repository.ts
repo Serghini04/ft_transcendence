@@ -39,4 +39,26 @@ export class NotificationRepository {
     const row = stmt.get(userId) as { count: number };
     return row.count;
   }
+
+  createNotification(userId: number, title: string, message: string, type: string = 'message'): Notification {
+    const stmt = this.db.prepare(`
+      INSERT INTO notifications (userId, title, message, type, read, createdAt)
+      VALUES (?, ?, ?, ?, 0, datetime('now'))
+    `);
+
+    const result = stmt.run(userId, title, message, type);
+    const notificationId = result.lastInsertRowid as number;
+
+    const getStmt = this.db.prepare(`
+      SELECT id, userId, title, message, type, read, createdAt
+      FROM notifications
+      WHERE id = ?
+    `);
+
+    const row = getStmt.get(notificationId) as any;
+    return {
+      ...row,
+      read: !!row.read,
+    } as Notification;
+  }
 }

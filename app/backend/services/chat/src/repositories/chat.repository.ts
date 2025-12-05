@@ -135,4 +135,60 @@ export class ChatRepository {
       `);
       stmt.run(currentUserId, currentUserId, currentUserId, otherUserId, otherUserId, currentUserId);
     }
+
+  validateUserRelationship(senderId: number, receiverId: number): { 
+    canMessage: boolean; 
+    reason?: string;
+    senderName?: string;
+    receiverName?: string;
+  } {
+
+    const stmt = this.db.prepare(`
+      SELECT 
+        u1.id as sender_id,
+        u1.full_name as sender_name,
+        u2.id as receiver_id,
+        u2.full_name as receiver_name,
+        r.type as relationship_type
+      FROM users u1
+      LEFT JOIN users u2 ON u2.id = ?
+      LEFT JOIN relationships r ON 
+        (r.user1_id = u1.id AND r.user2_id = u2.id) OR 
+        (r.user1_id = u2.id AND r.user2_id = u1.id)
+      WHERE u1.id = ?
+    `);
+
+    const result = stmt.get(receiverId, senderId) as {
+      sender_id: number | null;
+      sender_name: string;
+      receiver_id: number | null;
+      receiver_name: string;
+      relationship_type: string | null;
+    } | undefined;
+
+    if (!result || !result.sender_id)
+      return { canMessage: false, reason: "Sender does not exist" };
+
+    if (!result.receiver_id)
+      return { canMessage: false, reason: "Receiver does not exist" };
+
+    if (!result.relationship_type)
+      return { canMessage: false, reason: "You are not friends" };
+
+    if (result.relationship_type !== "friend") {
+      return { 
+        canMessage: false, 
+        reason: result.relationship_type === "blocked" 
+          ? "Cannot send message: user is blocked" 
+          : "You are not friends" 
+      };
+    }
+
+    return { 
+      canMessage: true,
+      senderName: result.sender_name,
+      receiverName: result.receiver_name,
+    };
+  }
+
 }

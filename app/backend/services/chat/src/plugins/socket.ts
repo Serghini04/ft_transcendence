@@ -2,6 +2,7 @@ import fp from "fastify-plugin";
 import { FastifyInstance } from "fastify";
 import { Server } from "socket.io";
 import { ChatRepository } from "../repositories/chat.repository";
+import { kafkaProducerService } from "../kafka/producer";
 
 const userSockets = new Map<number, Set<string>>();
 const socketUsers = new Map<string, number>();
@@ -56,11 +57,20 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
       
       if (!to || !message) {
         fastify.log.warn(`Invalid message data from ${userIdNum}`);
+        socket.emit("message:error", { 
+          messageId: data.id, 
+          error: "Invalid message data" 
+        });
         return;
       }
       
-      if (typeof message !== 'string' || message.trim().length === 0)
+      if (typeof message !== 'string' || message.trim().length === 0) {
+        socket.emit("message:error", { 
+          messageId: data.id, 
+          error: "Message cannot be empty" 
+        });
         return;
+      }
       
       if (message.length > 1000) {
         socket.emit("message:error", { 
@@ -71,6 +81,15 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
       }
 
       const receiverUserId = Number(to);
+      
+      if (isNaN(receiverUserId)) {
+        socket.emit("message:error", { 
+          messageId: data.id, 
+          error: "Invalid receiver ID" 
+        });
+        return;
+      }
+
       const messageTimestamp = timestamp || new Date().toISOString();
       const messageId = Date.now() + Math.random();
       
@@ -84,6 +103,22 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
 
       try {
         const chatRep = new ChatRepository(fastify.db);
+        
+        const validation = chatRep.validateUserRelationship(userIdNum, receiverUserId);
+        
+        if (!validation.canMessage) {
+          fastify.log.warn(
+            `Message blocked: ${validation.reason} ` +
+            `(from ${validation.senderName || `user ${userIdNum}`} ` +
+            `to ${validation.receiverName || `user ${receiverUserId}`})`
+          );
+          socket.emit("message:error", { 
+            messageId, 
+            error: validation.reason || "Cannot send message" 
+          });
+          return;
+        }
+        
         const saveResult = await chatRep.sendMessage(userIdNum, receiverUserId, message, messageTimestamp);
         
         if (!saveResult.success)
@@ -93,6 +128,20 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
           ...messageData,
           id: saveResult.messageId,
         };
+        
+        // Publish notification event to Kafka
+        try {
+          await kafkaProducerService.publishNewMessageNotification(
+            receiverUserId,
+            validation.senderName ?? "Unknown User",
+            messageData.message,
+            new Date(messageData.timestamp)
+          );
+          fastify.log.info(`Kafka notification sent for message to user ${receiverUserId}`);
+        } catch (kafkaError) {
+          fastify.log.error(`Failed to publish Kafka notification: ${kafkaError}`);
+          // Don't fail the message send if Kafka fails
+        }
 
         if (isUserOnline(receiverUserId))
           io.to(`user_${receiverUserId}`).emit("message:receive", finalMessageData);

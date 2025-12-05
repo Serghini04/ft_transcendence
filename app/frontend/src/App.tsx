@@ -1,6 +1,8 @@
 import './index.css';
+import 'react-toastify/dist/ReactToastify.css';
 
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { ToastContainer } from 'react-toastify';
 import MainLayout from './components/MainLayout';
 import Home from './userAuth/dashboard/Home';
 import Settings from './userAuth/settings/components/Settings';
@@ -10,6 +12,7 @@ import ChatPage from './chat/components/ChatPage';
 export default function App() {
   return (
     <Router>
+      <ToastContainer />
       <Routes>
 
         {/* Auth is outside MainLayout */}

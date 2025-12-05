@@ -2,8 +2,8 @@ import fp from "fastify-plugin";
 import { FastifyInstance } from "fastify";
 import { Server } from "socket.io";
 
-const userSockets = new Map<number, Set<string>>();
-const socketUsers = new Map<string, number>();
+export const userSockets = new Map<number, Set<string>>();
+export const socketUsers = new Map<string, number>();
 
 const socketPlugin = fp(async (fastify: FastifyInstance) => {
     const io = new Server(fastify.server, {

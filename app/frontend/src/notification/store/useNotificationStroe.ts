@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { toast } from "react-toastify";
 
 export type Notification = {
   id: number;
@@ -77,12 +78,10 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       reconnectionDelayMax: 5000,
     });
 
-    // Socket event handlers
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
       set({ socket, error: null });
       
-      // Fetch notifications on connect
       get().fetchNotifications();
     });
 
@@ -105,6 +104,16 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     socket.on("notification:new", (notification: Notification) => {
       console.log("New notification received:", notification);
       get().addNotification(notification);
+      
+      // Show toast notification
+      toast.info(`${notification.title}: ${notification.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     });
 
     socket.on("notification:read", (notificationId: number) => {
