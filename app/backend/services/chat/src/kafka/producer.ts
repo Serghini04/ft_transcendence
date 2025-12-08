@@ -57,10 +57,8 @@ export class KafkaProducerService {
   }
 
   async publishNotification(event: NotificationEvent): Promise<void> {
-    if (!this.isConnected) {
-      console.warn("Kafka producer not connected. Notification will not be sent.");
+    if (!this.isConnected)
       return;
-    }
 
     try {
       await this.producer.send({

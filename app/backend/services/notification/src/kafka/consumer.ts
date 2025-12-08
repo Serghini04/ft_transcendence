@@ -40,7 +40,8 @@ export class KafkaConsumerService {
   }
 
   async connect(): Promise<void> {
-    if (this.isConnected) return;
+    if (this.isConnected)
+      return;
 
     try {
       await this.consumer.connect();
@@ -104,9 +105,9 @@ export class KafkaConsumerService {
           notificationNS.to(socketId).emit("notification:new", notification);
         });
         console.log(`Toast notification sent to online user ${eventData.userId} (${socketIds.size} socket(s))`);
-      } else {
-        console.log(`User ${eventData.userId} is offline, notification stored for later`);
       }
+      else
+        console.log(`User ${eventData.userId} is offline, notification stored for later`);
     } catch (error) {
       console.error("Failed to process notification event:", error);
       console.error("Message value:", message.value?.toString());
