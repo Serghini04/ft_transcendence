@@ -78,7 +78,7 @@ export default function Online() {
 
   // Connect to Socket.IO
   useEffect(() => {
-    const s = io("http://localhost:8080", {transports: ['websocket']});
+    const s = io("http://localhost:3005", {transports: ['websocket']});
     setSocket(s);
 
     // const res = await fetch(`http://localhost:8080/api/v1/chat/conversation/${contact.user.id}`, {

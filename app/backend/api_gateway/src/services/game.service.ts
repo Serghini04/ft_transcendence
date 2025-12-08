@@ -11,7 +11,8 @@ export async function gameService(app: FastifyInstance) {
     
     preHandler: async (req: FastifyRequest, reply: FastifyReply) => {
       try {
-        req.headers["x-user-id"] = String(req.id);
+        // req.headers["x-user-id"] = String(req.id);
+        req.headers["x-user-id"] = String(req.user?.id);
       } catch (error) {
         const err = error as Error;
         app.log.error(`Error in preHandler: ${err.message}`);
@@ -22,20 +23,4 @@ export async function gameService(app: FastifyInstance) {
       }
     },
   });
-
-  // app.setErrorHandler((error, req, reply) => {
-  //   if (error.code === "ECONNREFUSED") {
-  //     app.log.error(`Error connecting to User Auth Service: ${error.message}`);
-  //     reply.status(503).send({
-  //       code: "SERVICE_UNAVAILABLE",
-  //       message: "User Auth Service is currently unavailable. Please try again later.",
-  //     });
-  //   } else {
-  //     app.log.error(`Unexpected error: ${error.message}`);
-  //     reply.status(503).send({
-  //       code: "SERVICE_UNAVAILABLE",
-  //       message: "An unexpected error occurred.",
-  //     });
-  //   }
-  // });
 }
