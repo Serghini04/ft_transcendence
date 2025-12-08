@@ -54,9 +54,28 @@ export default function LoginSettings()
 		});
 
 	};
+
+	const forgotPassword = async () => {
+		const res = await fetch("http://localhost:8080/api/v1/auth/forgotPassword", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ username: username }),
+			credentials: "include"
+		})
+		
+		const data = await res.json();
+		if (data.code === "PASSWORD_CHANFED_SUCCESS")
+		{
+			alert("A new password has been sent to your email.");
+		}
+		else
+		{
+			alert("Error in changing password: " + data.error);
+		}
+	}
 		
 	return (
-		<div className="flex flex-col items-center mt-[2.4vw]  w-[72%] md:mt-[1.2vw]">
+		<div className="flex flex-col items-center mt-[2.4vw]  w-[20vw] md:mt-[1.2vw]">
 			<form className="flex flex-col  gap-[1vw] w-full" onSubmit={handleSubmit}>
 				<Input text="Username" type="text" error={error.username} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>{
 					setUsername(e.target.value)
@@ -71,6 +90,7 @@ export default function LoginSettings()
 					<EyeClosed size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 				</Input>
 				<p className="absolute top-[15.3vw] text-red-500 text-xs mt-[-0.2vw] ml-[0.5vw]">{errormsg}</p>
+				<p className="absolute top-[48%] ml-[46%] text-white font-outfit text-[0.8vw] hover:text-[#D2D2D2]" onClick={forgotPassword}>Forgotten password</p>
 				<div className="flex justify-center mt-[1vw]">
 					<LSButton  text="Login"/>
 				</div>

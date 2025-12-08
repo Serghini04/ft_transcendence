@@ -13,7 +13,7 @@ export default function ModifyUserInformation() {
                     <h2 className="font-[outfit] text-[2vw]">Account</h2>
                 </div>
                 <div className="flex flex-col gap-10 mt-10">
-                    <Input label="Fullname" text="Fullname" type="text"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    <Input label="Username" text="Username" type="text"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setName(e.target.value)}
                     />
                     <Input label="Email" text="Email" type="Email"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

@@ -360,6 +360,35 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
   }
 });
 
+app.post("/api/v1/auth/forgotPassword", async (request, reply) => {
+  try {
+    const { username } = request.body as { username: string; };
+    
+    if (!username) {
+      reply.status(400).send({ error: "Username is required" });
+      return ;
+    }
+    const user = db.prepare("SELECT * FROM users WHERE name = ?").get(username) as User | undefined;
+    if (!user) {
+      reply.status(401).send({ error: "Invalid username", code: "INVALID_CREDENTIALS" });
+      return ;
+    }
+    
+    //generate new password
+    const newPassword = Math.random().toString(36).slice(-8);
+    sendOTPEmail(user.email, newPassword);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    db.prepare("UPDATE users SET password = ? WHERE name = ?").run(hashedPassword, username);
+    
+    reply.status(201).send({ 
+      message: "Password changed successfully",
+      code: "PASSWORD_CHANFED_SUCCESS" });
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: "Internal server error" });
+  }
+});
+
 // app.post("/api/v1/auth/signup", async (request, reply) => {
 //     try {
 //       const { name, email, password, cpassword , key} = request.body as { name: string; email: string; password: string; cpassword: string; key?: string };

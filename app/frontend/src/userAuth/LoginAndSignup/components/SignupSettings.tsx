@@ -70,7 +70,7 @@ export default function SignuoSettings()
 	return (
 		<div className="flex flex-col items-center  w-[72%] mt-[-1.1vw]">
 			<form className="flex flex-col gap-[0.4vw] w-full" onSubmit={handleSubmit}>
-				<Input text="Fullname" type="text"  error={error.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+				<Input text="Username" type="text"  error={error.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           			setName(e.target.value)}
 				>
 					<User size={"1.4vw"} color="#d2d2d2" strokeWidth={1.7} />

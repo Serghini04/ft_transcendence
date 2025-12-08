@@ -15,8 +15,6 @@ export default function OtpInput() {
 
   const submitOtp = async (otpString: string) => {
     try {
-        console.error("Submitting OTP:", otpOriginal, flag, otpString);
-        console.error("-00000000>>>>>>>>>>User info during OTP submission:", user.email);
         if (otpString === otpOriginal && flag === "signup") {
             const res = await fetch("http://localhost:8080/api/v1/auth/verifyEmail", {
                 method: "POST",

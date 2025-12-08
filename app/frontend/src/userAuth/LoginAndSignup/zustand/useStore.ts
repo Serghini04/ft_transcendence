@@ -51,7 +51,6 @@ export const UseTokenStore = create(
 
       setToken: (token: string) => {
         let decodedId: number | null = null;
-        console.error("Setting token:", token);
 
         // ✅ Only decode if token is not empty
         if (token && token.trim() !== "") {

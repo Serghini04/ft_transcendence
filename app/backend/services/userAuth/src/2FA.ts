@@ -17,7 +17,7 @@ export function generateOTP() {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to,
-      subject: "Your FT_Transcendence Login Code",
+      subject: "Your FT_Transcendence Code",
       html: `
         <h2>Your Login Code</h2>
         <p>Use the 6-digit code below to log in:</p>
