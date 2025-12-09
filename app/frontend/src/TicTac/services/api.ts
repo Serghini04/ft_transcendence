@@ -1,10 +1,10 @@
-// Dynamically detect the host - use window.location.hostname for network play
+// Use relative URL to go through nginx proxy (HTTPS)
 const getApiBaseUrl = () => {
   if (import.meta.env.VITE_TICTAC_API_URL) {
     return import.meta.env.VITE_TICTAC_API_URL;
   }
-  const hostname = window.location.hostname;
-  return `http://${hostname}:3003/api`;
+  // Default to relative URL which uses nginx proxy
+  return '/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -147,13 +147,25 @@ export class TicTacAPI {
   }
 
   static async getActiveGame(playerId: string): Promise<GameState | null> {
-    const response = await fetch(`${API_BASE_URL}/games/player/${playerId}/active`);
-    
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error('Failed to get active game');
-    
-    const data = await response.json();
-    return data.game;
+    try {
+      // Suppress 404 errors in console by catching them silently
+      const response = await fetch(`${API_BASE_URL}/games/player/${playerId}/active`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => null);
+      
+      if (!response) return null;
+      
+      // 404 is expected when no active game exists - not an error
+      if (response.status === 404) return null;
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      return data.game;
+    } catch (error) {
+      // Silently return null - no active game is normal
+      return null;
+    }
   }
 
   // Matchmaking endpoints

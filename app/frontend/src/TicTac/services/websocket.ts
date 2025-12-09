@@ -1,10 +1,17 @@
-// Dynamically detect the host - use window.location.hostname for network play
+// Use WebSocket through nginx proxy (wss:// for HTTPS)
 const getWsUrl = () => {
   if (import.meta.env.VITE_TICTAC_WS_URL) {
-    return import.meta.env.VITE_TICTAC_WS_URL;
+    const wsUrl = import.meta.env.VITE_TICTAC_WS_URL;
+    // If relative URL, construct full URL with proper protocol
+    if (wsUrl.startsWith('/')) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${protocol}//${window.location.host}${wsUrl}`;
+    }
+    return wsUrl;
   }
-  const hostname = window.location.hostname;
-  return `ws://${hostname}:3003/ws`;
+  // Default: use wss for HTTPS, ws for HTTP
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/ws`;
 };
 
 const WS_URL = getWsUrl();
@@ -50,10 +57,11 @@ export class WebSocketService {
         this.ws = new WebSocket(WS_URL);
 
         this.ws.onopen = () => {
-          console.log('WebSocket connected');
+          console.log('[WS] Connected to:', WS_URL);
           this.reconnectAttempts = 0;
           
           // Register user
+          console.log('[WS] Registering user:', userId);
           this.send({
             type: 'register',
             data: { userId }
@@ -64,10 +72,12 @@ export class WebSocketService {
 
         this.ws.onmessage = (event) => {
           try {
+            console.log('[WS] Received raw message:', event.data);
             const message: WSMessage = JSON.parse(event.data);
+            console.log('[WS] Parsed message:', message);
             this.handleMessage(message);
           } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
+            console.error('[WS] Failed to parse message:', error, event.data);
           }
         };
 
@@ -96,9 +106,10 @@ export class WebSocketService {
 
   send(message: WSMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log('[WS] Sending message:', message);
       this.ws.send(JSON.stringify(message));
     } else {
-      console.error('WebSocket is not connected');
+      console.error('[WS] Cannot send - WebSocket not connected. ReadyState:', this.ws?.readyState);
     }
   }
 
@@ -157,6 +168,7 @@ export class WebSocketService {
   }
 
   joinMatchmaking(userId: string, username: string): void {
+    console.log('[WS] Joining matchmaking:', { userId, username });
     this.send({
       type: 'join_matchmaking',
       data: { userId, username }

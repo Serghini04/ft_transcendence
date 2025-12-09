@@ -59,8 +59,15 @@ export function useOnlineGame(user: User | null) {
     };
 
     const handleError = (message: WSMessage) => {
+      const errorMsg = message.error || message.message || 'An error occurred';
+      
+      // Ignore 'already in queue' errors - they're not real errors
+      if (errorMsg.includes('Already in matchmaking queue')) {
+        return;
+      }
+      
       console.error('Error:', message);
-      setError(message.error || message.message || 'An error occurred');
+      setError(errorMsg);
       setIsSearching(false);
     };
 
@@ -101,9 +108,10 @@ export function useOnlineGame(user: User | null) {
   }, [user]);
 
   const findMatch = () => {
-    if (!user || !isConnected) return;
+    if (!user || !isConnected || isSearching) return;
     
     setError(null);
+    setIsSearching(true);
     wsService.joinMatchmaking(user.id, user.username);
   };
 
