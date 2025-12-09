@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import verifyToken from "../../globalUtils/verifyToken";
 
 
 interface GameState {
@@ -26,6 +27,9 @@ export default function Online() {
   const rafRef = useRef<number | null>(null);
   const winnerRef = useRef<"left" | "right" | null>(null);
   const navigate = useNavigate();
+
+  const { token } = UseTokenStore();
+  const { user } = UseUserStore();
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [side, setSide] = useState<"left" | "right" | null>(null);
@@ -78,100 +82,68 @@ export default function Online() {
 
   // Connect to Socket.IO
   useEffect(() => {
-    const s = io("http://localhost:3005", {transports: ['websocket']});
-    setSocket(s);
-
-    // const res = await fetch(`http://localhost:8080/api/v1/chat/conversation/${contact.user.id}`, {
-    //         method: "POST",
-    //         credentials: "include",
-    //         headers: { Authorization: `Bearer ${token}` },
-    //         body: JSON.stringify({ userId: user.id }),
-
-    //       });
-    
-    // const data = await res.json();
-    // const isValid = verifyToken(data);
-    const currentUserId = localStorage.getItem('userId') || `user_${Date.now()}`;
-    
-    s.emit("joinGame", { userId: currentUserId, options: { map, powerUps, speed } });
-    console.log("Joining game with settings:", { map, powerUps, speed });
-    s.on("connect", () => console.log("🔗 Connected:", s.id));
-    s.on("waiting", () => setWaiting(true));
-
-    s.on("start", ({ side, opponent, you }: { side: "left" | "right", opponent: UserProfile, you: UserProfile }) => {
-      console.log("🚀 Match started as:", side);
-      console.log("👤 Your profile:", you);
-      console.log("🎮 Opponent:", opponent);
-      setSide(side);
-      setYourProfile(you);
-      yourProfile!.side = side;
-      setOpponentProfile(opponent);
-      opponentProfile!.side = side === "left" ? "right" : "left";
-      setWaiting(false);
-      setTime(0);
-      setWinner(null);
-      winnerRef.current = null;
-      setForfeitWin(false);
-    });
-
-    s.on("state", (data: GameState) => {
-      setState(data);
-    });
-
-    s.on("gameOver", ({ winner, winnerProfile, loserProfile}: { 
-      winner: "left" | "right", 
-      winnerProfile: UserProfile,
-      loserProfile: UserProfile,
-      scores: { left: number, right: number },
-      duration: number
-    }) => {
-      console.log("🏆 Game Over!", { winner, winnerProfile, loserProfile});
-      setWinner(winner);
-      winnerRef.current = winner;
-      setWinnerProfile(winnerProfile);
-      setLoserProfile(loserProfile);
-    });
-
-    s.on("restartReady", ({side, leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
-      setRestartReady({ left: leftReady, right: rightReady });
-      if (side ===  opponentProfile?.side)
-        console.log("🔄 Opponent is ready to restart");
-    });
-
-    s.on("gameRestarted", () => {
-      console.log("🔄 Game restarted!");
-      setWinner(null);
-      winnerRef.current = null;
-      setTime(0);
-      setRestartReady({ left: false, right: false });
-      setWaitingForRestart(false);
-      setForfeitWin(false);
-    });
-
-    s.on("opponentDisconnected", ({ winner: forfeitWinner }: { winner: "left" | "right", reason: string }) => {
-      console.log("⚠️ Opponent disconnected");
-      setWinner(forfeitWinner);
-      winnerRef.current = forfeitWinner;
-      setWaitingForRestart(false);
-      setForfeitWin(true);
-      // Update score to reflect forfeit win
-      setState(prev => ({
-        ...prev,
-        winner: forfeitWinner,
-        scores: forfeitWinner === "left" 
-          ? { left: 5, right: prev.scores.right }
-          : { left: prev.scores.left, right: 5 }
-      }));
-    });
-
-    s.on("end", () => {
-      alert("Opponent disconnected");
-      setWaiting(true);
-      setSide(null);
-    });
-
-    return () => s.disconnect();
-  }, []);
+    const init = async () => {
+      // Check if user is authenticated
+      if (!token || !user) {
+        console.error("❌ User not authenticated");
+        navigate("/auth");
+        return;
+      }
+  
+      // Fetch user data
+      try {
+        const res = await fetch(`http://localhost:8080/api/v1/game/user/${user.id}`, {
+          method: "GET",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+  
+        const data = await res.json();
+        console.log("---------> : Fetched user profile:", data);
+        verifyToken(data);
+        setYourProfile(data);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        return;
+      }
+  
+      // Create socket connection with auth
+      const s = io("http://localhost:8080", {
+        transports: ['websocket'],
+        auth: { token },
+        extraHeaders: { Authorization: `Bearer ${token}` },
+      });
+      setSocket(s);
+  
+      s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed } });
+      console.log("Joining game with settings:", { map, powerUps, speed });
+  
+      s.on("connect", () => console.log("🔗 Connected:", s.id));
+      s.on("waiting", () => setWaiting(true));
+  
+      s.on("start", ({ side, opponent, you }: { side: "left" | "right", opponent: UserProfile, you: UserProfile }) => {
+        console.log("🚀 Match started as:", side);
+        setSide(side);
+        setYourProfile(you);
+        setOpponentProfile(opponent);
+        setWaiting(false);
+        setTime(0);
+        setWinner(null);
+        winnerRef.current = null;
+        setForfeitWin(false);
+      });
+  
+      s.on("state", (data: GameState) => setState(data));
+  
+      // Add other socket listeners here...
+  
+      return () => s.disconnect();
+    };
+  
+    init(); // Call the async function
+  }, [token, user, map, powerUps, speed, navigate]);
+  
 
   // Handle paddle movement - continuous movement while key is held
   useEffect(() => {

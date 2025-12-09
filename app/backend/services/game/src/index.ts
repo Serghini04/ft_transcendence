@@ -1,8 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import gameDB from "./plugins/game.db";
+import {db} from "./plugins/game.db";
 import gameSocket from "./plugins/game.socket";
-import gameRoutes from "./routes/game.route";
 
 const app = Fastify({
   logger: {
@@ -18,6 +17,12 @@ const app = Fastify({
   },
 });
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: typeof db;
+  }
+}
+
 // CORS
 app.register(cors, {
   origin: true,
@@ -27,13 +32,33 @@ app.register(cors, {
 });
 
 // Attach database
-app.decorate("db", gameDB);
+app.decorate("db", db);
 
 // Attach socket.io
 app.register(gameSocket);
 
 // Register REST routes
-app.register(gameRoutes, { prefix: "/api/v1/game" });
+// app.register(gameRoutes, { prefix: "/api/v1/game/user" });
+
+app.get("/api/v1/game/user/:userId", async (request, reply) => {
+  const { userId } = request.params as { userId: string };
+  
+  // db.prepare(`INSERT INTO users (id, name, avatar) VALUES (?, ?, ?)`)
+  // .run(userId, "souaouri", "");
+
+  const row = db.prepare("SELECT id, name, avatar FROM users WHERE id = ?").get(userId);
+
+  if (row) {
+    reply.send({
+      id: row.id,
+      username: row.name,
+      avatarUrl: row.avatar,
+    });
+  }
+  else {
+    reply.status(404).send({ message: "User not found" });
+  }
+});
 
 const start = async () => {
   try {

@@ -19,18 +19,26 @@ export const gameGateway = (fastify: FastifyInstance) => {
         userId,
         options = { map: "Classic", powerUps: false, speed: "Normal" },
       }) => {
-        socket.data.userId = userId || socket.id;
+        try {
+          // const userProfile = await getUserProfile(userId);
+          // socket.data.userId = userId || socket.id;
+          // socket.data.userProfile = userProfile
+          const configKey = JSON.stringify(options);
+          const waiting = waitingPlayers.get(configKey);
 
-        const configKey = JSON.stringify(options);
-        const waiting = waitingPlayers.get(configKey);
-
-        if (!waiting) {
-          waitingPlayers.set(configKey, socket);
-          socket.emit("waiting");
-        } else {
-          waitingPlayers.delete(configKey);
-          await createRoom(waiting, socket, configKey, options);
+          if (!waiting) {
+            waitingPlayers.set(configKey, socket);
+            socket.emit("waiting");
+          } else {
+            waitingPlayers.delete(configKey);
+            await createRoom(waiting, socket, configKey, options);
+          }
         }
+        catch (error) {
+          console.error("Error fetching user profile:", error);
+          socket.emit("error", { message: "Failed to join game." });
+        }
+        
       }
     );
 
