@@ -280,8 +280,8 @@ services:
 
   frontend:
     build:
-      context: ./app/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./infra/nginx/Dockerfile.frontend
     image: frontend
     container_name: frontend
     ports:
