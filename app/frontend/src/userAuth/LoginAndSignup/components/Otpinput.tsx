@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore } from "../zustand/useStore";
+import { UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import { set } from "date-fns";
 
 export default function OtpInput() {

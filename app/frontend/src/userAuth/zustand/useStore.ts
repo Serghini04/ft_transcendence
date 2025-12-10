@@ -24,6 +24,11 @@ type UserState = {
   setUser: (user: User) => void;
 };
 
+type BioState = {
+  bio: string;
+  setBio: (bio: string) => void;
+};
+
 type ShowOtpInputState = {
   otpFlag: boolean;
   setOtpFlag: (otpFlag: boolean) => void;
@@ -102,3 +107,15 @@ export const UseShowOtpInputStore = create<ShowOtpInputState>((set) => ({
   otpFlag: false,
   setOtpFlag: (flag) => set({ otpFlag: flag }),
 }));
+
+export const UseBioStore = create(
+  persist<BioState>(
+    (set) => ({
+      bio: "",
+      setBio: (content) => set({ bio: content}),
+    }),
+    {
+      name: "frofile-bio",
+    }
+  )
+);

@@ -1,14 +1,14 @@
 import fastify from "fastify";
-import db from "./db";
+import db from "./db.ts";
 import bcrypt from "bcrypt";
 import { Console, error } from "console";
 import {OAuth2Client } from "google-auth-library";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { request } from "http";
-import {generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt";
+import {generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.ts";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
-import { generateOTP, sendOTPEmail } from "./2FA";
+import { generateOTP, sendOTPEmail } from "./2FA.ts";
 import { access } from "fs";
 
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
 import axiosInstance from "../app/axios";
-import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
+import { UseTokenStore } from '../../userAuth/zustand/useStore';
 import { isValid } from 'date-fns';
 import isValidToken from '../../globalUtils/isValidToken';
 

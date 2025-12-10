@@ -7,7 +7,7 @@ import InputBar from "./InputBar";
 import { useChatStore } from "../store/useChatStore";
 import { useParams } from "react-router-dom";
 import HistoryPanel from "./HistoryPanel";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 
 export default function ChatPage() {
   // const { id } = useParams<{ id: string }>();

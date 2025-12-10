@@ -2,7 +2,7 @@ import { Eye, EyeClosed, Lock, User } from "lucide-react";
 import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
-import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore} from "../zustand/useStore";
+import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore} from "../../zustand/useStore";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginSettings()

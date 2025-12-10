@@ -1,5 +1,5 @@
 
-import { UseOtpStore, UseShowOtpInputStore } from "../zustand/useStore";
+import { UseOtpStore, UseShowOtpInputStore } from "../../zustand/useStore";
 import OtpInput from "./Otpinput";
 import SwitchBetweenLoginAndSignin from "./SwitchBetweenLoginAndSignin"
 

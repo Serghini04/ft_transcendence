@@ -1,5 +1,5 @@
 import { useGoogleLogin } from "@react-oauth/google";
-import {UseErrorStore, UseTokenStore, UseUserStore} from "../zustand/useStore";
+import {UseErrorStore, UseTokenStore, UseUserStore} from "../../zustand/useStore";
 import { useNavigate } from "react-router-dom";
 
 export default function GoogleButton(props :any) {

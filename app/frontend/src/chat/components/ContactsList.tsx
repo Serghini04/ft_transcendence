@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import  axiosInstance  from "../app/axios";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "react-toastify";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 import isValidToken from "../../globalUtils/isValidToken";
 import { useNavigate } from "react-router-dom";
 import verifyToken from "../../globalUtils/verifyToken";
