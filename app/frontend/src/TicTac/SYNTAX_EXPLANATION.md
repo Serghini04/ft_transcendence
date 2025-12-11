@@ -193,3 +193,11 @@ Without TypeScript's type assertion, JavaScript would work fine, but TypeScript 
 - [MDN: Computed Property Names](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer#computed_property_names)
 - [TypeScript: Type Assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions)
 - [React: Updating State Based on Previous State](https://react.dev/reference/react/useState#updating-state-based-on-the-previous-state)
+
+## Practical Examples
+
+For hands-on code examples and exercises, see [syntax-examples.ts](syntax-examples.ts) which includes:
+- Complete working examples
+- Step-by-step breakdowns
+- Alternative implementations
+- Practice exercises with solutions

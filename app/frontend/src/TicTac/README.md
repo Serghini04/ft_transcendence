@@ -6,6 +6,7 @@ This directory contains the TicTacToe game implementation with both local and on
 
 - **[INTEGRATION.md](INTEGRATION.md)** - Setup guide, API integration, and deployment instructions
 - **[SYNTAX_EXPLANATION.md](SYNTAX_EXPLANATION.md)** - Detailed explanation of advanced TypeScript/React patterns used in the codebase
+- **[syntax-examples.ts](syntax-examples.ts)** - Practical code examples with exercises
 
 ## 📁 Structure
 
