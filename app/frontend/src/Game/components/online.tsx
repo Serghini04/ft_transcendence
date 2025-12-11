@@ -19,20 +19,21 @@ interface UserProfile {
   id: string;
   name: string;
   avatar: string;
-  side: "left" | "right";
 }
 
 export default function Online() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const winnerRef = useRef<"left" | "right" | null>(null);
+  const winnerRef = useRef<string | null>(null);
+  const yourProfileRef = useRef<UserProfile | null>(null);
+  const opponentProfileRef = useRef<UserProfile | null>(null);
+  const playerPositionRef = useRef<"left" | "right" | null>(null);
   const navigate = useNavigate();
 
   const { token } = UseTokenStore();
   const { user } = UseUserStore();
 
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [side, setSide] = useState<"left" | "right" | null>(null);
   const [waiting, setWaiting] = useState(true);
   const [winner, setWinner] = useState<string | null>(null); // Store user ID, not side
   const [time, setTime] = useState(0);
@@ -45,9 +46,6 @@ export default function Online() {
   const [opponentProfile, setOpponentProfile] = useState<UserProfile | null>(null);
   const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
   const [loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
-
-  // const { token } = UseTokenStore();
-  // const { user } = UseUserStore();
 
 
   const [state, setState] = useState<GameState>({
@@ -107,10 +105,10 @@ export default function Online() {
           id: raw.id,
           name: raw.username,
           avatar: raw.avatarUrl,
-          side: "left",
         };
         
         setYourProfile(data);
+        yourProfileRef.current = data;
         console.log("---------> : Fetched user profile:", data); // Log data, not state
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
@@ -131,14 +129,40 @@ export default function Online() {
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));
   
-      s.on("start", ({ side, opponentId, yourId }: { side: "left" | "right", opponentId: string, yourId: string }) => {
-        console.log("🚀 Match started as:", side);
-        setSide(side);
-        // yourProfile and opponentProfile are already set from initial fetch
-        // Just verify IDs match
-        if (yourProfile && yourProfile.id !== yourId) {
-          console.error("⚠️ Your ID mismatch:", yourProfile.id, yourId);
+      s.on("start", async ({ opponentId, yourId, position }: { opponentId: string, yourId: string, position: "left" | "right" }) => {
+        console.log("🚀 Match started - Position:", position);
+        playerPositionRef.current = position;
+        
+        const currentYourProfile = yourProfileRef.current;
+        if (currentYourProfile && currentYourProfile.id !== yourId) {
+          console.error("⚠️ Your ID mismatch:", currentYourProfile.id, yourId);
         }
+        
+        // Fetch opponent profile
+        try {
+          const res = await fetch(`http://localhost:8080/api/v1/game/user/${opponentId}`, {
+            method: "GET",
+            credentials: "include",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          
+          const raw = await res.json();
+          verifyToken(raw);
+          
+          const opponentData: UserProfile = {
+            id: raw.id,
+            name: raw.username,
+            avatar: raw.avatarUrl,
+          };
+          
+          setOpponentProfile(opponentData);
+          opponentProfileRef.current = opponentData;
+          console.log("---------> : Fetched opponent profile:", opponentData);
+        } catch (err) {
+          console.error("Failed to fetch opponent profile:", err);
+        }
+        
         setWaiting(false);
         setTime(0);
         setWinner(null);
@@ -151,29 +175,31 @@ export default function Online() {
       });
 
       s.on("gameOver", ({ winnerId }) => {
-        console.log("🏁 Game Over! Winner ID:", winnerId);
+        const currentYourProfile = yourProfileRef.current;
+        const currentOpponentProfile = opponentProfileRef.current;
+        
+        console.log("🏁 Game Over! Winner:", winnerId === currentYourProfile?.id ? currentYourProfile : currentOpponentProfile);
 
         setWinner(winnerId);
         winnerRef.current = winnerId;
         
         // Determine winner/loser from existing profiles
-        if (yourProfile && opponentProfile) {
-          if (winnerId === yourProfile.id) {
-            setWinnerProfile(yourProfile);
-            setLoserProfile(opponentProfile);
-            setWinner(yourProfile.side);
+        if (currentYourProfile && currentOpponentProfile) {
+          if (winnerId === currentYourProfile.id) {
+            setWinnerProfile(currentYourProfile);
+            setLoserProfile(currentOpponentProfile);
             console.log("🏆 You won!");
           } else {
-            setWinnerProfile(opponentProfile);
-            setLoserProfile(yourProfile);
-            setWinner(opponentProfile.side);
-            console.log("😞 You lost to", opponentProfile.name);
+            setWinnerProfile(currentOpponentProfile);
+            setLoserProfile(currentYourProfile);
+            console.log("😞 You lost to", currentOpponentProfile.name);
           }
         }
       });
 
-      s.on("restartReady", ({ leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
+      s.on("restartReady", ({ leftReady, rightReady }: { leftReady: boolean, rightReady: boolean }) => {
         setRestartReady({ left: leftReady, right: rightReady });
+        console.log("Restart ready status:", { leftReady, rightReady });
       });
 
       s.on("gameRestarted", () => {
@@ -186,23 +212,27 @@ export default function Online() {
         setForfeitWin(false);
         setWinnerProfile(null);
         setLoserProfile(null);
+
       });
 
       s.on("opponentDisconnected", ({ winnerId }: { winnerId: string, reason: string }) => {
         console.log("⚠️ Opponent disconnected");
+        const currentYourProfile = yourProfileRef.current;
+        const currentOpponentProfile = opponentProfileRef.current;
+        
         setWinner(winnerId);
         winnerRef.current = winnerId;
         setWaitingForRestart(false);
         setForfeitWin(true);
         
         // Set winner/loser profiles
-        if (yourProfile && opponentProfile) {
-          if (winnerId === yourProfile.id) {
-            setWinnerProfile(yourProfile);
-            setLoserProfile(opponentProfile);
+        if (currentYourProfile && currentOpponentProfile) {
+          if (winnerId === currentYourProfile.id) {
+            setWinnerProfile(currentYourProfile);
+            setLoserProfile(currentOpponentProfile);
           } else {
-            setWinnerProfile(opponentProfile);
-            setLoserProfile(yourProfile);
+            setWinnerProfile(currentOpponentProfile);
+            setLoserProfile(currentYourProfile);
           }
         }
       });
@@ -221,7 +251,7 @@ export default function Online() {
 
   // Handle paddle movement - continuous movement while key is held
   useEffect(() => {
-    if (!socket || !side) return;
+    if (!socket || waiting) return;
 
     const keysPressed: Record<string, boolean> = {};
 
@@ -254,7 +284,7 @@ export default function Online() {
       window.removeEventListener("keyup", handleKeyUp);
       clearInterval(moveInterval);
     };
-  }, [socket, side]);
+  }, [socket, waiting]);
 
   // Timer
   useEffect(() => {
@@ -351,7 +381,7 @@ export default function Online() {
   }, [state]);
 
   const resetGame = () => {
-    setWaitingForRestart(true);
+    setWaitingForRestart(true)
     socket?.emit("restart");
   };
 
@@ -381,15 +411,13 @@ export default function Online() {
           }}
         >
           <div className="flex items-center gap-3 w-20">
-            {side === "left" && yourProfile && (
+            {yourProfile && opponentProfile && (
               <>
-                <img src={yourProfile.avatar} alt={yourProfile.name} className="h-10 w-10 rounded-full object-cover" />
-                <span className="text-[22px] font-semibold">{state.scores.left}</span>
-              </>
-            )}
-            {side === "right" && opponentProfile && (
-              <>
-                <img src={opponentProfile.avatar} alt={opponentProfile.name} className="h-10 w-10 rounded-full object-cover" />
+                <img 
+                  src={playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar} 
+                  alt={playerPositionRef.current === "left" ? yourProfile.name : opponentProfile.name} 
+                  className="h-10 w-10 rounded-full object-cover" 
+                />
                 <span className="text-[22px] font-semibold">{state.scores.left}</span>
               </>
             )}
@@ -410,11 +438,12 @@ export default function Online() {
 
           <div className="flex items-center gap-3 w-20">
             <span className="text-[22px] font-semibold">{state.scores.right}</span>
-            {side === "right" && yourProfile && (
-              <img src={yourProfile.avatar} alt={yourProfile.name} className="h-10 w-10 rounded-full object-cover" />
-            )}
-            {side === "left" && opponentProfile && (
-              <img src={opponentProfile.avatar} alt={opponentProfile.name} className="h-10 w-10 rounded-full object-cover" />
+            {yourProfile && opponentProfile && (
+              <img 
+                src={playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar} 
+                alt={playerPositionRef.current === "right" ? yourProfile.name : opponentProfile.name} 
+                className="h-10 w-10 rounded-full object-cover" 
+              />
             )}
           </div>
         </div>
@@ -436,8 +465,8 @@ export default function Online() {
             />
             <h2 className="text-white text-3xl font-bold text-center mb-4">
               {forfeitWin 
-                ? (user && winner === user.id ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
-                : (user && winner === user.id ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
+                ? (user && winner === String(user.id) ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
+                : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
               }
             </h2>
             {forfeitWin && (
@@ -449,6 +478,9 @@ export default function Online() {
                 <div className="text-white text-xl font-semibold">
                   Waiting for your opponent...
                 </div>
+                {/* <div className="text-green-400 text-sm">
+                  ✓ You are ready
+                </div> */}
               </div>
             ) : forfeitWin ? (
               <button
@@ -458,12 +490,20 @@ export default function Online() {
                 Return to Menu
               </button>
             ) : (
-              <button
-                onClick={resetGame}
-                className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-              >
-                Play Again
-              </button>
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  onClick={resetGame}
+                  className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
+                >
+                  Play Again
+                </button>
+                {((playerPositionRef.current === "left" && restartReady.right) || 
+                  (playerPositionRef.current === "right" && restartReady.left)) && (
+                  <div className="text-green-400 text-sm mt-2">
+                    ✓ Opponent is ready
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

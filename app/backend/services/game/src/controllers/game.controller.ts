@@ -138,23 +138,21 @@ export async function createRoom(
   p1.join(id);
   p2.join(id);
 
-  p1.data.side = "left";
-  p2.data.side = "right";
   p1.data.roomId = id;
   p2.data.roomId = id;
 
   p1.emit("start", {
-    side: "left",
     roomId: id,
     opponentId: player2Profile.id,
     yourId: player1Profile.id,
+    position: "left",
   });
 
   p2.emit("start", {
-    side: "right",
     roomId: id,
     opponentId: player1Profile.id,
     yourId: player2Profile.id,
+    position: "right",
   });
 
   console.log(`✅ Room ${id} created with players:`, player1Profile.id, player2Profile.id);

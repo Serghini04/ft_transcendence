@@ -46,6 +46,20 @@ app.get("/api/v1/game/user/:userId", async (request, reply) => {
   // db.prepare(`INSERT INTO users (id, name, avatar) VALUES (?, ?, ?)`)
   // .run(userId, "souaouri", "");
 
+  // Clear tables
+  // db.exec("DELETE FROM users;");
+  // db.exec("DELETE FROM games;");
+
+  // // Insert test users
+  // const insertUser = db.prepare(`
+  //   INSERT INTO users (id, name, avatar, level) VALUES (?, ?, ?, 0)
+  // `);
+
+  // insertUser.run("1", "User1", "../../../frontend/public/user1.png");
+  // insertUser.run("2", "User2", "../../../frontend/public/user2.png");
+  // insertUser.run("3", "User3", "../../../frontend/public/user3.png");
+  // insertUser.run("4", "User4", "../../../frontend/public/user4.png");
+
   const row = db.prepare("SELECT id, name, avatar FROM users WHERE id = ?").get(userId);
 
   if (row) {
