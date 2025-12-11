@@ -12,7 +12,7 @@ interface GameState {
   paddles: { left: { x: number; y: number; width: number; height: number; speed: number }, right: { x: number; y: number; width: number; height: number; speed: number } };
   scores: { left: number; right: number };
   powerUp: { found: boolean; x: number; y: number; width: number; height: number; visible: boolean; duration: number; spawnTime: number | null};
-  winner?: "left" | "right" | null;
+  winner?: null;
 }
 
 interface UserProfile {
@@ -34,7 +34,7 @@ export default function Online() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [side, setSide] = useState<"left" | "right" | null>(null);
   const [waiting, setWaiting] = useState(true);
-  const [winner, setWinner] = useState<"left" | "right" | null>(null);
+  const [winner, setWinner] = useState<string | null>(null); // Store user ID, not side
   const [time, setTime] = useState(0);
   const [restartReady, setRestartReady] = useState({ left: false, right: false });
   const [waitingForRestart, setWaitingForRestart] = useState(false);
@@ -99,34 +99,46 @@ export default function Online() {
         });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
   
-        const data = await res.json();
-        console.log("---------> : Fetched user profile:", data);
-        verifyToken(data);
+        const raw = await res.json();
+        verifyToken(raw);
+        
+        // Normalize backend response
+        const data: UserProfile = {
+          id: raw.id,
+          name: raw.username,
+          avatar: raw.avatarUrl,
+          side: "left",
+        };
+        
         setYourProfile(data);
+        console.log("---------> : Fetched user profile:", data); // Log data, not state
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
         return;
       }
-  
-      // Create socket connection with auth
-      const s = io("http://localhost:8080", {
-        transports: ['websocket'],
+      
+      // Connect to the /game namespace on the API Gateway so events reach the game service
+      const s = io("http://localhost:8080/game", {
+        path: "/socket.io",
+        transports: ["websocket"],
         auth: { token },
         extraHeaders: { Authorization: `Bearer ${token}` },
       });
       setSocket(s);
-  
       s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed } });
       console.log("Joining game with settings:", { map, powerUps, speed });
   
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));
   
-      s.on("start", ({ side, opponent, you }: { side: "left" | "right", opponent: UserProfile, you: UserProfile }) => {
+      s.on("start", ({ side, opponentId, yourId }: { side: "left" | "right", opponentId: string, yourId: string }) => {
         console.log("🚀 Match started as:", side);
         setSide(side);
-        setYourProfile(you);
-        setOpponentProfile(opponent);
+        // yourProfile and opponentProfile are already set from initial fetch
+        // Just verify IDs match
+        if (yourProfile && yourProfile.id !== yourId) {
+          console.error("⚠️ Your ID mismatch:", yourProfile.id, yourId);
+        }
         setWaiting(false);
         setTime(0);
         setWinner(null);
@@ -134,15 +146,77 @@ export default function Online() {
         setForfeitWin(false);
       });
   
-      s.on("state", (data: GameState) => setState(data));
-  
-      // Add other socket listeners here...
-  
-      return () => s.disconnect();
+      s.on("state", (data: GameState) => {
+        setState(data);
+      });
+
+      s.on("gameOver", ({ winnerId }) => {
+        console.log("🏁 Game Over! Winner ID:", winnerId);
+
+        setWinner(winnerId);
+        winnerRef.current = winnerId;
+        
+        // Determine winner/loser from existing profiles
+        if (yourProfile && opponentProfile) {
+          if (winnerId === yourProfile.id) {
+            setWinnerProfile(yourProfile);
+            setLoserProfile(opponentProfile);
+            setWinner(yourProfile.side);
+            console.log("🏆 You won!");
+          } else {
+            setWinnerProfile(opponentProfile);
+            setLoserProfile(yourProfile);
+            setWinner(opponentProfile.side);
+            console.log("😞 You lost to", opponentProfile.name);
+          }
+        }
+      });
+
+      s.on("restartReady", ({ leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
+        setRestartReady({ left: leftReady, right: rightReady });
+      });
+
+      s.on("gameRestarted", () => {
+        console.log("🔄 Game restarted!");
+        setWinner(null);
+        winnerRef.current = null;
+        setTime(0);
+        setRestartReady({ left: false, right: false });
+        setWaitingForRestart(false);
+        setForfeitWin(false);
+        setWinnerProfile(null);
+        setLoserProfile(null);
+      });
+
+      s.on("opponentDisconnected", ({ winnerId }: { winnerId: string, reason: string }) => {
+        console.log("⚠️ Opponent disconnected");
+        setWinner(winnerId);
+        winnerRef.current = winnerId;
+        setWaitingForRestart(false);
+        setForfeitWin(true);
+        
+        // Set winner/loser profiles
+        if (yourProfile && opponentProfile) {
+          if (winnerId === yourProfile.id) {
+            setWinnerProfile(yourProfile);
+            setLoserProfile(opponentProfile);
+          } else {
+            setWinnerProfile(opponentProfile);
+            setLoserProfile(yourProfile);
+          }
+        }
+      });
+
+      s.on("end", () => {
+        alert("Opponent disconnected");
+        setWaiting(true);
+    
+        return () => s.disconnect();
+      });
     };
   
     init(); // Call the async function
-  }, [token, user, map, powerUps, speed, navigate]);
+  }, []);
   
 
   // Handle paddle movement - continuous movement while key is held
@@ -362,8 +436,8 @@ export default function Online() {
             />
             <h2 className="text-white text-3xl font-bold text-center mb-4">
               {forfeitWin 
-                ? (winner === side ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
-                : (winner === side ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
+                ? (user && winner === user.id ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
+                : (user && winner === user.id ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
               }
             </h2>
             {forfeitWin && (

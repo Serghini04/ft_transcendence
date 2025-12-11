@@ -1,16 +1,12 @@
 // gameGateway.ts
-import { Server, Socket } from "socket.io";
 import { FastifyInstance } from "fastify";
-import { createRoom, updateGame, rooms } from "./game.controller";
+import { Socket } from "socket.io";
+import { createRoom, rooms, updateGame } from "./game.controller";
 
-export const gameGateway = (fastify: FastifyInstance) => {
-  const io = new Server(fastify.server, {
-    cors: { origin: "*" },
-  });
-
+export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
   const waitingPlayers = new Map<string, Socket>();
 
-  io.on("connection", (socket) => {
+  namespace.on("connection", (socket: any) => {
     console.log(`🟢 ${socket.id} connected`);
 
     socket.on(
@@ -18,11 +14,9 @@ export const gameGateway = (fastify: FastifyInstance) => {
       async ({
         userId,
         options = { map: "Classic", powerUps: false, speed: "Normal" },
-      }) => {
+      }: any) => {
         try {
-          // const userProfile = await getUserProfile(userId);
-          // socket.data.userId = userId || socket.id;
-          // socket.data.userProfile = userProfile
+          console.log("debuuuuuug: joining game", userId, options);
           const configKey = JSON.stringify(options);
           const waiting = waitingPlayers.get(configKey);
 
@@ -31,18 +25,18 @@ export const gameGateway = (fastify: FastifyInstance) => {
             socket.emit("waiting");
           } else {
             waitingPlayers.delete(configKey);
-            await createRoom(waiting, socket, configKey, options);
+            // ✅ FIX 1: Pass 'namespace' as the 5th argument
+            await createRoom(waiting, socket, configKey, options, namespace);
           }
         }
         catch (error) {
           console.error("Error fetching user profile:", error);
           socket.emit("error", { message: "Failed to join game." });
         }
-        
       }
     );
 
-    socket.on("move", ({ direction }) => {
+    socket.on("move", ({ direction }: any) => {
       const room = rooms.get(socket.data.roomId);
       if (!room) return;
 
@@ -73,18 +67,27 @@ export const gameGateway = (fastify: FastifyInstance) => {
           const opponentSide =
             socket.data.side === "left" ? "right" : "left";
 
-          io.to(roomId).emit("opponentDisconnected", {
+          namespace.to(roomId).emit("opponentDisconnected", {
             winner: opponentSide,
             reason: "disconnect",
           });
+
+          // ✅ FIX 2: Clear the room-specific interval
+          if (room.intervalId) {
+            clearInterval(room.intervalId);
+          }
 
           rooms.delete(roomId);
         }
       }
     });
 
+    // ❌ FIX 3: DELETE THIS ENTIRE BLOCK
+    // The game loop is now started inside createRoom() in game.controller.ts
+    /*
     setInterval(() => {
-      for (const roomId of rooms.keys()) updateGame(roomId, io);
+      for (const roomId of rooms.keys()) updateGame(roomId, namespace);
     }, 16);
+    */
   });
 };

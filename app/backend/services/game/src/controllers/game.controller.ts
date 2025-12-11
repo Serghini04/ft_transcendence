@@ -1,11 +1,9 @@
 // gameController.ts
-import { saveGameResult } from "../plugins/game.db";
+// import { saveGameResult } from "../plugins/game.db";
 import { Socket } from "socket.io";
 
 interface PlayerProfile {
-  id: number;
-  name: string;
-  avatar: string;
+  id: string; // User IDs are strings (from auth/JWT)
 }
 
 interface Paddle {
@@ -43,7 +41,7 @@ interface GameState {
   paddles: { left: Paddle; right: Paddle };
   scores: { left: number; right: number };
   powerUp: PowerUp;
-  winner: "left" | "right" | null;
+  winner: string | null; // Now stores user ID instead of side
 }
 
 interface Room {
@@ -54,6 +52,8 @@ interface Room {
   startTime: number;
   playerProfiles: { left: PlayerProfile; right: PlayerProfile };
   restartReady: { left: boolean; right: boolean };
+  intervalId?: NodeJS.Timeout; // Track the game loop
+  namespace: any; // Store namespace reference for emit
 }
 
 export const rooms = new Map<string, Room>();
@@ -71,9 +71,9 @@ function initGameState(powerUps: boolean, speed: number): GameState {
       x: 600,
       y: 337.5,
       radius: 8,
-      vx: 4,
-      vy: 3,
-      speed,
+      vx: 4 * speed, // Apply speed multiplier here once
+      vy: 3 * speed,
+      speed, // Keep for reference
       visible: true,
     },
     paddles: {
@@ -107,24 +107,19 @@ function initGameState(powerUps: boolean, speed: number): GameState {
   };
 }
 
-// mock — you must replace with your real fetch service
-async function getUserProfile(userId: number): Promise<PlayerProfile> {
-  return { id: userId, name: "Player " + userId, avatar: "" };
-}
-
 export async function createRoom(
   p1: Socket,
   p2: Socket,
   configKey: string,
-  options: any
+  options: any,
+  namespace: any
 ) {
   const id = Date.now().toString();
   const state = initGameState(options.powerUps, speedMap[options.speed]);
 
-  const [player1Profile, player2Profile] = await Promise.all([
-    getUserProfile(p1.data.userId),
-    getUserProfile(p2.data.userId),
-  ]);
+  // Socket auth passes userId as string from JWT
+  const player1Profile: PlayerProfile = { id: String(p1.handshake.auth?.userId) };
+  const player2Profile: PlayerProfile = { id: String(p2.handshake.auth?.userId) };
 
   rooms.set(id, {
     players: [p1, p2],
@@ -137,6 +132,7 @@ export async function createRoom(
       right: player2Profile,
     },
     restartReady: { left: false, right: false },
+    namespace,
   });
 
   p1.join(id);
@@ -150,114 +146,125 @@ export async function createRoom(
   p1.emit("start", {
     side: "left",
     roomId: id,
-    opponent: player2Profile,
-    you: player1Profile,
+    opponentId: player2Profile.id,
+    yourId: player1Profile.id,
   });
 
   p2.emit("start", {
     side: "right",
     roomId: id,
-    opponent: player1Profile,
-    you: player2Profile,
+    opponentId: player1Profile.id,
+    yourId: player2Profile.id,
   });
 
-  console.log(`Room ${id} created`);
+  console.log(`✅ Room ${id} created with players:`, player1Profile.id, player2Profile.id);
+
+  // Start the game loop for this room only
+  const room = rooms.get(id);
+  if (room) {
+    room.intervalId = setInterval(() => {
+      updateGame(id);
+    }, 16); // 60fps
+  }
 }
 
 function resetBall(state: GameState) {
   const ball = state.ball;
   ball.x = state.canvas.width / 2;
   ball.y = state.canvas.height / 2;
-  ball.vx = 4 * (Math.random() > 0.5 ? 1 : -1);
-  ball.vy = 3 * (Math.random() > 0.5 ? 1 : -1);
+  // Reapply speed multiplier when resetting
+  ball.vx = 4 * ball.speed * (Math.random() > 0.5 ? 1 : -1);
+  ball.vy = 3 * ball.speed * (Math.random() > 0.5 ? 1 : -1);
 }
 
-export function updateGame(roomId: string, io: any) {
-  const room = rooms.get(roomId);
-  if (!room || room.state.winner) return;
+export function updateGame(roomId: string) {
+   const room = rooms.get(roomId);
+   if (!room) return;
+  
+   const { namespace } = room; // Get namespace from room
+   
+   // Stop game loop if there's a winner
+   if (room.state.winner) {
+     if (room.intervalId) {
+       clearInterval(room.intervalId);
+       room.intervalId = undefined;
+     }
+     return;
+   }
+ 
+   const { ball, paddles, scores, powerUp } = room.state;
+ 
+   // Speed is already applied in vx/vy during init
+   ball.x += ball.vx;
+   ball.y += ball.vy;
+ 
+   // Paddle collisions
+   const left = paddles.left;
+   if (
+     ball.x - ball.radius <= left.x + left.width &&
+     ball.y >= left.y &&
+     ball.y <= left.y + left.height
+   ) {
+     ball.vx = Math.abs(ball.vx);
+     ball.x = left.x + left.width + ball.radius;
+   }
+ 
+   const right = paddles.right;
+   if (
+     ball.x + ball.radius >= right.x &&
+     ball.y >= right.y &&
+     ball.y <= right.y + right.height
+   ) {
+     ball.vx = -Math.abs(ball.vx);
+     ball.x = right.x - ball.radius;
+   }
+ 
+   // Wall bounce
+   if (
+     ball.y - ball.radius <= 0 ||
+     ball.y + ball.radius >= room.state.canvas.height
+   )
+     ball.vy *= -1;
+ 
+   // Scoring
+   if (ball.x < 0) {
+     scores.right++;
+     resetBall(room.state);
+   } else if (ball.x > room.state.canvas.width) {
+     scores.left++;
+     resetBall(room.state);
+   }
+ 
+   // Win logic
+   handleWin(room, roomId, namespace);
+ 
+   // Power-up logic
+   handlePowerUps(room.state);
 
-  const { ball, paddles, scores, powerUp } = room.state;
-
-  ball.x += ball.vx * ball.speed;
-  ball.y += ball.vy * ball.speed;
-
-  // Paddle collisions
-  const left = paddles.left;
-  if (
-    ball.x - ball.radius <= left.x + left.width &&
-    ball.y >= left.y &&
-    ball.y <= left.y + left.height
-  ) {
-    ball.vx = Math.abs(ball.vx);
-    ball.x = left.x + left.width + ball.radius;
-  }
-
-  const right = paddles.right;
-  if (
-    ball.x + ball.radius >= right.x &&
-    ball.y >= right.y &&
-    ball.y <= right.y + right.height
-  ) {
-    ball.vx = -Math.abs(ball.vx);
-    ball.x = right.x - ball.radius;
-  }
-
-  // Wall bounce
-  if (
-    ball.y - ball.radius <= 0 ||
-    ball.y + ball.radius >= room.state.canvas.height
-  )
-    ball.vy *= -1;
-
-  // Scoring
-  if (ball.x < 0) {
-    scores.right++;
-    resetBall(room.state);
-  } else if (ball.x > room.state.canvas.width) {
-    scores.left++;
-    resetBall(room.state);
-  }
-
-  // Win logic
-  handleWin(room, roomId, io);
-
-  // Power-up logic
-  handlePowerUps(room.state);
-
-  io.to(roomId).emit("state", room.state);
-}
-
-function handleWin(room: Room, roomId: string, io: any) {
-  const { scores, playerProfiles } = room.state;
+   namespace.to(roomId).emit("state", room.state);
+   // Uncomment for debugging, but it will spam console
+   // console.log(`🏓 Room ${roomId} state updated:`, { ball, paddles, scores });
+ }
+ 
+function handleWin(room: Room, roomId: string, namespace: any) {
+  const { scores } = room.state;
+  const { playerProfiles } = room;
 
   if (scores.left >= 5 || scores.right >= 5) {
-    const winner = scores.left >= 5 ? "left" : "right";
-    room.state.winner = winner;
+    const winnerSide = scores.left >= 5 ? "left" : "right";
+    
+    const winnerProfile = playerProfiles[winnerSide];
 
-    const winnerProfile = playerProfiles[winner];
-    const loserProfile =
-      winner === "left" ? playerProfiles.right : playerProfiles.left;
+    room.state.winner = winnerProfile.id;
 
-    saveGameResult({
+    console.log("💾 Saving game result:", {
       gameId: roomId,
-      mode: "online",
-      player1: {
-        ...playerProfiles.left,
-        score: scores.left,
-      },
-      player2: {
-        ...playerProfiles.right,
-        score: scores.right,
-      },
-      winner: { id: winnerProfile.id },
-      createdAt: room.startTime,
+      winnerId: winnerProfile.id,
+      scores,
     });
 
-    io.to(roomId).emit("gameOver", {
-      winner,
-      winnerProfile,
-      loserProfile,
-      scores,
+    namespace.to(roomId).emit("gameOver", {
+      winnerId: winnerProfile.id
     });
   }
 }

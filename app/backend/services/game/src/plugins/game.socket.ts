@@ -8,7 +8,10 @@ async function gameSocket(fastify: FastifyInstance) {
     cors: { origin: "*" },
   });
 
-  gameGateway(io, fastify);
+  // Create /game namespace to match what the gateway expects
+  const gameNamespace = io.of("/game");
+  gameGateway(gameNamespace, fastify);
+  
   fastify.decorate("io", io);
 }
 
