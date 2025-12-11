@@ -1,5 +1,10 @@
 # TicTacToe Online Game - Integration Guide
 
+## Documentation
+
+- [Integration Guide](INTEGRATION.md) - This file (setup and usage)
+- [Syntax Explanation](SYNTAX_EXPLANATION.md) - Detailed explanation of TypeScript/React patterns used in the codebase
+
 ## Quick Start
 
 ### 1. Backend Setup
@@ -234,3 +239,4 @@ For issues or questions:
 - Check backend logs: `npm run dev` shows detailed logs
 - Check browser console for frontend errors
 - Review API documentation in backend README.md
+- See [SYNTAX_EXPLANATION.md](SYNTAX_EXPLANATION.md) for understanding advanced TypeScript patterns
