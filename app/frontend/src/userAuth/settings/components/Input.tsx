@@ -18,7 +18,7 @@ export default function Input(props: InputProps)
 	}, [props.error]);
 	return (
 		<div className="relative flex flex-col ml-[1.4vw] h-full justify-center">
-            <label className="ml-4 mb-1 font-[outfit] text-white">{props.label}</label>
+            <label className="ml-[0.8vw] mb-[0.2vw] font-[outfit] text-white text-[0.85vw]">{props.label}</label>
 			<input onChange={props.onChange} type={ispasswordhide ? props.type : "text"} placeholder={props.text} className={`text-[#D2D2D2] w-[27vw] h-[3.3vw] pl-[1.8vw] text-[0.8vw] border-[0.1vw] b rounded-[0.5vw] bg-[rgba(1,9,16,50%)] ${props.error ? "border-red-600" : "border-[#27445E]"} outline-none `} />
 			<button className="absolute right-5" onClick={() => setIspasswordhide(!ispasswordhide)} type="button">
 				{ispasswordhide ? childrenArray[2] : childrenArray[1]}
