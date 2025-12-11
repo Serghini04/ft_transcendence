@@ -56,6 +56,13 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
       if (board[a] && board[a] === board[b] && board[a] === board[c]) {
         setWinner(board[a]);
         setWinningLine(combination);
+        // Update score for winner using advanced TypeScript syntax
+        // Breakdown: { ...prev, [board[a]]: prev[board[a] as 'X' | 'O'] + 1 }
+        // - ...prev: Spreads all existing scores (X, O, draws)
+        // - [board[a]]: Computed property - uses winner's symbol ('X' or 'O') as key
+        // - prev[board[a] as 'X' | 'O']: Gets current score, with type assertion for TypeScript
+        // - + 1: Increments the winner's score
+        // See SYNTAX_EXPLANATION.md for detailed explanation
         setScores(prev => ({ ...prev, [board[a]]: prev[board[a] as 'X' | 'O'] + 1 }));
         return board[a];
       }
