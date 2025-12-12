@@ -1,5 +1,5 @@
 // gameController.ts
-// import { saveGameResult } from "../plugins/game.db";
+import { saveGameResult } from "../plugins/game.db";
 import { Socket } from "socket.io";
 
 interface PlayerProfile {
@@ -52,8 +52,8 @@ interface Room {
   startTime: number;
   playerProfiles: { left: PlayerProfile; right: PlayerProfile };
   restartReady: { left: boolean; right: boolean };
-  intervalId?: NodeJS.Timeout; // Track the game loop
   namespace: any; // Store namespace reference for emit
+  intervalId?: NodeJS.Timeout; // Store the game loop interval
 }
 
 export const rooms = new Map<string, Room>();
@@ -175,7 +175,7 @@ function resetBall(state: GameState) {
   ball.vy = 3 * ball.speed * (Math.random() > 0.5 ? 1 : -1);
 }
 
-export function updateGame(roomId: string) {
+export async function updateGame(roomId: string) {
    const room = rooms.get(roomId);
    if (!room) return;
   
@@ -233,10 +233,9 @@ export function updateGame(roomId: string) {
      resetBall(room.state);
    }
  
-   // Win logic
-   handleWin(room, roomId, namespace);
+   // ✅ Await the win handler
+   await handleWin(room, roomId, namespace);
  
-   // Power-up logic
    handlePowerUps(room.state);
 
    namespace.to(roomId).emit("state", room.state);
@@ -244,7 +243,7 @@ export function updateGame(roomId: string) {
    // console.log(`🏓 Room ${roomId} state updated:`, { ball, paddles, scores });
  }
  
-function handleWin(room: Room, roomId: string, namespace: any) {
+async function handleWin(room: Room, roomId: string, namespace: any) {
   const { scores } = room.state;
   const { playerProfiles } = room;
 
@@ -260,6 +259,31 @@ function handleWin(room: Room, roomId: string, namespace: any) {
       winnerId: winnerProfile.id,
       scores,
     });
+
+    try {
+      // ✅ Access database through namespace.fastify
+      const db = namespace.fastify?.db;
+      
+      if (!db) {
+        console.error("❌ Database not available for saving game result");
+        console.error("namespace.fastify:", namespace.fastify);
+        // Still emit gameOver even if DB save fails
+      } else {
+        await saveGameResult(db, {
+          gameId: roomId,
+          mode: room.options.mode,
+          player1Id: playerProfiles.left.id,
+          player2Id: playerProfiles.right.id,
+          winnerId: winnerProfile.id,
+          score1: scores.left,
+          score2: scores.right,
+          createdAt: Date.now(),
+        });
+        console.log("✅ Game result saved successfully");
+      }
+    } catch (error) {
+      console.error("❌ Failed to save game result:", error);
+    }
 
     namespace.to(roomId).emit("gameOver", {
       winnerId: winnerProfile.id
@@ -294,7 +318,7 @@ function handlePowerUps(state: GameState) {
     }
   }
 
-  if (powerUp.visible && Date.now() - powerUp.spawnTime > powerUp.duration) {
+  if (powerUp.visible && powerUp.spawnTime !== null && Date.now() - powerUp.spawnTime > powerUp.duration) {
     powerUp.visible = false;
   }
 }

@@ -4,6 +4,9 @@ import { Socket } from "socket.io";
 import { createRoom, rooms, updateGame } from "./game.controller";
 
 export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
+  // ✅ Store fastify instance on namespace so we can access it later
+  namespace.fastify = fastify;
+
   const waitingPlayers = new Map<string, Socket>();
 
   namespace.on("connection", (socket: any) => {
@@ -90,8 +93,14 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         room.state.powerUp.visible = false;
         room.state.powerUp.spawnTime = null;
 
-        // Send the reset state to all players immediately
-        namespace.to(socket.data.roomId).emit("state", room.state);
+        // Restart the game loop (it was stopped when winner was declared)
+        if (room.intervalId) {
+          clearInterval(room.intervalId);
+        }
+        room.intervalId = setInterval(() => {
+          updateGame(socket.data.roomId);
+        }, 16); // 60fps
+
         namespace.to(socket.data.roomId).emit("gameRestarted");
         
         console.log(`✅ Game ${socket.data.roomId} restarted - Scores: ${room.state.scores.left}-${room.state.scores.right}`);

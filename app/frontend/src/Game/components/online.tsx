@@ -123,7 +123,7 @@ export default function Online() {
         extraHeaders: { Authorization: `Bearer ${token}` },
       });
       setSocket(s);
-      s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed } });
+      s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
       console.log("Joining game with settings:", { map, powerUps, speed });
   
       s.on("connect", () => console.log("🔗 Connected:", s.id));
@@ -203,7 +203,6 @@ export default function Online() {
       });
 
       s.on("gameRestarted", () => {
-        console.log("🔄 Game restarted!");
         setWinner(null);
         winnerRef.current = null;
         setTime(0);
@@ -212,7 +211,7 @@ export default function Online() {
         setForfeitWin(false);
         setWinnerProfile(null);
         setLoserProfile(null);
-
+        console.log("🔄 Game restarted!");
       });
 
       s.on("opponentDisconnected", ({ winnerId }: { winnerId: string, reason: string }) => {
@@ -251,6 +250,7 @@ export default function Online() {
 
   // Handle paddle movement - continuous movement while key is held
   useEffect(() => {
+    // console.log("Setting up paddle movement listeners started");
     if (!socket || waiting) return;
 
     const keysPressed: Record<string, boolean> = {};
@@ -279,6 +279,7 @@ export default function Online() {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     
+    // console.log("Setting up paddle movement listeners ended");
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
@@ -360,25 +361,33 @@ export default function Online() {
     };
 
     const loop = () => {
+      // console.log("Drawing frame");
       if (!canvasRef.current) return;
       draw();
-      if (!winnerRef.current)
-        requestAnimationFrame(loop);
-      else
-      {
-        if (rafRef.current)
+      if (!winnerRef.current) {
+        rafRef.current = requestAnimationFrame(loop);
+      } else {
+        if (rafRef.current) {
           cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
+      }
+    };
+    
+    // Cancel any existing animation frame before starting new loop
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    
+    loop();
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
     };
-    loop();
-    return () => {
-      if (rafRef.current)
-        cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
 
-  }, [state]);
+  }, [state, winner]);
 
   const resetGame = () => {
     setWaitingForRestart(true)

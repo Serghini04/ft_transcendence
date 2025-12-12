@@ -14,14 +14,16 @@ import { FastifyInstance } from "fastify";
 //   score: number;
 // }
 
-// export interface GameData {
-//   gameId: string;
-//   mode: string;
-//   player1: PlayerInfo;
-//   player2: PlayerInfo;
-//   winner: { id: string };
-//   createdAt?: number;
-// }
+export interface GameData {
+  gameId: string;
+  mode: string;
+  player1Id: string;
+  player2Id: string;
+  winnerId: string;
+  score1: number;
+  score2: number;
+  createdAt?: number;
+}
 
 // export interface UserProfile {
 //   id: string;
@@ -36,6 +38,64 @@ import { FastifyInstance } from "fastify";
 // export  const db = new Database("./src/db/game.sqlite");
 
 export const db: Database.Database = new Database("./src/db/game.sqlite");
+
+// Initialize database
+db.pragma("foreign_keys = ON");
+db.pragma("journal_mode = WAL");
+
+// Drop old tables with incorrect structure (remove this after first run)
+try {
+  db.prepare(`DROP TABLE IF EXISTS games`).run();
+  console.log("🗑️  Dropped old games table");
+} catch (error) {
+  console.log("⚠️  Could not drop games table:", error);
+}
+
+// Create tables if they don't exist
+const createTables = (db: Database.Database) => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS games (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      game_id TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'paddle',
+      mode TEXT NOT NULL,
+      player1_id TEXT NOT NULL,
+      player2_id TEXT NOT NULL,
+      winner_id TEXT NOT NULL,
+      score1 INTEGER NOT NULL,
+      score2 INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+      
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_games_game_id ON games(game_id);
+    CREATE INDEX IF NOT EXISTS idx_games_player1 ON games(player1_id);
+    CREATE INDEX IF NOT EXISTS idx_games_player2 ON games(player2_id);
+    CREATE INDEX IF NOT EXISTS idx_games_winner ON games(winner_id);
+    CREATE INDEX IF NOT EXISTS idx_games_created ON games(created_at);
+  `);
+      
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      avatar TEXT,
+      level INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+          
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_users_level ON users(level);
+    CREATE INDEX IF NOT EXISTS idx_users_updated ON users(updated_at);
+  `);
+};
+
+// Execute table creation
+createTables(db);
+console.log("✅ Database tables initialized");
 
 
 // export default fp(async function gameDBPlugin(app: FastifyInstance) {
@@ -70,82 +130,37 @@ export const db: Database.Database = new Database("./src/db/game.sqlite");
   // });
   
   // -------------------------
-  // Table creation
+  // Table creation (moved above)
   // -------------------------
-  // const createTables = (db: Database.Database) => {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS games (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        game_id TEXT UNIQUE NOT NULL,
-        type TEXT NOT NULL DEFAULT 'paddle',
-        mode TEXT NOT NULL DEFAULT 'online',
-        player1_id TEXT NOT NULL,
-        player1_name TEXT NOT NULL,
-        player1_avatar TEXT,
-        player1_score INTEGER DEFAULT 0,
-        player2_id TEXT NOT NULL,
-        player2_name TEXT NOT NULL,
-        player2_avatar TEXT,
-        player2_score INTEGER DEFAULT 0,
-        winner_id TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-        `);
-        
-        db.exec(`
-          CREATE INDEX IF NOT EXISTS idx_games_player1 ON games(player1_id);
-          CREATE INDEX IF NOT EXISTS idx_games_player2 ON games(player2_id);
-          CREATE INDEX IF NOT EXISTS idx_games_winner ON games(winner_id);
-          CREATE INDEX IF NOT EXISTS idx_games_created ON games(created_at);
-          `);
-          
-          db.exec(`
-            CREATE TABLE IF NOT EXISTS users (
-              id TEXT PRIMARY KEY,
-              name TEXT NOT NULL,
-              avatar TEXT,
-              level INTEGER DEFAULT 0,
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-              )
-              `);
-              
-              db.exec(`
-                CREATE INDEX IF NOT EXISTS idx_users_level ON users(level);
-                CREATE INDEX IF NOT EXISTS idx_users_updated ON users(updated_at);
-                `);
-                // };
-                // -------------------------
-                // Game operations
-                // -------------------------
-                // const saveGameResult = (db: Database.Database, gameData: GameData) => {
-                  //   const stmt = db.prepare(`
-                  //     INSERT INTO games (
-                    //       game_id, mode,
-                    //       player1_id, player1_name, player1_avatar, player1_score,
-                    //       player2_id, player2_name, player2_avatar, player2_score,
-                    //       winner_id, created_at
-                    //     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    //   `);
-                    
-                    //   return stmt.run(
-                      //     gameData.gameId,
-                      //     gameData.mode,
-                      
-                      //     gameData.player1.id,
-                      //     gameData.player1.name,
-//     gameData.player1.avatar || null,
-//     gameData.player1.score,
 
-//     gameData.player2.id,
-//     gameData.player2.name,
-//     gameData.player2.avatar || null,
-//     gameData.player2.score,
-
-//     gameData.winner.id,
-//     gameData.createdAt || Date.now()
-//   ).lastInsertRowid;
-// };
+// -------------------------
+// Game operations
+// -------------------------
+export const saveGameResult = (db: Database.Database, gameData: GameData) => {
+  const stmt = db.prepare(`
+    INSERT INTO games (
+        game_id,
+        mode,
+        player1_id,
+        player2_id,
+        winner_id,
+        score1,
+        score2,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+  
+    return stmt.run(
+      gameData.gameId,
+      gameData.mode,
+      gameData.player1Id,
+      gameData.player2Id,
+      gameData.winnerId,
+      gameData.score1,
+      gameData.score2,
+      gameData.createdAt || Date.now()
+  ).lastInsertRowid;
+};
 
 // const getUserGames = (
 //   db: Database.Database,
