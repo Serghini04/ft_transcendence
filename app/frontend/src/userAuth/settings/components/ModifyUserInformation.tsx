@@ -1,5 +1,5 @@
 
-import { Lock, User } from "lucide-react";
+import { Lock, ShieldCheck, User } from "lucide-react";
 import { useState } from "react";
 import Input from "./Input";
 import { BioInput } from "./BioInput";
@@ -33,7 +33,7 @@ export default function ModifyUserInformation() {
             <div className="flex flex-col w-[30vw] gap-[0.36vw] mb-4">
                 <div className="flex gap-[0.3vw] ml-[1.4vw]">
                     <Lock color="#ffffff" size={"2vw"} className="mt-[0.45vw]"/>
-                    <h2 className="font-[outfit] text-[2vw]">Account</h2>
+                    <h2 className="font-[outfit] text-[2vw]">Security</h2>
                 </div>
                 <div className="flex flex-col w-full gap-[1.65vw] mt-10">
                     <Input label="Current Password" text="...................." type="password"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -49,6 +49,16 @@ export default function ModifyUserInformation() {
                 </div>
             </div>
             <div className="h-[27vw] w-0.5 bg-[#27445E]"></div>
+            <div className="flex flex-col w-[30vw] gap-[0.36vw] mb-4">
+                <div className="flex gap-[0.3vw] ml-[1.4vw]">
+                    <ShieldCheck color="#ffffff" size={"2vw"} className="mt-[0.45vw]"/>
+                    <h2 className="font-[outfit] text-[2vw]">Privacy</h2>
+                </div>
+                <div className="flex items-center  justify-center gap-[4vw]">
+                    <p className="text-[1.3vw]">Show notifications</p>
+                    <div className="h-[0.8vw] w-[2vw] bg-amber-300"></div>
+                </div>
+            </div>
         </div>
     );
 }
