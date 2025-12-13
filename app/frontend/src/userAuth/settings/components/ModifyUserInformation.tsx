@@ -5,13 +5,36 @@ import Input from "./Input";
 import { BioInput } from "./BioInput";
 import { UseBioStore } from "../../zustand/useStore";
 
+interface params {
+    user :{
+        name: string;
+        email: string;
+        photoURL: string;
+        bgPhotoURL: string;
+    }
+}
 
-export default function ModifyUserInformation() {
+export default function ModifyUserInformation(props: params) {
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [c_NewPassword, setC_NewPassword] = useState("");
     const {bio, setBio} = UseBioStore();
+
+    const changeData = async () => {
+        await fetch("http://localhost:8080/api/v1/auth/setting/modifyUserData", {
+            method: "post",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+                name: name,
+                password: password,
+                newPassword: newPassword,
+                c_NewPassword: c_NewPassword,
+                bio: bio
+            })
+        });
+    }
     return (
         <div className="flex gap-4 w-full py-6">
             <div className="flex flex-col w-[30vw] gap-[0.36vw]">
@@ -20,10 +43,10 @@ export default function ModifyUserInformation() {
                     <h2 className="font-[outfit] text-[2vw]">Account</h2>
                 </div>
                 <div className="flex flex-col w-full gap-[1.65vw] mt-10">
-                    <Input label="Username" text="Username" type="text"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    <Input label="Username" text={props.user.name} type="text"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setName(e.target.value)}
                     />
-                    <Input label="Email" text="Email" type="Email"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    <Input label="Email" text={props.user.email} type="Email"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setName(e.target.value)}
                     />  
                     <BioInput label="Profile bio" value={bio} onChange={(e) => setBio(e.target.value)}/>
@@ -58,6 +81,7 @@ export default function ModifyUserInformation() {
                     <p className="text-[1.3vw]">Show notifications</p>
                     <div className="h-[0.8vw] w-[2vw] bg-amber-300"></div>
                 </div>
+                <button onClick={changeData} className=" mt-10 ml-10 h-[3vw] w-[10vw] bg-primary rounded-[0.4vw] text-white text-[1vw] font-outfit font-medium hover:bg-[rgba(12,115,104,85%)]">Save Changes</button>
             </div>
         </div>
     );
