@@ -16,7 +16,9 @@ interface User {
   id: number;
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  photoURL?: string;
+  bgPhotoURL?: string;
 }
 
 
@@ -25,13 +27,14 @@ await app.register(cookie, {
   secret: process.env.COOKIE_SECRET,
 });
 await app.register(cors, {
-  origin: "http://localhost:5173", // for development only
+  origin: ["http://localhost:5173"],
   credentials: true,
 });
 
 
 
-db.prepare(`DROP TABLE IF EXISTS users`).run();
+// db.prepare(`DROP TABLE IF EXISTS temp_users`).run();
+// db.prepare(`DROP TABLE IF EXISTS users`).run();
 
 // Create table if not exists
 
@@ -40,7 +43,10 @@ db.prepare(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    photoURL TEXT,
+    bgPhotoURL TEXT,
+    profileVisibility BOOLEAN DEFAULT 1
     )
     `).run();
     db.prepare(`
@@ -48,6 +54,9 @@ db.prepare(`
         name TEXT NOT NULL,
         email TEXT NOT NULL,
         password TEXT NOT NULL,
+        photoURL TEXT,
+        bgPhotoURL TEXT,
+        profileVisibility BOOLEAN DEFAULT 1,
         expiry INTEGER NOT NULL
         )
     `).run();
@@ -201,7 +210,7 @@ app.post("/api/v1/auth/login", async (request, reply) => {
       return ;
     }
 
-    const match = await bcrypt.compare(password, user.password);
+    const match = await bcrypt.compare(password, user.password as string);
     if (!match) {
       reply.status(401).send({ error: "Invalid Username or password", code: "INVALID_CREDENTIALS" });
       return ;
@@ -248,15 +257,14 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
     let userInfo = {id: 0, name: "", email: ""};
     if (key === "signup")
     {
-      const pending = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(emailOrName) as {name: string; email: string; password: string; expiry: number} | undefined;
+      const pending = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(emailOrName) as User | undefined;
 
     if (!pending) {
       reply.status(400).send({ error: "No pending signup found for this email", code: "NO_PENDING_SIGNUP" });
       return ;
     }
 
-    db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)")
-      .run(pending.name, pending.email, pending.password);
+    db.prepare("INSERT INTO users (name, email, password, photoURL, bgPhotoURL) VALUES (?, ?, ?, ?, ?)").run(pending.name, pending.email, pending.password, pending.photoURL, pending.bgPhotoURL);
 
     // Remove from pending_users
     db.prepare("DELETE FROM temp_users WHERE email = ?").run(emailOrName);
@@ -300,7 +308,7 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
 
 app.post("/api/v1/auth/signup", async (request, reply) => {
   try {
-    const { name, email, password, cpassword} = request.body as { name: string; email: string; password: string; cpassword: string};
+    const { name, email, password, cpassword, photoURL, bgPhotoURL} = request.body as { name: string; email: string; password: string; cpassword: string, photoURL: string; bgPhotoURL: string; };
   
       if (!name || !email || !password || !cpassword) {
         reply.status(400).send({ error: "All fields are required" });
@@ -334,7 +342,7 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       //stor in db
       const expiry = Date.now() + 10 * 60 * 1000; 
-      db.prepare("INSERT INTO temp_users (name, email, password, expiry) VALUES (?, ?, ?, ?)").run(name, email, hashedPassword, expiry);
+      db.prepare("INSERT INTO temp_users (name, email, password, expiry, photoURL, bgPhotoURL) VALUES (?, ?, ?, ?, ?, ?)").run(name, email, hashedPassword, expiry, photoURL, bgPhotoURL);
 
       //save user info for sending back to client
       const row = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(email) as User;
@@ -388,6 +396,64 @@ app.post("/api/v1/auth/forgotPassword", async (request, reply) => {
     reply.status(500).send({ error: "Internal server error" });
   }
 });
+
+app.post("/api/v1/auth/setting/getUserData", async (request, reply) => {
+  try {
+    const { id } = (request.body as {id: number});
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+    if (!user) {
+      reply.status(401).send({ error: "Invalid user id", code: "INVALID_USER_ID" });
+      return ;
+    }
+    const userInfo = {
+      name: user.name,
+      email: user.email,
+      photoURL: user.photoURL,
+      bgPhotoURL: user.bgPhotoURL
+    }
+    reply.status(201).send({ 
+      message: "User data fetched successfully",
+      user: userInfo,
+      code: "USER_DATA_FETCHED_SUCCESS" });
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
+  try {
+    const {id , name, password, newpassword, cnewpassword, photoURL, bgPhotoURL, flag} = (request.body as {id: number; name: string; email: string; password:string; newpassword: string; cnewpassword:string; photoURL: string; bgPhotoURL: string; flag: string});
+
+    db.prepare("UPDATE users SET name = ?, photoURL = ?, bgPhotoURL = ? WHERE id = ?").run(name, photoURL, bgPhotoURL, id);
+    if (flag === "PW")
+    {
+      const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+      if (!user) {
+        reply.status(401).send({ error: "Invalid user id", code: "INVALID_USER_ID" });
+        return ;
+      }
+      const match = await bcrypt.compare(password, user.password!);
+      if (!match) {
+        reply.status(401).send({ error: "Invalid current password", code: "INVALID_CREDENTIALS" });
+        return ;
+      }
+      if (newpassword !== cnewpassword) {
+        reply.status(400).send({ error: "New passwords do not match", code: "CPASSWORD_NOT_MATCHING" });
+        return ;
+      }
+      const hashedPassword = await bcrypt.hash(newpassword, 10);
+      db.prepare("UPDATE users SET password = ? WHERE id = ?").run(hashedPassword, id);
+    }
+    reply.status(201).send({ 
+      message: "User data updated successfully",
+      code: "USER_DATA_UPDATED_SUCCESS" });
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: "Internal server error" });
+  }
+});
+
 
 // app.post("/api/v1/auth/signup", async (request, reply) => {
 //     try {

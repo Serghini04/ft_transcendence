@@ -33,10 +33,10 @@ export default function SignuoSettings()
 		const res = await fetch("http://localhost:8080/api/v1/auth/signup", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name, email, password, cpassword}),
+			body: JSON.stringify({ name, email, password, cpassword, photoURL: "/public/breakingbad1.jpg", bgPhotoURL: "/public/profileBG.png" }),
 			credentials: "include"
 		});
-		
+
 		const data = await res.json();
 		
 		

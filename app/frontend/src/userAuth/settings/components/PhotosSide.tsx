@@ -1,8 +1,22 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function PhotosSide() {
+interface params {
+  user :{
+      name: string;
+      email: string;
+      photoURL: string;
+      bgPhotoURL: string;
+  }
+}
+
+export default function PhotosSide(props: params) {
   const filrInputRef = useRef<HTMLInputElement | null>(null)
-  const [ imageDataUrl, setImageDataUrl ] = useState("/public/profileBG.png");
+  const [ imageDataUrl, setImageDataUrl ] = useState("");
+  useEffect(() => {
+    if (props.user.bgPhotoURL) {
+      setImageDataUrl(props.user.bgPhotoURL);
+    }
+  }, [props.user.bgPhotoURL]);
     const handleChoosePhoto = () => {
         filrInputRef.current?.click();
     }
@@ -24,7 +38,7 @@ export default function PhotosSide() {
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
-        className="h-[21vw] w-full rounded-tl-4xl cursor-pointer"
+        className="h-160 md:h-60 xl:h-120  w-full rounded-tl-4xl cursor-pointer"
         onClick={handleChoosePhoto}
     >
           <input
