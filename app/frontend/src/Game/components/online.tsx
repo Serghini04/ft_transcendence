@@ -28,6 +28,7 @@ export default function Online() {
   const yourProfileRef = useRef<UserProfile | null>(null);
   const opponentProfileRef = useRef<UserProfile | null>(null);
   const playerPositionRef = useRef<"left" | "right" | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
 
   const { token } = UseTokenStore();
@@ -40,6 +41,7 @@ export default function Online() {
   const [restartReady, setRestartReady] = useState({ left: false, right: false });
   const [waitingForRestart, setWaitingForRestart] = useState(false);
   const [forfeitWin, setForfeitWin] = useState(false);
+  const [opponentLeftPostGame, setOpponentLeftPostGame] = useState(false);
   
   // User profiles
   const [yourProfile, setYourProfile] = useState<UserProfile | null>(null);
@@ -123,6 +125,7 @@ export default function Online() {
         extraHeaders: { Authorization: `Bearer ${token}` },
       });
       setSocket(s);
+      socketRef.current = s; // Store in ref for cleanup
       s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
       console.log("Joining game with settings:", { map, powerUps, speed });
   
@@ -209,20 +212,33 @@ export default function Online() {
         setRestartReady({ left: false, right: false });
         setWaitingForRestart(false);
         setForfeitWin(false);
+        setOpponentLeftPostGame(false);
         setWinnerProfile(null);
         setLoserProfile(null);
         console.log("🔄 Game restarted!");
       });
 
-      s.on("opponentDisconnected", ({ winnerId }: { winnerId: string, reason: string }) => {
-        console.log("⚠️ Opponent disconnected");
+      s.on("opponentLeftPostGame", () => {
+        console.log("⚠️ Opponent left after game over");
+        setOpponentLeftPostGame(true);
+        setWaitingForRestart(false);
+      });
+
+      s.on("opponentDisconnected", ({ winnerId, gameActive }: { winnerId: string, reason: string, gameActive: boolean }) => {
+        console.log("⚠️ Opponent disconnected", { gameActive });
         const currentYourProfile = yourProfileRef.current;
         const currentOpponentProfile = opponentProfileRef.current;
         
         setWinner(winnerId);
         winnerRef.current = winnerId;
         setWaitingForRestart(false);
-        setForfeitWin(true);
+        
+        // Only set forfeitWin if game was active (not after game over)
+        if (gameActive) {
+          setForfeitWin(true);
+        } else {
+          setOpponentLeftPostGame(true);
+        }
         
         // Set winner/loser profiles
         if (currentYourProfile && currentOpponentProfile) {
@@ -245,6 +261,15 @@ export default function Online() {
     };
   
     init(); // Call the async function
+
+    // Cleanup on unmount (when user navigates away, reloads, or closes tab)
+    return () => {
+      if (socketRef.current) {
+        console.log("🚪 Component unmounting - disconnecting socket");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, []);
   
 
@@ -473,12 +498,14 @@ export default function Online() {
               className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4 object-cover"
             />
             <h2 className="text-white text-3xl font-bold text-center mb-4">
-              {forfeitWin 
-                ? (user && winner === String(user.id) ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
-                : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
+              {opponentLeftPostGame
+                ? "Your opponent left"
+                : forfeitWin 
+                  ? (user && winner === String(user.id) ? "🏆 You Won by Forfeit!" : "😞 You Lost - Disconnected")
+                  : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 You Lost`)
               }
             </h2>
-            {forfeitWin && (
+            {forfeitWin && !opponentLeftPostGame && (
               <p className="text-gray-300 text-sm mb-4">Your opponent left the game</p>
             )}
             
@@ -491,7 +518,7 @@ export default function Online() {
                   ✓ You are ready
                 </div> */}
               </div>
-            ) : forfeitWin ? (
+            ) : (forfeitWin || opponentLeftPostGame) ? (
               <button
                 onClick={() => navigate("/game")}
                 className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
@@ -499,16 +526,28 @@ export default function Online() {
                 Return to Menu
               </button>
             ) : (
-              <div className="flex flex-col items-center gap-3">
-                <button
-                  onClick={resetGame}
-                  className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-                >
-                  Play Again
-                </button>
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={resetGame}
+                    className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
+                  >
+                    Play Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      // socket?.emit("leavePostGame");
+                      socket?.disconnect();
+                      navigate("/game");
+                    }}
+                    className="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
                 {((playerPositionRef.current === "left" && restartReady.right) || 
                   (playerPositionRef.current === "right" && restartReady.left)) && (
-                  <div className="text-green-400 text-sm mt-2">
+                  <div className="text-green-400 text-sm">
                     ✓ Opponent is ready
                   </div>
                 )}

@@ -2,6 +2,7 @@
 import { FastifyInstance } from "fastify";
 import { Socket } from "socket.io";
 import { createRoom, rooms, updateGame } from "./game.controller";
+import { saveGameResult } from "../plugins/game.db";
 
 export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
   // ✅ Store fastify instance on namespace so we can access it later
@@ -107,7 +108,39 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
       }
     });
 
-    socket.on("disconnect", () => {
+    // socket.on("leavePostGame", async () => {
+    //   console.log(`🚪 ${socket.id} left post-game`);
+
+    //   if (socket.data.roomId) {
+    //     const roomId = socket.data.roomId;
+    //     const room = rooms.get(roomId);
+
+    //     if (room) {
+    //       // Notify opponent that this player left after game over
+    //       socket.to(roomId).emit("opponentLeftPostGame");
+
+    //       // Remove this player from the room but don't delete the room yet
+    //       const playerIndex = room.players.findIndex(p => p.id === socket.id);
+    //       if (playerIndex !== -1) {
+    //         room.players.splice(playerIndex, 1);
+    //       }
+
+    //       // If no players left in room, clean up
+    //       if (room.players.length === 0) {
+    //         if (room.intervalId) {
+    //           clearInterval(room.intervalId);
+    //         }
+    //         rooms.delete(roomId);
+    //         console.log(`🗑️ Room ${roomId} deleted - no players remaining`);
+    //       }
+    //     }
+    //   }
+
+    //   // Disconnect the socket
+    //   socket.disconnect();
+    // });
+
+    socket.on("disconnect", async () => {
       console.log(`🔴 ${socket.id} disconnected`);
 
       for (const [key, s] of waitingPlayers.entries()) {
@@ -122,16 +155,47 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         const room = rooms.get(roomId);
 
         if (room) {
+          // Check if game was active (no winner yet) or finished
+          const gameActive = !room.state.winner;
+          
           // Determine opponent's userId
           const disconnectedPlayerIndex = room.players.findIndex(p => p.id === socket.id);
-          const opponentIndex = disconnectedPlayerIndex === 0 ? 1 : 0;
           const opponentUserId = disconnectedPlayerIndex === 0 
             ? room.playerProfiles.right.id 
             : room.playerProfiles.left.id;
 
+          // Save forfeit game to database if game was active
+          if (gameActive) {
+            try {
+              const db = fastify?.db;
+              
+              if (db) {
+                // Set score to 5-0 for forfeit win
+                const isLeftPlayerWinner = disconnectedPlayerIndex === 0 ? false : true;
+                
+                await saveGameResult(db, {
+                  gameId: roomId,
+                  mode: room.options.mode || 'online',
+                  player1Id: room.playerProfiles.left.id,
+                  player2Id: room.playerProfiles.right.id,
+                  winnerId: opponentUserId,
+                  score1: isLeftPlayerWinner ? 5 : 0,
+                  score2: isLeftPlayerWinner ? 0 : 5,
+                  createdAt: Date.now(),
+                });
+                console.log("✅ Forfeit game result saved successfully");
+              } else {
+                console.error("❌ Database not available for saving forfeit game");
+              }
+            } catch (error) {
+              console.error("❌ Failed to save forfeit game result:", error);
+            }
+          }
+
           namespace.to(roomId).emit("opponentDisconnected", {
             winnerId: opponentUserId,
             reason: "disconnect",
+            gameActive: gameActive, // flag to indicate if game was active
           });
 
           // ✅ FIX 2: Clear the room-specific interval
