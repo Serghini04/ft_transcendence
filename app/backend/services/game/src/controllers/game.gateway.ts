@@ -4,6 +4,11 @@ import { Socket } from "socket.io";
 import { createRoom, rooms, updateGame } from "./game.controller";
 import { saveGameResult } from "../plugins/game.db";
 
+// Export these for HTTP routes to access
+export const userSocketMap = new Map<number, Socket>();
+export const pendingChallenges = new Map<string, any>();
+export const challengeRooms = new Map<string, any>(); // roomId -> { player1Id, player2Id, connectedSockets: [] }
+
 export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
   // ✅ Store fastify instance on namespace so we can access it later
   namespace.fastify = fastify;
@@ -12,6 +17,11 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
 
   namespace.on("connection", (socket: any) => {
     console.log(`🟢 ${socket.id} connected`);
+    
+    // Store user socket mapping if userId is available
+    if (socket.handshake.auth.userId) {
+      userSocketMap.set(socket.handshake.auth.userId, socket);
+    }
 
     socket.on(
       "joinGame",
@@ -39,6 +49,35 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         }
       }
     );
+    
+    // Handle joining a challenge room
+    socket.on("joinChallengeRoom", async ({ roomId, userId }: any) => {
+      console.log(`🎮 ${userId} joining challenge room ${roomId}`);
+      
+      const challengeRoom = challengeRooms.get(roomId);
+      if (!challengeRoom) {
+        socket.emit("error", { message: "Challenge room not found or expired" });
+        return;
+      }
+      
+      // Add socket to connected sockets
+      challengeRoom.connectedSockets.push(socket);
+      
+      // Check if both players have connected
+      if (challengeRoom.connectedSockets.length === 2) {
+        console.log(`✅ Both players connected to challenge room ${roomId}, starting game...`);
+        
+        // Remove from pending challenge rooms
+        challengeRooms.delete(roomId);
+        
+        // Create the actual game room
+        const [socket1, socket2] = challengeRoom.connectedSockets;
+        await createRoom(socket1, socket2, "challenge", challengeRoom.options, namespace);
+      } else {
+        console.log(`⏳ Waiting for other player to join challenge room ${roomId}`);
+        socket.emit("waiting");
+      }
+    });
 
     socket.on("move", ({ direction }: any) => {
       const room = rooms.get(socket.data.roomId);
@@ -140,8 +179,65 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
     //   socket.disconnect();
     // });
 
+    
+    
+    socket.on("game:challenge:accept", async ({ challengeId }: any) => {
+      console.log(`✅ Challenge ${challengeId} accepted`);
+      
+      const challenge = pendingChallenges.get(challengeId);
+      if (!challenge) {
+        socket.emit("game:challenge:unavailable", { reason: "Challenge expired or not found" });
+        return;
+      }
+      
+      // Remove from pending
+      pendingChallenges.delete(challengeId);
+      
+      // Generate room ID
+      const roomId = `challenge_room_${Date.now()}`;
+      
+      // Create pending challenge room (waiting for both players to connect)
+      challengeRooms.set(roomId, {
+        player1Id: challenge.challengerId,
+        player2Id: challenge.challengedId,
+        options: { map: "Classic", powerUps: false, speed: "Normal", mode: "online" },
+        connectedSockets: [],
+        createdAt: Date.now(),
+      });
+      
+      // Notify both players with the room ID
+      challenge.challengerSocket.emit("game:challenge:accepted", { challengeId, gameRoomId: roomId });
+      challenge.challengedSocket.emit("game:challenge:accepted", { challengeId, gameRoomId: roomId });
+      
+      console.log(`🎮 Challenge room ${roomId} created, waiting for both players to connect`);
+      
+      // Auto-cleanup after 1 minute if players don't connect
+      setTimeout(() => {
+        if (challengeRooms.has(roomId)) {
+          console.log(`⏰ Challenge room ${roomId} expired`);
+          challengeRooms.delete(roomId);
+        }
+      }, 60000);
+    });
+    
+    socket.on("game:challenge:decline", ({ challengeId }: any) => {
+      console.log(`❌ Challenge ${challengeId} declined`);
+      
+      const challenge = pendingChallenges.get(challengeId);
+      if (challenge) {
+        pendingChallenges.delete(challengeId);
+        challenge.challengerSocket.emit("game:challenge:declined", { challengeId });
+        console.log(`Challenge ${challengeId} removed from pending`);
+      }
+    });
+
     socket.on("disconnect", async () => {
       console.log(`🔴 ${socket.id} disconnected`);
+      
+      // Remove from userSocketMap
+      if (socket.handshake.auth.userId) {
+        userSocketMap.delete(socket.handshake.auth.userId);
+      }
 
       for (const [key, s] of waitingPlayers.entries()) {
         if (s.id === socket.id) {

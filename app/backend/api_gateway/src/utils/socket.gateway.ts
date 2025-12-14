@@ -9,7 +9,7 @@ export function setupSocketGateway(app: FastifyInstance) {
   const io = new Server(app.server, {
     path: "/socket.io",
     cors: { origin: true, credentials: true },
-    transports: ["websocket"],
+    transports: ["polling", "websocket"],
   });
 
   const authMiddleware = async (socket: any, next: any) => {
@@ -71,20 +71,14 @@ export function setupSocketGateway(app: FastifyInstance) {
       path: "/socket.io",
       withCredentials: true,
       auth: { userId: user.id },
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
     });
 
-    chatSocket.on("connect", () => app.log.info(`🔗 Chat socket connected for user ${user.id}`));
-    chatSocket.on("connect_error", (err) => app.log.error({ err }, `❌ Chat socket connect_error for user ${user.id}`));
-    chatSocket.on("error", (err) => app.log.error({ err }, `❌ Chat socket error for user ${user.id}`));
-
     socket.onAny((event, ...args) => {
-      app.log.info(`📤 [User ${user.id}] -> chat event: ${String(event)}`);
       chatSocket.emit(event, ...args);
     });
 
     chatSocket.onAny((event, ...args) => {
-      app.log.info(`📥 [chat -> User ${user.id}] event: ${String(event)}`);
       socket.emit(event, ...args);
     });
 
@@ -125,4 +119,33 @@ export function setupSocketGateway(app: FastifyInstance) {
   });
 
   app.log.info("✅ Socket.IO Gateway initialized on path /socket.io");
+
+  const notifNamespace = io.of("/notification");
+  
+  notifNamespace.use(authMiddleware);
+
+  notifNamespace.on("connection", (socket) => {
+    const user = socket.data.user;
+
+    app.log.info(`User ${user.id} connected to /notification namespace`);
+
+    const notificationSocket = ClientIO("http://localhost:3006/notification", {
+      path: "/socket.io",
+      withCredentials: true,
+      auth: { userId: user.id },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.onAny((event, ...args) => {
+      notificationSocket.emit(event, ...args);
+    });
+
+    notificationSocket.onAny((event, ...args) => {
+      socket.emit(event, ...args);
+    });
+
+    socket.on("disconnect", () => notificationSocket.disconnect());
+  });
+
+  app.log.info("Gateway with namespaces initialized");
 }

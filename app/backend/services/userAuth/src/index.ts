@@ -295,7 +295,6 @@ app.get("/api/v1/auth/protect", async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
 
-
 app.listen({ port: 3004 }, (err, address) => {
   if (err) {
     console.error(err);

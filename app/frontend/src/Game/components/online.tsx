@@ -61,6 +61,11 @@ export default function Online() {
 
   const location = useLocation();
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
+  
+  // Check if this is a challenge game (roomId in URL params)
+  const searchParams = new URLSearchParams(location.search);
+  const roomId = searchParams.get('roomId');
+  const isChallenge = !!roomId;
 
   const gameThemes = {
     Classic: {
@@ -121,13 +126,21 @@ export default function Online() {
       const s = io("http://localhost:8080/game", {
         path: "/socket.io",
         transports: ["websocket"],
-        auth: { token },
+        auth: { token, userId: user.id },
         extraHeaders: { Authorization: `Bearer ${token}` },
       });
       setSocket(s);
       socketRef.current = s; // Store in ref for cleanup
-      s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
-      console.log("Joining game with settings:", { map, powerUps, speed });
+      
+      // Only emit joinGame for regular online mode, not for challenges
+      if (!isChallenge) {
+        s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
+        console.log("Joining game with settings:", { map, powerUps, speed });
+      } else {
+        // For challenge mode, join the specific room
+        s.emit("joinChallengeRoom", { roomId, userId: user.id });
+        console.log("Joining challenge room:", roomId);
+      }
   
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));

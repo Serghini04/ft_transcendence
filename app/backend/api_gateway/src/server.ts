@@ -7,6 +7,7 @@ import { setupSocketGateway } from "./utils/socket.gateway";
 import { userAuthService } from "./services/userAuth.service";
 import cookie from "@fastify/cookie"; 
 import { gameService } from "./services/game.service";
+import { NotificationService } from "./services/notification.service";
 
 // Load environment variables FIRST
 dotenv.config();
@@ -59,17 +60,12 @@ app.addHook("preHandler", authMiddleware);
 app.register(chatService);
 app.register(userAuthService);
 app.register(gameService);
+app.register(NotificationService);
 const start = async () => {
   try {
-    // await app.register(cookie, {
-    //   secret: process.env.COOKIE_SECRET || "my-secret", // ✅ Add this
-    //   parseOptions: {}
-    // });
-
-    // Setup socket gateway before listening
     await setupSocketGateway(app);
     await app.listen({ port: 8080, host: "0.0.0.0" });
-    app.log.info("🚀 API Gateway running at http://localhost:8080");
+    app.log.info("API Gateway running at http://localhost:8080");
   } catch (err) {
     app.log.error(err);
     process.exit(1);

@@ -1,10 +1,10 @@
 import { fastify, UserPayload, type FastifyReply, type FastifyRequest } from "fastify";
 import jwt, { TokenExpiredError, type JwtPayload } from "jsonwebtoken";
 import dotenv from "dotenv";
-import cookie from "@fastify/cookie";
+// import cookie from "@fastify/cookie";
 import "fastify";
-import cors from "@fastify/cors";
-import { ref } from "process";
+// import cors from "@fastify/cors";
+// import { ref } from "process";
 
 dotenv.config();
 
@@ -12,7 +12,7 @@ export function generateJwtAccessToken({id, name, email}: {id: number; name:stri
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined");
     }
-    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "15m" }) // ✅ Changed from 15s to 15m
+    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "10h" }) // ✅ Changed from 15s to 15m
     return token;
 }
 

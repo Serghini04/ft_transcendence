@@ -1,15 +1,54 @@
 import { CircleX, RotateCcw, Sword, Bell, UserX } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
+import { useState, useEffect } from "react";
+import { UseUserStore, UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, isNotificationsMuted, toggleNotificationsMute} = useChatStore();
-    const matches = [
-      { id: 1, userScore: 4, opponentScore: 3 },
-      { id: 2, userScore: 3, opponentScore: 2 },
-      { id: 3, userScore: 5, opponentScore: 2 },
-      { id: 4, userScore: 4, opponentScore: 0 },
-    ];
+    const {selectedContact, isNotificationsMuted, toggleNotificationsMute, onlineUsers} = useChatStore();
+    const { user } = UseUserStore();
+    const { token } = UseTokenStore();
+    const [challengeStatus, setChallengeStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+    const [matches, setMatches] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    
+    // Fetch match history when contact is selected
+    useEffect(() => {
+      const fetchMatchHistory = async () => {
+        if (!selectedContact || !user || !token) return;
+        
+        console.log('Fetching match history:', { userId: user.id, opponentId: selectedContact.user.id });
+        
+        setLoading(true);
+        try {
+          const response = await fetch(`http://localhost:8080/api/v1/game/history/${user.id}/${selectedContact.user.id}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Match history data:', data);
+            setMatches(data.matches || []);
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Failed to fetch match history:', response.status, errorData);
+            setMatches([]);
+          }
+        } catch (error) {
+          console.error('Error fetching match history:', error);
+          setMatches([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchMatchHistory();
+    }, [selectedContact, user, token]);
 
     return (
      <aside
@@ -62,44 +101,95 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
             </div>
 
             <div className="flex flex-col gap-3 w-full">
-              {matches.map((match) => (
-                <div
-                  key={match.id}
-                  className="flex justify-between items-center bg-[#112434] p-3 rounded-xl"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="/user.png"
-                      alt="User"
-                      className="w-10 h-10 rounded-full border border-gray-600"
-                    />
-                    <span className="text-base font-semibold">
-                      {match.userScore}
-                    </span>
-                  </div>
+              {loading ? (
+                <div className="text-center text-gray-400 py-4">Loading...</div>
+              ) : matches.length === 0 ? (
+                <div className="text-center text-gray-400 py-4">No match history yet</div>
+              ) : (
+                matches.map((match) => (
+                  <div
+                    key={match.id}
+                    className="flex justify-between items-center bg-[#112434] p-3 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={match.yourAvatar || "/user.png"}
+                        alt="User"
+                        className="w-10 h-10 rounded-full border border-gray-600 object-cover"
+                      />
+                      <span className="text-base font-semibold">
+                        {match.yourScore}
+                      </span>
+                    </div>
 
-                  <span className="text-gray-400 font-semibold">vs</span>
+                    <span className="text-gray-400 font-semibold">vs</span>
 
-                  <div className="flex items-center gap-3">
-                    <span className="text-base font-semibold">
-                      {match.opponentScore}
-                    </span>
-                    <img
-                      src="/enemy.jpeg"
-                      alt="Opponent"
-                      className="w-10 h-10 rounded-full border border-gray-600"
-                    />
+                    <div className="flex items-center gap-3">
+                      <span className="text-base font-semibold">
+                        {match.opponentScore}
+                      </span>
+                      <img
+                        src={match.opponentAvatar || "/enemy.jpeg"}
+                        alt="Opponent"
+                        className="w-10 h-10 rounded-full border border-gray-600 object-cover"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="mt-6 flex flex-col gap-3 w-full">
-            <button className="flex items-center justify-center gap-2 !bg-[#112434] hover:!bg-[#1A2D42] !border-none rounded-xl py-2.5 text-sm transition-colors">
+            <button 
+              onClick={async () => {
+                if (!selectedContact || !user || !token) return;
+                
+                const isOnline = onlineUsers.has(selectedContact.user.id);
+                if (!isOnline) {
+                  alert('User is offline');
+                  return;
+                }
+                
+                setChallengeStatus('sending');
+                console.log('Sending challenge to user ID:', selectedContact.user.id);
+                
+                try {
+                  const response = await fetch('http://localhost:8080/api/v1/game/challenge', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                      challengerId: user.id,
+                      challengedId: selectedContact.user.id,
+                    }),
+                  });
+                  
+                  if (response.ok) {
+                    setChallengeStatus('sent');
+                    setTimeout(() => setChallengeStatus('idle'), 3000);
+                  } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to send challenge');
+                    setChallengeStatus('error');
+                    setTimeout(() => setChallengeStatus('idle'), 2000);
+                  }
+                } catch (error) {
+                  console.error('Challenge error:', error);
+                  alert('Failed to send challenge');
+                  setChallengeStatus('error');
+                  setTimeout(() => setChallengeStatus('idle'), 2000);
+                }
+              }}
+              disabled={challengeStatus !== 'idle' || !selectedContact || !onlineUsers.has(selectedContact?.user.id)}
+              className="flex items-center justify-center gap-2 !bg-[#112434] hover:!bg-[#1A2D42] !border-none rounded-xl py-2.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Sword size={16} />
-              Launch a challenge
+              {challengeStatus === 'sending' ? 'Sending...' : challengeStatus === 'sent' ? '✓ Challenge Sent!' : challengeStatus === 'error' ? '❌ Error' : 'Launch a challenge'}
             </button>
 
             <div className="flex items-center justify-between bg-[#112434] rounded-xl py-3 px-4">

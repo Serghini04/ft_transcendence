@@ -5,6 +5,11 @@
   text-align: center;
 }
 
+.my-progress {
+  background-color: rgba(255,255,255,0.8) !important;
+}
+
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;

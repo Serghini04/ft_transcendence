@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
-import axiosInstance from "../app/axios";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
-import { isValid } from 'date-fns';
-import isValidToken from '../../globalUtils/isValidToken';
 
 type ContactUser = {
     id: number;
@@ -33,11 +30,11 @@ type Message = {
 type ChatStore = {
     loginId: number | null;
     socket: Socket | null;
+    gameSocket: Socket | null;
     selectedContact: Contact | null;
     messages: Message[];
     contacts: ContactUser[];
     onlineUsers: Set<number>;
-    connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
     unseenMessageCounts: Map<number, number>;
     isNotificationsMuted: boolean;
 
@@ -71,210 +68,178 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     loginId: null,
     selectedContact: null,
     socket: null,
+    gameSocket: null,
     contacts: [],
     messages: [],
     onlineUsers: new Set<number>(),
-    connectionStatus: 'disconnected',
     unseenMessageCounts: new Map<number, number>(),
     isNotificationsMuted: false,
     
-connectSocket: (userId) => {
-    const { token } = UseTokenStore.getState();
-    const currentSocket = get().socket;
-    
-    // Prevent duplicate connections
-    if (currentSocket?.connected) {
-        console.log("✅ Socket already connected");
-        return;
-    }
+    connectSocket: (userId) => {
+        const { token } = UseTokenStore.getState();
+        const currentSocket = get().socket;
 
-    // Disconnect existing socket if present
-    if (currentSocket) {
-        console.log("🔄 Disconnecting existing socket");
-        currentSocket.removeAllListeners();
-        currentSocket.disconnect();
-    }
-
-    if (!token) {
-        console.error("❌ No token available for socket connection");
-        // setToken("");
-        window.location.href = "/auth";
-        set({ connectionStatus: 'error' });
-        return;
-    }
-    
-    set({ 
-        loginId: userId, 
-        connectionStatus: 'connecting',
-        messages: [],
-        selectedContact: null
-    });
-
-    console.log("🔌 Connecting to socket with userId:", userId);
-    console.log("🔑 Token:", token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
-    
-    const socket = io("http://localhost:8080", {
-        withCredentials: true,
-        auth: { 
-            token: token  // ✅ SEND TOKEN - gateway will extract userId from it
-        },
-        reconnection: true,
-        reconnectionAttempts: 10,
-        transports: ['polling', 'websocket'],
-        path: '/socket.io',
-    });
-
-    // Debug transport
-    socket.io.on("error", (error) => {
-        console.error("🔥 Socket.IO Manager Error:", error);
-    });
-
-    socket.io.engine.on("packet", ({ type, data }) => {
-        console.log(`📦 Engine packet: ${type}`, data);
-    });
-
-    socket.io.engine.on("packetCreate", ({ type, data }) => {
-        console.log(`📤 Engine sending: ${type}`, data);
-    });
-
-    // Connection successful
-    socket.on("connect", () => {
-        console.log("✅ Socket connected successfully");
-        console.log("🔌 Transport:", socket.io.engine.transport.name);
-        console.log("🆔 Socket ID:", socket.id);
-        set({ connectionStatus: 'connected' });
-
-        const { selectedContact } = get();
-        if (selectedContact) {
-            const chatId = getChatId(userId, selectedContact.user.id);
-            console.log("📨 Rejoining chat:", chatId);
-            socket.emit("chat:join", chatId);
+        if (currentSocket?.connected) {
+            console.log("Socket already connected");
+            return;
         }
-    });
+        if (currentSocket) {
+            console.log("Disconnecting existing socket before connecting");
+            currentSocket.removeAllListeners();
+            currentSocket.disconnect();
+        }
 
-    // Connection error
-    socket.on("connect_error", (error) => {
-        console.error("❌ Socket connection error:", error.message);
-        console.error("❌ Error details:", {
-            message: error.message,
-            description: error.description,
-            context: error.context,
-            type: error.type
-        });
-        set({ connectionStatus: 'error' });
-
-        // Handle specific auth errors
-        if (error.message === "NO_TOKEN" || 
-            error.message === "INVALID_TOKEN" || 
-            error.message === "REFRESH_INVALID") {
-            console.error("🔒 Authentication failed, redirecting to login");
-            UseTokenStore.getState().setToken("");
+        if (!token) {
+            console.error("No token available for socket connection");
             window.location.href = "/auth";
+            return;
         }
-    });
 
-    // Token refreshed by server
-    socket.on("token_refreshed", ({ accessToken }) => {
-        console.log("🔄 Token refreshed by server");
-        UseTokenStore.getState().setToken(accessToken);
+        set({
+            loginId: userId,
+            messages: [],
+            selectedContact: null
+        });
+
+        console.log("Connecting to Gateway with userId:", userId);
+        const socket = io("http://localhost:8080/chat", {
+            withCredentials: true,
+            auth: { token },
+            transports: ['polling', 'websocket'],
+            path: '/socket.io',
+            reconnection: true,
+            reconnectionAttempts: 10,
+        });
+
+        socket.io.on("error", (err) => console.error("Socket.IO manager error", err));
+
+        socket.on("connect", () => {
+            console.log("Socket connected:", socket.id, "transport:", socket.io.engine.transport.name);
+
+            const { selectedContact } = get();
+            if (selectedContact) {
+                const chatId = getChatId(userId, selectedContact.user.id);
+                console.log("📨 Rejoining chat:", chatId);
+                socket.emit("chat:join", chatId);
+            }
+        });
+
+        // handle connect_error (handshake errors like NO_TOKEN, INVALID_TOKEN, REFRESH_INVALID)
+        socket.on("connect_error", (error: any) => {
+            console.error("Socket connect_error:", error?.message ?? error);
+
+            const code = error?.message ?? "";
+
+            if (["NO_TOKEN", "INVALID_TOKEN", "REFRESH_INVALID", "NO_REFRESH_TOKEN"].includes(code)) {
+                console.warn("Auth error on socket handshake:", code);
+
+                try {
+                    (socket.io as any).opts.reconnection = false;
+                } catch (e) {
+                    console.warn("Could not toggle reconnection option:", e);
+                }
+
+                socket.removeAllListeners();
+                socket.disconnect();
+                UseTokenStore.getState().setToken("");
+                window.location.href = "/auth";
+                return;
+            }
+
+            console.warn("Non-auth connect_error, will attempt reconnects");
+        });
+
+        socket.on("service_error", ({ message }: { message: string }) => {
+            console.error("Service error from gateway:", message);
+        });
+
+        socket.on("message:receive", (m) => get().handleIncomingMessage(m));
+        socket.on("message:sent", (m) => get().handleMessageSent(m));
+        socket.on("message:error", (e) => get().handleMessageError(e));
+        socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
+
+        set({ socket });
         
-        // Update socket auth with new token only
-        socket.auth = { 
-            token: accessToken  // ✅ Only token
-        };
-    });
+        // Connect to game socket for challenge notifications
+        const gameSocket = io("http://localhost:8080/game", {
+            withCredentials: true,
+            auth: { token, userId },
+            transports: ['websocket'],
+            path: '/socket.io',
+        });
+        
+        gameSocket.on('connect', () => {
+            console.log('Game socket connected for challenges:', gameSocket.id);
+        });
+        
+        // Game challenge events
+        gameSocket.on("game:challenge:received", (data) => {
+            console.log("🎮 Challenge received:", data);
+            const shouldAccept = window.confirm(`${data.challengerName} challenged you to a game! Accept?`);
+            if (shouldAccept) {
+                gameSocket.emit('game:challenge:accept', { challengeId: data.challengeId });
+            } else {
+                gameSocket.emit('game:challenge:decline', { challengeId: data.challengeId });
+            }
+        });
+        
+        gameSocket.on("game:challenge:accepted", (data) => {
+            console.log("✅ Challenge accepted!", data);
+            window.location.href = `/game/challenge?roomId=${data.gameRoomId}`;
+        });
+        
+        gameSocket.on("game:challenge:declined", (data) => {
+            console.log("❌ Challenge declined", data);
+            alert('Challenge was declined');
+        });
+        
+        gameSocket.on("game:challenge:unavailable", (data) => {
+            console.log("⚠️ Challenge unavailable", data);
+            alert(data.reason || 'User is not available');
+        });
+        
+        set({ gameSocket });
+    },
 
-    // Reconnection attempts
-    socket.io.on("reconnect_attempt", (attempt) => {
-        console.log(`🔄 Reconnection attempt ${attempt}`);
-        const newToken = UseTokenStore.getState().token;
-        if (newToken) {
-            socket.auth = { token: newToken };  // ✅ Only token
-        }
-        set({ connectionStatus: 'connecting' });
-    });
-
-    socket.io.on("reconnect", (attempt) => {
-        console.log(`✅ Reconnected after ${attempt} attempts`);
-        set({ connectionStatus: 'connected' });
-    });
-
-    socket.io.on("reconnect_failed", () => {
-        console.error("❌ Reconnection failed");
-        set({ connectionStatus: 'error' });
-    });
-
-    // Disconnection
-    socket.on("disconnect", (reason) => {
-        console.log("❌ Socket disconnected:", reason);
-        set({ connectionStatus: 'disconnected' });
-
-        // If server initiated disconnect, reconnect manually
-        if (reason === "io server disconnect") {
-            console.log("🔄 Server disconnected, attempting manual reconnect");
-            socket.connect();
-        }
-    });
-
-    // Service error from gateway
-    socket.on("service_error", ({ message }) => {
-        console.error("⚠️ Service error:", message);
-        set({ connectionStatus: 'error' });
-    });
-
-    // Message handlers
-    socket.on("message:receive", (messageData) => {
-        console.log("📩 Message received:", messageData);
-        get().handleIncomingMessage(messageData);
-    });
-
-    socket.on("message:sent", (messageData) => {
-        console.log("✉️ Message sent confirmation:", messageData);
-        get().handleMessageSent(messageData);
-    });
-
-    socket.on("message:error", (errorData) => {
-        console.error("❌ Message error:", errorData);
-        get().handleMessageError(errorData);
-    });
-
-    socket.on("users:online", (userIds) => {
-        console.log("👥 Online users updated:", userIds);
-        set({ onlineUsers: new Set(userIds) });
-    });
-    
-    set({ socket });
-},
 
     disconnectSocket: () => {
-        const socket = get().socket;
+        const { socket, gameSocket } = get();
         if (socket) {
-            console.log("🔌 Disconnecting socket");
+            console.log("Disconnecting chat socket");
             socket.removeAllListeners();
             socket.disconnect();
-            set({ 
-                socket: null, 
-                connectionStatus: 'disconnected',
-                onlineUsers: new Set<number>()
-            });
         }
+        if (gameSocket) {
+            console.log("Disconnecting game socket");
+            gameSocket.removeAllListeners();
+            gameSocket.disconnect();
+        }
+        set({ 
+            socket: null,
+            gameSocket: null,
+            onlineUsers: new Set<number>()
+        });
     },
 
     resetStore: () => {
-        console.log("🔄 Resetting chat store completely");
-        const socket = get().socket;
+        console.log("Resetting chat store completely");
+        const { socket, gameSocket } = get();
         if (socket) {
             socket.removeAllListeners();
             socket.disconnect();
+        }
+        if (gameSocket) {
+            gameSocket.removeAllListeners();
+            gameSocket.disconnect();
         }
         set({
             loginId: null,
             selectedContact: null,
             socket: null,
+            gameSocket: null,
             contacts: [],
             messages: [],
             onlineUsers: new Set<number>(),
-            connectionStatus: 'disconnected',
             unseenMessageCounts: new Map<number, number>(),
             isNotificationsMuted: false
         });
@@ -283,17 +248,15 @@ connectSocket: (userId) => {
     toggleNotificationsMute: () => {
         const { isNotificationsMuted } = get();
         set({ isNotificationsMuted: !isNotificationsMuted });
-        console.log(`🔔 Notifications ${!isNotificationsMuted ? 'muted' : 'unmuted'}`);
+        console.log(`Notifications ${!isNotificationsMuted ? 'muted' : 'unmuted'}`);
     },
 
     setSelectedContact: (contact) => {
         const { socket, loginId, selectedContact } = get();
-        // const { token } = UseTokenStore.getState();
 
-        // Leave previous chat
         if (selectedContact && socket && loginId) {
             const oldChatId = getChatId(loginId, selectedContact.user.id);
-            console.log("👋 Leaving chat:", oldChatId);
+            console.log("Leaving chat:", oldChatId);
             socket.emit("chat:leave", oldChatId);
         }
 
@@ -302,40 +265,13 @@ connectSocket: (userId) => {
             messages: []
         });
 
-        // Join new chat
         if (contact && socket && loginId) {
             const newChatId = getChatId(loginId, contact.user.id);
-            console.log("👋 Joining chat:", newChatId);
+            console.log("Joining chat:", newChatId);
             socket.emit("chat:join", newChatId);
             
-            // Mark messages as seen
-            get().markMessagesAsSeen(contact.user.id);
-            
-            // Notify server
-            // axiosInstance.patch(
-            //     `/api/v1/chat/messages/${contact.user.id}/seen`,
-            //     {},
-            //     {
-            //         headers: {
-            //             Authorization: `Bearer ${token}`,
-            //             'Content-Type': 'application/json'
-            //         }
-            //     }
 
-            // isValidToken(token);
-            // fetch(`http://localhost:8080/api/v1/chat/messages/${contact.user.id}/seen`, {
-            //     method: "PATCH",
-            //     credentials: "include",
-            //     body: JSON.stringify({}),
-            //     headers: {
-            //         Authorization: `Bearer ${token}`,
-            //         'Content-Type': 'application/json'
-            //     }
-            // }
-            
-            // ).catch(error => {
-            //     console.error('❌ Failed to mark messages as seen:', error);
-            // });
+            get().markMessagesAsSeen(contact.user.id);
         }
     },
 
@@ -354,12 +290,12 @@ connectSocket: (userId) => {
         const { socket, loginId } = get();
         
         if (!socket?.connected) {
-            console.error("❌ Socket not connected");
+            console.error("Socket not connected");
             return;
         }
         
         if (!loginId) {
-            console.error("❌ No loginId");
+            console.error("No loginId");
             return;
         }
 
@@ -378,7 +314,7 @@ connectSocket: (userId) => {
 
         get().addMessage(optimisticMessage);
 
-        console.log("📤 Sending message:", {
+        console.log("Sending message:", {
             id: messageId,
             to: receiverId,
             message: text
