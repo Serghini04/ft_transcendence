@@ -38,7 +38,7 @@ export default function PhotosSide(props: params) {
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
-        className="h-160 md:h-60 xl:h-120  w-full rounded-tl-4xl cursor-pointer"
+        className="h-40 sm:h-60 lg:h-80 xl:h-[20vw]  rounded-tl-4xl cursor-pointer"
         onClick={handleChoosePhoto}
     >
           <input

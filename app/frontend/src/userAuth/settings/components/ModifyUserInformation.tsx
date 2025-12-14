@@ -47,8 +47,8 @@ export default function ModifyUserInformation(props: params) {
         console.log("updateUserData Reponse: ", data);
     }
     return (
-        <div className="flex flex-col md:flex-row w-full py-6">
-            <div className="flex flex-col w:full md:w-[30vw] ml-[27vw] md:ml-[1.4vw] gap-[0.36vw] mb-10 md:mb-0 ">
+        <div className="grid grid-cols-1 place-content-center lg:place-items-center lg:grid-cols-2 lg:pl-0  gap-8 w-full pt-[5vw] lg:pt-0 lg:mt-[7vw] xl:mt-[1vw]">
+            <div className="flex flex-col w-full md:pl-[15vw] lg:pl-0 lg:w-[30vw] ml-[27vw] md:ml-0 lg:ml-0  xl:ml-[1.4vw] gap-[0.36vw] mb-2  lg:scale-130 xl:scale-100">
                 <div className="flex gap-[0.3vw]">
                     <User color="#ffffff" className="mt-[0.45vw] w-5 h-5 md:w-[2vw] md:h-[2vw]"/>
                     <h2 className="font-[outfit] text-xl md:text-[2vw]">Account</h2>
@@ -63,8 +63,8 @@ export default function ModifyUserInformation(props: params) {
                     <BioInput label="Profile bio" value={bio} onChange={(e) => setBio(e.target.value)}/>
                 </div>
             </div>
-            <div className="h-0 w-0 md:h-[27vw] md:w-0.5 bg-[#27445E]"></div>
-            <div className="flex flex-col w:full md:w-[30vw] ml-[27vw] md:ml-[1.4vw] gap-[0.36vw]  mb-10 md:mb-0">
+            {/* <div className="h-0 w-0 xl:h-[27vw] xl:w-0.5 bg-[#27445E] ml-[1.2vw]"></div> */}
+            <div className="flex flex-col w:full md:pl-[15vw] lg:pl-0 lg:w-[30vw] ml-[27vw] md:ml-0 gap-[0.2vw] mb-2 md:mb-0 lg:col-start-2 lg:row-start-1 lg:scale-130 lg:mt-[-3.5vw] xl:scale-100">
                 <div className="flex gap-[0.3vw] ml-[1.4vw]">
                     <Lock color="#ffffff" className="mt-[0.45vw] w-5 h-5 md:w-[2vw] md:h-[2vw]"/>
                     <h2 className="font-[outfit] text-xl md:text-[2vw]">Security</h2>
@@ -82,26 +82,26 @@ export default function ModifyUserInformation(props: params) {
                     
                 </div>
             </div>
-            <div className="h-0 w-0 md:h-[27vw] md:w-0.5 bg-[#27445E]"></div>
-            <div className="flex flex-col h-50 md:h-[20vw] w-full md:w-[30vw] ml-[27vw] md:ml-[1.4vw] gap-[0.36vw] xl:self-end">
+            {/* <div className="h-0 w-0 xl:h-[27vw] xl:w-0.5 bg-[#27445E] ml-[1.2vw]"></div> */}
+            <div className="flex flex-col h-50 md:h-[20vw] w-full md:pl-[15vw] lg:mt-10 lg:pl-0 lg:w-[30vw] ml-[27vw]  md:ml-0  xl:ml-[1.4vw]  xl:mt-0 gap-[0.36vw] lg:scale-130 xl:scale-100">
                 <div className="flex gap-[0.3vw] ml-[1.4vw]">
                     <ShieldCheck color="#ffffff" className="mt-[0.45vw] w-5 h-5 md:w-[2vw] md:h-[2vw]"/>
                     <h2 className="font-[outfit] text-xl md:text-[2vw]">Privacy</h2>
                 </div>
-                <div className="flex items-center  md:justify-center ml-7 md:ml-0 gap-[11vw] mt-[4vw]">
-                    <p className="text-[1.3vw]">Show notifications</p>
-                    <div onClick={() => setActiveNotif(!activeNotif)} className={`flex items-center  h-[0.95vw] w-[1.7vw] rounded-[3vw]  ${!activeNotif ? "bg-[#D9D9D9]" : "bg-[#145084]"}`}>
+                <div className="flex items-center   pl-[7vw] md:pl-[2vw] md:ml-8 gap-[11vw] mt-[2vw]">
+                    <p className="text-[3.5vw] md:text-xl lg:text-[1.3vw]">Show notifications</p>
+                    <div onClick={() => setActiveNotif(!activeNotif)} className={`flex items-center  scale-270 lg:scale-160 md:scale-190   h-[0.95vw] w-[1.7vw] md:w-[1.7vw] rounded-[3vw]  ${!activeNotif ? "bg-[#D9D9D9]" : "bg-[#145084]"} mt-[0.5vw]`}>
                         <div className={` h-[0.8vw] w-[0.8vw] ${!activeNotif ? "ml-[0.08vw]" : "ml-[0.82vw]"} rounded-full ${activeNotif ? "bg-[#D9D9D9]" : "bg-[#145084]"}`}></div>
                     </div>
                 </div>
-                <div className="flex items-center  md:justify-center ml-7 md:ml-0 gap-[13vw] mt-[1vw]">
-                    <p className="text-[1.3vw]">Profile visibility</p>
-                    <div onClick={() => setActivePvisibility(!activePvisibility)} className={`flex items-center  h-[0.95vw] w-[1.7vw] rounded-[3vw]  ${!activePvisibility ? "bg-[#D9D9D9]" : "bg-[#145084]"}`}>
+                <div className="flex items-center pl-[7vw] md:pl-[2vw] md:ml-8 gap-[13vw] mt-[1vw]">
+                    <p className="text-[3.5vw] md:text-xl lg:text-[1.3vw]">Profile visibility</p>
+                    <div onClick={() => setActivePvisibility(!activePvisibility)} className={`flex items-center ml-[3.2vw] md:ml-[1.4vw] lg:ml-0 scale-270  lg:scale-160 md:scale-190   h-[0.95vw] w-[1.7vw] rounded-[3vw]  ${!activePvisibility ? "bg-[#D9D9D9]" : "bg-[#145084]"} mt-[0.5vw]`}>
                         <div className={` h-[0.8vw] w-[0.8vw] ${!activePvisibility ? "ml-[0.08vw]" : "ml-[0.82vw]"} rounded-full ${activePvisibility ? "bg-[#D9D9D9]" : "bg-[#145084]"}`}></div>
                     </div>
                 </div>
-                    <button onClick={changeData} className="mt-auto ml-auto mr-[39vw] md:mr-2 h-[6vw] w-[20vw] md:h-[3vw] md:w-[10vw] bg-primary rounded-[0.8vw] md:rounded-[0.4vw] text-white text-[2vw] md:text-[1vw] font-outfit font-medium hover:bg-[rgba(12,115,104,85%)]">Save Changes</button>
             </div>
+                <button onClick={changeData} className="mt-auto mb-10 ml-[57vw] sm:ml-[50vw] md:ml-auto mr-auto xl:mr-12 h-[6vw] md:scale-190 lg:scale-100   w-[20vw] md:h-[3vw] md:w-[10vw] bg-primary rounded-[0.8vw] md:rounded-[0.4vw] text-white text-[2vw] md:text-[1vw] font-outfit font-medium hover:bg-[rgba(12,115,104,85%)]">Save Changes</button>
         </div>
     );
 }

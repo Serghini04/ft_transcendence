@@ -43,25 +43,33 @@ export default function Settings() {
   }
     fetchUserData();
   }, []); 
-    return (
-      <div
-        className="
-          fixed
-          flex-col
-          bg-[rgba(15,26,36,0.5)]
-          mt-30
-          md:ml-30 ml-[-5rem]   /* push left off-screen on mobile */
-          rounded-tl-4xl shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
-          inset-0
-          flex
-          overflow-y-auto
-        "
-      >
-        <PhotosSide user={userInfo}/>
-        {/* <EditAccountData /> */}
-        <ModifyUserInformation user={userInfo} />
-        <p className="absolute top-1/2 left-1/2"></p>
-      </div>
-    );
+  return (
+    <div
+    className="
+      fixed
+      flex
+      flex-col
+      inset-0
+      bg-[rgba(15,26,36,0.5)]
+      mt-30
+      md:ml-30 ml-[-5rem]
+      border-l-2 md:border-l-2 border-t-2
+      border-[#27445E]
+      rounded-tl-4xl
+      shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_0_#27445E]
+      overflow-y-auto
+      overflow-x-hidden
+    "
+  >
+    {/* 👇 THIS LINE IS THE FIX */}
+    <div className="flex-shrink-0">
+      <PhotosSide user={userInfo} />
+    </div>
+
+    <ModifyUserInformation user={userInfo} />
+  </div>
+
+  );
+  
   }
   
