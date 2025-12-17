@@ -11,12 +11,46 @@ export default function MainLayout() {
   const handleMenuClose = () => setMenuOpen(false);
 
   return (
-      <div className="relative min-h-screen text-white">
-        <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat z-0" />
 
-        <SideMenu open={menuOpen} onClose={handleMenuClose} />
-        <HeaderBar onMenuToggle={handleMenuToggle} />
-        <Outlet />
-      </div>
+  <div className="relative min-h-screen text-white">
+        <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat -z-10" />
+
+        <div className="flex min-h-screen">
+        
+         
+          <SideMenu open={menuOpen} onClose={handleMenuClose} />
+
+         
+          <div className="mt-16 xl:mt-0 flex-1 flex flex-col md:ml-20 overflow-y-auto md:no-scrollbar">
+
+            <HeaderBar onMenuToggle={handleMenuToggle} />
+            <main className="p-4">
+              <Outlet />
+            </main>
+
+          </div>
+
+        </div>
+    </div>
   );
 }
+
+
+  //  <div className="relative min-h-screen text-white">
+  //       <div className="fixed inset-0 bg-[url('/bg.png')] bg-cover bg-center bg-no-repeat -z-10" />
+
+  //       <div className="flex min-h-screen">
+        
+  //       {/* Side menu */}
+  //       <SideMenu open={menuOpen} onClose={handleMenuClose} />
+
+  //       {/* Main content */}
+  //       <div className="flex-1 flex flex-col md:ml-20">
+  //         <HeaderBar onMenuToggle={handleMenuToggle} />
+  //         <main className="p-4">
+  //           <Outlet />
+  //         </main>
+  //       </div>
+
+  //       </div>
+  //     </div>

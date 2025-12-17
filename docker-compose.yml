@@ -313,11 +313,10 @@ services:
     volumes:
       - ./app/frontend:/app
       - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:8000
-      - VITE_WS_URL=ws://localhost:8000
     networks:
       - ft_Transc
+    depends_on:
+      - tictac-game
     profiles:
       - development
     logging:

@@ -46,9 +46,9 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
 
   const checkWinner = (board: string[]) => {
     const winningCombinations = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-      [0, 4, 8], [2, 4, 6] // diagonals
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], 
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], 
+      [0, 4, 8], [2, 4, 6]
     ];
 
     for (const combination of winningCombinations) {
@@ -72,18 +72,23 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
 
   const handleCellClick = (index: number) => {
     if (isOnline) {
-      if (!currentGame || currentGame.status !== 'active' || currentGame.board[index] !== '') return;
+
+      if (!currentGame || currentGame.status !== 'active' || currentGame.board[index] !== '')
+        return;
       const isPlayer1 = currentGame.player1Id === user?.id;
       const playerSymbol = isPlayer1 ? 'X' : 'O';
       if (currentGame.currentTurn !== playerSymbol) return;
       onlineProps?.makeMove(index);
+
     } else {
+
       if (board[index] !== "" || winner) return;
       const newBoard = [...board];
       newBoard[index] = isXNext ? "X" : "O";
       setBoard(newBoard);
       setIsXNext(!isXNext);
       checkWinner(newBoard);
+
     }
   };
 
@@ -181,109 +186,127 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
   // Name Entry Screen (Local Mode Only)
   if (!isOnline && showNameEntry) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1a24] to-[#1a1f2e] text-white p-4 relative overflow-hidden">
-        {/* Animated background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full mix-blend-screen animate-[float_20s_ease-in-out_infinite]"
-              style={{
-                width: `${200 + i * 100}px`,
-                height: `${200 + i * 100}px`,
-                background: `radial-gradient(circle, ${['rgba(96,165,250,0.1)', 'rgba(168,85,247,0.1)', 'rgba(244,114,182,0.1)'][i % 3]} 0%, transparent 70%)`,
-                left: `${20 * i}%`,
-                top: `${15 * i}%`,
-                animationDelay: `${i * 2}s`,
-                animationDuration: `${15 + i * 3}s`
-              }}
-            />
-          ))}
-        </div>
+      // <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1a24] to-[#1a1f2e] text-white p-4 relative overflow-hidden">
+      //   {/* Animated background */}
+        
+      //   <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      //     {[...Array(5)].map((_, i) => (
+      //       <div
+      //         key={i}
+      //         className="absolute rounded-full mix-blend-screen animate-[float_20s_ease-in-out_infinite]"
+      //         style={{
+      //           width: `${200 + i * 100}px`,
+      //           height: `${200 + i * 100}px`,
+      //           background: `radial-gradient(circle, ${['rgba(96,165,250,0.1)', 'rgba(168,85,247,0.1)', 'rgba(244,114,182,0.1)'][i % 3]} 0%, transparent 70%)`,
+      //           left: `${20 * i}%`,
+      //           top: `${15 * i}%`,
+      //           animationDelay: `${i * 2}s`,
+      //           animationDuration: `${15 + i * 3}s`
+      //         }}
+      //       />
+      //     ))}
+      //   </div>
 
-        <div className="relative z-10 w-full max-w-md">
-          <div className="bg-gradient-to-br from-[#1e293b]/90 via-[#334155]/90 to-[#1e293b]/90 backdrop-blur-xl 
-                        p-8 rounded-3xl border-2 border-cyan-400/30 shadow-2xl shadow-cyan-400/20">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-3 mb-4">
-                <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
-                <h1 className="text-4xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  TicTacToe
-                </h1>
-                <Trophy className="w-8 h-8 text-yellow-400 animate-pulse" />
-              </div>
-              <p className="text-gray-400 text-sm">Enter player names to start</p>
-            </div>
+      //   <div className="relative z-10 w-full max-w-md">
+      //     <div className="bg-gradient-to-br from-[#1e293b]/90 via-[#334155]/90 to-[#1e293b]/90 backdrop-blur-xl 
+      //                   p-8 rounded-3xl border-2 border-cyan-400/30 shadow-2xl shadow-cyan-400/20">
+      //       {/* Header */}
+      //       <div className="text-center mb-8">
+      //         <div className="inline-flex items-center gap-3 mb-4">
+      //           <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
+      //           <h1 className="text-4xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+      //             TicTacToe
+      //           </h1>
+      //           <Trophy className="w-8 h-8 text-yellow-400 animate-pulse" />
+      //         </div>
+      //         <p className="text-gray-400 text-sm">Enter player names to start</p>
+      //       </div>
 
-            {/* Player 1 Input */}
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium mb-2 text-cyan-300">
-                  <User className="w-4 h-4" />
-                  Player 1 (X)
-                </label>
-                <input
-                  type="text"
-                  value={playerXName}
-                  onChange={(e) => setPlayerXName(e.target.value)}
-                  placeholder="Enter name..."
-                  className="w-full px-4 py-3 bg-[#0f172a] border-2 border-cyan-400/30 rounded-xl 
-                           text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none
-                           transition-all duration-200 focus:shadow-lg focus:shadow-cyan-400/20"
-                  maxLength={15}
-                />
-              </div>
+      //       {/* Player 1 Input */}
+      //       <div className="space-y-4 mb-6">
+      //         <div>
+      //           <label className="flex items-center gap-2 text-sm font-medium mb-2 text-cyan-300">
+      //             <User className="w-4 h-4" />
+      //             Player 1 (X)
+      //           </label>
+      //           <input
+      //             type="text"
+      //             value={playerXName}
+      //             onChange={(e) => setPlayerXName(e.target.value)}
+      //             placeholder="Enter name..."
+      //             className="w-full px-4 py-3 bg-[#0f172a] border-2 border-cyan-400/30 rounded-xl 
+      //                      text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none
+      //                      transition-all duration-200 focus:shadow-lg focus:shadow-cyan-400/20"
+      //             maxLength={15}
+      //           />
+      //         </div>
 
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium mb-2 text-pink-300">
-                  <User className="w-4 h-4" />
-                  Player 2 (O)
-                </label>
-                <input
-                  type="text"
-                  value={playerOName}
-                  onChange={(e) => setPlayerOName(e.target.value)}
-                  placeholder="Enter name..."
-                  className="w-full px-4 py-3 bg-[#0f172a] border-2 border-pink-400/30 rounded-xl 
-                           text-white placeholder-gray-500 focus:border-pink-400 focus:outline-none
-                           transition-all duration-200 focus:shadow-lg focus:shadow-pink-400/20"
-                  maxLength={15}
-                />
-              </div>
-            </div>
+      //         <div>
+      //           <label className="flex items-center gap-2 text-sm font-medium mb-2 text-pink-300">
+      //             <User className="w-4 h-4" />
+      //             Player 2 (O)
+      //           </label>
+      //           <input
+      //             type="text"
+      //             value={playerOName}
+      //             onChange={(e) => setPlayerOName(e.target.value)}
+      //             placeholder="Enter name..."
+      //             className="w-full px-4 py-3 bg-[#0f172a] border-2 border-pink-400/30 rounded-xl 
+      //                      text-white placeholder-gray-500 focus:border-pink-400 focus:outline-none
+      //                      transition-all duration-200 focus:shadow-lg focus:shadow-pink-400/20"
+      //             maxLength={15}
+      //           />
+      //         </div>
+      //       </div>
 
-            {/* Start Button */}
-            <button
-              onClick={() => setShowNameEntry(false)}
-              className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 
-                       hover:from-cyan-600 hover:via-purple-600 hover:to-pink-600
-                       text-white font-bold rounded-xl shadow-lg hover:shadow-2xl
-                       transition-all duration-300 transform hover:scale-105 active:scale-95
-                       flex items-center justify-center gap-2"
-            >
-              <Star className="w-5 h-5" />
-              Start Game
-              <Star className="w-5 h-5" />
-            </button>
+      //       {/* Start Button */}
+      //       <button
+      //         onClick={() => setShowNameEntry(false)}
+      //         className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 
+      //                  hover:from-cyan-600 hover:via-purple-600 hover:to-pink-600
+      //                  text-white font-bold rounded-xl shadow-lg hover:shadow-2xl
+      //                  transition-all duration-300 transform hover:scale-105 active:scale-95
+      //                  flex items-center justify-center gap-2"
+      //       >
+      //         <Star className="w-5 h-5" />
+      //         Start Game
+      //         <Star className="w-5 h-5" />
+      //       </button>
 
-            <Link to="/games" className="block mt-4">
-              <button className="w-full px-6 py-3 bg-gray-600/50 hover:bg-gray-600/70 text-white font-medium rounded-xl
-                               transition-all duration-200 flex items-center justify-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Menu
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      //       <Link to="/games" className="block mt-4">
+      //         <button className="w-full px-6 py-3 bg-gray-600/50 hover:bg-gray-600/70 text-white font-medium rounded-xl
+      //                          transition-all duration-200 flex items-center justify-center gap-2">
+      //           <ArrowLeft className="w-4 h-4" />
+      //           Back to Menu
+      //         </button>
+      //       </Link>
+      //     </div>
+      //   </div>
+      // </div>
+      <>ho</>
     );
   }
 
   // Matchmaking Screen (Online Mode Only)
   if (isOnline && !currentGame) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1a24] to-[#1a1f2e] text-white p-4 relative overflow-hidden">
+    <div
+      className="
+        relative
+        bg-[rgba(15,26,36,0.5)]
+        md:rounded-tl-4xl
+        shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
+        min-h-screen
+        transition-all
+        md:mt-26
+        md:ml-6
+        ml-[-2.9rem]
+        pl-15
+        md:pl-0
+      
+      "
+      >
+      <div className="flex flex-col items-center justify-center min-h-screen text-white p-4 relative overflow-hidden">
         {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {[...Array(3)].map((_, i) => (
@@ -304,8 +327,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
         </div>
 
         <div className="relative z-10 w-full max-w-md">
-          <div className="bg-gradient-to-br from-[#1e293b]/90 via-[#334155]/90 to-[#1e293b]/90 backdrop-blur-xl 
-                        p-8 rounded-3xl border-2 border-cyan-400/30 shadow-2xl">
+          <div className=" backdrop-blur-xl p-8 rounded-3xl border-2 border-cyan-400/30 shadow-2xl">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-3 mb-4">
                 <Users className="w-8 h-8 text-cyan-400 animate-bounce" />
@@ -356,7 +378,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
                   {onlineProps?.isConnected ? 'Find Match' : 'Connecting...'}
                 </button>
 
-                <Link to="/games">
+                <Link to="/SecondGame">
                   <button className="w-full px-6 py-3 bg-gray-600/50 hover:bg-gray-600/70 text-white font-medium rounded-xl
                                    transition-all duration-200 flex items-center justify-center gap-2">
                     <ArrowLeft className="w-4 h-4" />
@@ -368,6 +390,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
           </div>
         </div>
       </div>
+    </div>
     );
   }
 
@@ -383,7 +406,24 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
     (winner === 'Draw' ? 'Draw' : (winner === 'X' ? playerXName : playerOName));
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1a24] to-[#1a1f2e] text-white p-3 sm:p-6 relative overflow-hidden">
+    // her
+  <div
+      className="
+        relative
+        bg-[rgba(15,26,36,0.5)]
+        md:rounded-tl-4xl
+        shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
+        min-h-screen
+        transition-all
+        md:mt-26
+        md:ml-6
+        ml-[-2.9rem]
+        pl-15
+        md:pl-0
+      
+      "
+      >
+    <div className="flex flex-col items-center justify-center lg:pt-20 text-white p-3 sm:p-6 relative overflow-hidden">
       {/* Dynamic background animations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(4)].map((_, i) => (
@@ -410,7 +450,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
       <div className="relative z-10 w-full max-w-4xl">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6 px-2">
-          <Link to="/games">
+          <Link to="/SecondGame">
             <button className="px-4 py-2 bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm rounded-xl
                              transition-all duration-200 flex items-center gap-2 border border-gray-600/50">
               <ArrowLeft className="w-4 h-4" />
@@ -450,17 +490,17 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
 
           <div className={`flex flex-col items-center p-4 rounded-2xl transition-all duration-300 ${
             currentPlayer === 'O' && gameActive 
-              ? 'bg-gradient-to-br from-pink-500/30 to-purple-500/30 border-2 border-pink-400 scale-110 shadow-lg shadow-pink-400/30' 
+              ? 'bg-gradient-to-br from-green-500/30 to-green-500/30 border-2 border-green-400 scale-110 shadow-lg shadow-pink-400/30' 
               : 'bg-gray-800/50 border border-gray-600/30'
           }`}>
-            <User className={`w-6 h-6 mb-2 ${currentPlayer === 'O' && gameActive ? 'text-pink-400 animate-bounce' : 'text-gray-400'}`} />
+            <User className={`w-6 h-6 mb-2 ${currentPlayer === 'O' && gameActive ? 'text-green-400 animate-bounce' : 'text-gray-400'}`} />
             <p className="text-sm text-gray-400 mb-1">{isOnline ? (currentGame?.player2Id === user?.id ? 'You' : opponent?.username) : playerOName}</p>
-            <p className="text-3xl font-black text-pink-400">{isOnline ? '—' : scores.O}</p>
+            <p className="text-3xl font-black text-green-400">{isOnline ? '—' : scores.O}</p>
           </div>
         </div>
 
         {/* Turn Indicator */}
-        <div className="text-center mb-6">
+        {/* <div className="text-center mb-6">
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-gray-800/80 backdrop-blur-sm rounded-full border-2 border-gray-600/50">
             {gameActive ? (
               <>
@@ -484,10 +524,10 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
               </>
             )}
           </div>
-        </div>
+        </div> */}
 
         {/* Game Board */}
-        <div className="relative max-w-2xl mx-auto mb-6 p-4 sm:p-6 bg-gradient-to-br from-[#1e293b]/90 via-[#334155]/90 to-[#1e293b]/90 
+        <div className="relative max-w-2xl mx-auto mb-6 p-4 sm:p-6
                       backdrop-blur-xl rounded-3xl border-2 border-cyan-400/30 shadow-2xl shadow-cyan-400/10">
           
           {/* Winner Overlay - Full Screen Celebration */}
@@ -596,7 +636,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
                 resetGame();
                 setScores({ X: 0, O: 0, draws: 0 });
               }}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600
+              className="px-6 py-3 bg-gradient-to-r  from-green-600 to-green-900 hover:from-green-600 hover:to-green-600
                        text-white font-medium rounded-xl shadow-lg hover:shadow-2xl
                        transition-all duration-300 transform hover:scale-105 active:scale-95
                        flex items-center gap-2"
@@ -661,7 +701,8 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
         }
       `}</style>
     </div>
+    </div>
   );
-};
+}
 
 export default TicTacGame;

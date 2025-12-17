@@ -153,7 +153,7 @@ const OnlineTicTac = () => {
                 Start Playing
               </button>
 
-              <Link to="/games" className="block">
+              <Link to="/SecondGame" className="block">
                 <button className="w-full px-6 py-3 bg-gray-600/50 hover:bg-gray-600/70 text-white font-medium rounded-xl
                                  transition-all duration-200 flex items-center justify-center gap-2">
                   <ArrowLeft className="w-4 h-4" />

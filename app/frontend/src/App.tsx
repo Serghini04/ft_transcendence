@@ -24,7 +24,7 @@ export default function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/settings/*" element={<Settings />} />
-          <Route path="/games" element={<GameSelection />} />
+          <Route path="/SecondGame" element={<GameSelection />} />
           <Route path="/tictac" element={<TicTac />} />
           <Route path="/tictac/online" element={<OnlineTicTac />} />
         </Route>

@@ -34,11 +34,19 @@ interface SideMenuProps {
   onClose: () => void;
 }
 
-export default function SideMenu({ open }: SideMenuProps) {
+export default function SideMenu({ open, onClose }: SideMenuProps) {
   const location = useLocation();
 
   return (
     <>
+      {/* Overlay for mobile - clicking closes menu */}
+      {open && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-10 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
       {/* --- Logo Bar (Always visible) --- */}
       <div className="fixed top-0 left-0 h-20 w-20 bg-[rgba(13,34,52,0.65)] flex flex-col items-center justify-center z-30 backdrop-blur-md border-r border-white/10 shadow-lg">
         <img
@@ -61,38 +69,43 @@ export default function SideMenu({ open }: SideMenuProps) {
             color="#12C0AD"
             to="/"
             active={location.pathname === "/"}
+            onClick={onClose}
           />
           <NavItem
             icon={<MessageCircle size={32} />}
             color="#12C0AD"
             to="/chat"
             active={location.pathname.startsWith("/chat")}
+            onClick={onClose}
           />
           <NavItem
             icon={<Gamepad2 size={32} />}
             color="#12C0AD"
             to="/game"
             active={location.pathname.startsWith("/game")}
+            onClick={onClose}
           />
           <NavItem
             icon={<TicTacCombinedIcon size={32} />}
-            color="#FFB800"
-            to="/games"
-            active={location.pathname.startsWith("/games") || location.pathname.startsWith("/tictac")}
+            color="#12C0AD"
+            to="/SecondGame"
+            active={location.pathname.startsWith("/SecondGame") || location.pathname.startsWith("/tictac")}
             label="TicTacToe • Local & Online"
+            onClick={onClose}
           />
           <NavItem
             icon={<Settings size={32} />}
             color="#12C0AD"
             to="/settings"
             active={location.pathname.startsWith("/settings")}
+            onClick={onClose}
           />
         </nav>
 
         {/* Logout Section */}
         <div className="w-full flex flex-col items-center mt-4 mb-6">
           <div className="w-10 border-t border-gray-700 mb-3"></div>
-          <NavItem icon={<LogOut size={32} />} color="#FF4C4C" to="/auth" />
+          <NavItem icon={<LogOut size={32} />} color="#FF4C4C" to="/auth" onClick={onClose} />
         </div>
       </aside>
   </>
@@ -106,12 +119,13 @@ interface NavItemProps {
   to: string;
   active?: boolean;
   label?: string;
+  onClick?: () => void;
 }
 
-function NavItem({icon, color = "#12C0AD", to, active = false, label}: NavItemProps)
+function NavItem({icon, color = "#12C0AD", to, active = false, label, onClick}: NavItemProps)
 {
   return (
-    <Link to={to} className="group relative flex items-center justify-center w-full cursor-pointer">
+    <Link to={to} onClick={onClick} className="group relative flex items-center justify-center w-full cursor-pointer">
        {/* Icon */}
       <div
         className={`transition-all duration-300 transform ${

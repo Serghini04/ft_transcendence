@@ -35,6 +35,6 @@ export default function Home() {
                 flex
               "
             >
-            </div>
+      </div>
     );
   }
