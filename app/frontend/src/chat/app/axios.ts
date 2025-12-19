@@ -1,6 +1,4 @@
 import axios from "axios";
-import verifyToken from "../../globalUtils/verifyToken";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 const axiosInstance = axios.create({
   baseURL: "http://localhost:8080",

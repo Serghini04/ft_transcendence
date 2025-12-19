@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 import verifyToken from "../../globalUtils/verifyToken";
 
@@ -47,7 +46,7 @@ export default function Online() {
   const [yourProfile, setYourProfile] = useState<UserProfile | null>(null);
   const [opponentProfile, setOpponentProfile] = useState<UserProfile | null>(null);
   const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
-  const [loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
+  const [_loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
 
 
   const [state, setState] = useState<GameState>({
@@ -82,8 +81,7 @@ export default function Online() {
     },
   };
 
-  const theme = gameThemes[map] || gameThemes.Classic;
-  const speedMultiplier = { Slow: 0.8, Normal: 1.3, Fast: 2.5 };
+  const theme = gameThemes[map as keyof typeof gameThemes] || gameThemes.Classic;
 
   // Connect to Socket.IO
   useEffect(() => {

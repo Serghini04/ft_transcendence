@@ -37,11 +37,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-<<<<<<< HEAD
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-=======
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
->>>>>>> 8825f8bf7a6e3cbc9b6e2f3babde3aa95ae99ad9
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -130,8 +126,73 @@ services:
     container_name: chat-service
     ports:
       - "3003:3003"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
     networks:
       - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api-gateway:
+    build:
+      context: ./app/backend/api_gateway
+      dockerfile: dockerfile
+    image: api-gateway
+    container_name: api-gateway
+    ports:
+      - "3022:3022"
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  game-service:
+    build:
+      context: ./app/backend/services/game
+      dockerfile: dockerfile
+    image: game-service
+    container_name: game-service
+    ports:
+      - "3005:3005"
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        
+  notification-service:
+    build:
+      context: ./app/backend/services/notification
+      dockerfile: dockerfile
+    image: notification-service
+    container_name: notification-service
+    ports:
+      - "3006:3006"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   prometheus:
     build:
@@ -348,7 +409,7 @@ services:
       - ft_Transc
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
       timeout: 3s
       start_period: 5s
