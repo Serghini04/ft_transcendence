@@ -30,6 +30,14 @@ html, body {
 	--color-primary-border: #DDDDDD;
 }
 
+@media (min-width: 768px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 @theme {
 	--color-primary: #0C7368;
 }

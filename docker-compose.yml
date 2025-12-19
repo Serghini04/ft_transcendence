@@ -194,6 +194,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
+
   prometheus:
     build:
       context: ./infra/monitoring/prometheus
@@ -399,12 +400,13 @@ services:
 
   frontend:
     build:
-      context: ./app/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./infra/nginx/Dockerfile.frontend
     image: frontend
     container_name: frontend
     ports:
-      - "8888:80"
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -431,13 +433,94 @@ services:
     volumes:
       - ./app/frontend:/app
       - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:8000
-      - VITE_WS_URL=ws://localhost:8000
     networks:
       - ft_Transc
+    depends_on:
+      - tictac-game
     profiles:
       - development
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  tictac-game:
+    build:
+      context: ./app/backend/services/tictac
+      dockerfile: Dockerfile
+    image: tictac-game
+    container_name: tictac-game
+    ports:
+      - "0.0.0.0:3003:3003"
+    environment:
+      - PORT=3003
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/tictac.db
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_TIMEWINDOW=60000
+      - MATCHMAKING_TIMEOUT=60000
+      - SKILL_RANGE=100
+      - CORS_ORIGIN=http://localhost:5173,http://localhost:8888,http://10.32.138.11:5173,http://10.32.138.11:8888
+    volumes:
+      - tictac-data:/app/data
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api_gateway:
+    build:
+      context: ./app/backend/api_gateway
+      dockerfile: dockerfile
+    image: api_gateway
+    container_name: api_gateway
+    ports:
+      - "8081:8081"
+    environment:
+      NODE_ENV: production
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - zookeeper
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  user_auth:
+    build:
+      context: ./app/backend/services/userAuth
+      dockerfile: Dockerfile
+    image: user_auth
+    container_name: user_auth
+    ports:
+      - "3020:3020"
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+      JWT_REFRESH: ${JWT_REFRESH:-your-jwt-refresh-key-change-in-production}
+      COOKIE_SECRET: ${COOKIE_SECRET:-your-cookie-secret-key-change-in-production}
+    networks:
+      - ft_Transc
+    depends_on:
+      - kafka
+      - zookeeper
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
@@ -453,3 +536,4 @@ volumes:
   alertmanager-data:
   grafana-data:
   elasticsearch-data:
+  tictac-data:

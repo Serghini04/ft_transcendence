@@ -1,10 +1,10 @@
 import fastify from "fastify";
-import db from "./db";
+import db from "./db.js";
 import bcrypt from "bcrypt";
-import { Console, error } from "console";
+// import { Console, error } from "console";
 import {OAuth2Client } from "google-auth-library";
-import { request } from "http";
-import { authenticateToken, generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt";
+// import { request } from "http";
+import { generateJwtAccessToken, generateJwtRefreshToken, authenticateToken } from "./jwt.js";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 
@@ -22,13 +22,13 @@ await app.register(cookie, {
   secret: process.env.COOKIE_SECRET,
 });
 await app.register(cors, {
-  origin: "http://localhost:5173", // for development only
+  origin: true, // for development only
   credentials: true,
 });
 
 
 
-db.prepare(`DROP TABLE IF EXISTS users`).run();
+// db.prepare(`DROP TABLE IF EXISTS users`).run();
 // Create table if not exists
 
 db.prepare(`
@@ -291,11 +291,11 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
     }
   });
 
-app.get("/api/v1/auth/protect", async (request, reply) => {
+app.get("/api/v1/auth/protect", { preHandler: authenticateToken }, async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
 
-app.listen({ port: 3004 }, (err, address) => {
+app.listen({ port: 3004, host: "0.0.0.0" }, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

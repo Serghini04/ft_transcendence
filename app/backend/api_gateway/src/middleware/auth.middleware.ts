@@ -17,8 +17,8 @@ export function generateJwtAccessToken({id, name, email}: {id: number; name:stri
 }
 
 export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
-  if (!req.url.startsWith("/api/v1/auth/protect") && req.url.startsWith("/api/v1/auth/")) {
-    console.error("Auth route, skipping middleware");
+  // Skip all auth service routes - let user_auth handle its own authentication
+  if (req.url.startsWith("/api/v1/auth/")) {
     return;
   }
   if (req.url.startsWith("/socket.io/")) {

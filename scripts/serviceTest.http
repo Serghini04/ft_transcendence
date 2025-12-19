@@ -1,0 +1,41 @@
+### Health Check
+GET http://localhost:3010/health HTTP/1.1
+
+###
+
+
+
+### Send Message to Kafka
+POST http://localhost:3010/send HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": 123,
+  "userName": "TestUser",
+  "event": "USER_CREATED"
+}
+
+
+### Get messagees from service-b
+GET http://localhost:3011/messages HTTP/1.1
+
+
+### get messagees from service-c
+GET http://localhost:3012/messages HTTP/1.1
+
+ 
+ ### get messagees from service-d
+GET http://localhost:3013/messages HTTP/1.1
+
+
+### reset messagees in service-b
+POST http://localhost:3011/reset HTTP/1.1
+
+### reset messagees in service-c
+POST http://localhost:3012/reset HTTP/1.1   
+
+### reset messagees in service-b
+POST http://localhost:3011/reset HTTP/1.1   
+
+
+
