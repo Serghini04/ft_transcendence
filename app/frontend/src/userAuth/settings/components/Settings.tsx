@@ -13,7 +13,7 @@ export default function Settings() {
     name: "",
     email: "",
     photoURL: "",
-    bgPhotoURL: ""
+    bgPhotoURL: "public/profileBG.png"
   });
   useEffect(() => {
     async function fetchUserData() {
@@ -28,8 +28,8 @@ export default function Settings() {
           body: JSON.stringify({ id: user.id })
         });
     const data = await res.json();
+    console.log("USER DATA SETTINGS: ", data);
     verifyToken(data);
-    console.log("USER DATA SETTINGS: ", data.user);
     setUserInfo({
       name: data.user.name,
       email: data.user.email,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { UseimageDataUrlStore } from "../../zustand/useStore";
 
 interface params {
   user :{
@@ -11,10 +12,10 @@ interface params {
 
 export default function PhotosSide(props: params) {
   const filrInputRef = useRef<HTMLInputElement | null>(null)
-  const [ imageDataUrl, setImageDataUrl ] = useState("");
+  const { BgImageDataUrl, setBgImageDataUrl } = UseimageDataUrlStore();
   useEffect(() => {
     if (props.user.bgPhotoURL) {
-      setImageDataUrl(props.user.bgPhotoURL);
+      setBgImageDataUrl(props.user.bgPhotoURL);
     }
   }, [props.user.bgPhotoURL]);
     const handleChoosePhoto = () => {
@@ -26,7 +27,7 @@ export default function PhotosSide(props: params) {
 
         const reader = new FileReader();
         reader.onload = () => {
-            setImageDataUrl(reader.result as string);
+          setBgImageDataUrl(reader.result as string);
         };
 
         reader.readAsDataURL(file);
@@ -34,7 +35,7 @@ export default function PhotosSide(props: params) {
     return (
       <div
         style={{
-          backgroundImage: imageDataUrl ? `url(${imageDataUrl})` : "none",
+          backgroundImage: BgImageDataUrl ? `url(${BgImageDataUrl})` : "none",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

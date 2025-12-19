@@ -3,7 +3,8 @@ import { Lock, ShieldCheck, User } from "lucide-react";
 import { useState } from "react";
 import Input from "./Input";
 import { BioInput } from "./BioInput";
-import { UseBioStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { UseBioStore, UseSettingsErrorStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { set } from "date-fns";
 
 interface params {
     user :{
@@ -11,6 +12,8 @@ interface params {
         email: string;
         photoURL: string;
         bgPhotoURL: string;
+        showNotifications: string;
+        profileVisibility: string;
     }
 }
 
@@ -19,6 +22,10 @@ export default function ModifyUserInformation(props: params) {
     const [password, setPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [c_NewPassword, setC_NewPassword] = useState("");
+    const [showNotifications, setShowNotifications] = useState();
+    const [profileVisibility, setProfileVisibility] = useState();
+    const {nameErrorMsg, currentPasswordErrorMsg, newPasswordErrorMsg, confirmPasswordErrorMsg, setCurrentPasswordErrorMsg, setNewPasswordErrorMsg, setConfirmPasswordErrorMsg, setNameErrorMsg} = UseSettingsErrorStore();
+    // const [c_NewPassword, setC_NewPassword] = useState("");
     const {bio, setBio} = UseBioStore();
     const { token } = UseTokenStore();
     const { user } = UseUserStore();
@@ -37,13 +44,52 @@ export default function ModifyUserInformation(props: params) {
             id: user.id,
             name: name,
             password: password,
-            newPassword: newPassword,
-            c_NewPassword: c_NewPassword,
+            newpassword: newPassword,
+            cnewpassword: c_NewPassword,
+            showNotifications: showNotifications,
+            profileVisibility: profileVisibility,
+            photoURL: "",
+            bgPhotoURL: "",
             bio: bio,
             flag: flag
         })
     });
         const data = await res.json();
+        if (data.code === "NAME_ALR_EXIST")
+        {
+            setNameErrorMsg("name already exist");
+            setCurrentPasswordErrorMsg("");
+            setNewPasswordErrorMsg("");
+            setConfirmPasswordErrorMsg("");
+        }
+        if (data.code === "INVALID_PASSWORD")
+        {
+            setCurrentPasswordErrorMsg("invalid current password");
+            setNameErrorMsg("");
+            setNewPasswordErrorMsg("");
+            setConfirmPasswordErrorMsg("");
+        }
+        if (data.code === "PASSWORD_NOT_STRONG")
+        {
+            setNewPasswordErrorMsg("Min 8 chars, 1 uppercase, 1 number, 1 symbol");
+            setNameErrorMsg("");
+            setCurrentPasswordErrorMsg("");
+            setConfirmPasswordErrorMsg("");
+        }
+        if (data.code === "CPASSWORD_NOT_MATCHING")
+        {
+            setConfirmPasswordErrorMsg("new passwords do not match");
+            setNameErrorMsg("");
+            setCurrentPasswordErrorMsg("");
+            setNewPasswordErrorMsg("");
+        }
+        if (data.code === "USER_DATA_UPDATED_SUCCESS")
+        {
+            setNameErrorMsg("");
+            setCurrentPasswordErrorMsg("");
+            setNewPasswordErrorMsg("");
+            setConfirmPasswordErrorMsg("");
+        }
         console.log("updateUserData Reponse: ", data);
     }
     return (
@@ -54,10 +100,11 @@ export default function ModifyUserInformation(props: params) {
                     <h2 className="font-[outfit] text-xl md:text-[2vw]">Account</h2>
                 </div>
                 <div className="flex flex-col w-full gap-[1.65vw] mt-6 md:mt-[1.7vw]">
-                    <Input label="Username" text={props.user.name} type="text"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    <Input label="Username" text={props.user.name} ErrorMsg={nameErrorMsg} readonlyFlag={false} type="text"  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setName(e.target.value)}
                     />
-                    <Input label="Email" text={props.user.email} type="Email"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    {nameErrorMsg && <p className="text-red-600 mt-[-1.9vw] mb-[1.5vw] ml-[3.4vw] lg:ml-[2.4vw] text-[1.9vw] sm:text-[1.6vw] md:text-[1.4vw] lg:text-[0.9vw]">{nameErrorMsg}</p>}
+                    <Input label="Email" text={props.user.email} readonlyFlag={true} type="Email"  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setName(e.target.value)}
                     />
                     <BioInput label="Profile bio" value={bio} onChange={(e) => setBio(e.target.value)}/>
@@ -70,16 +117,18 @@ export default function ModifyUserInformation(props: params) {
                     <h2 className="font-[outfit] text-xl md:text-[2vw]">Security</h2>
                 </div>
                 <div className="flex flex-col w-full gap-[1.65vw] mt-6 md:mt-[1.7vw]">
-                    <Input label="Current Password" text="...................." type="password"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    <Input label="Current Password" text="...................." ErrorMsg={currentPasswordErrorMsg} type="password"  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setPassword(e.target.value)}
                     />
-                    <Input label="New Password" text="...................." type="password"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    {currentPasswordErrorMsg && <p className="text-red-600 mt-[-1.9vw] mb-[1.5vw] ml-[3.4vw] lg:ml-[2.4vw] text-[1.9vw] sm:text-[1.6vw] md:text-[1.4vw] lg:text-[0.9vw]">{currentPasswordErrorMsg}</p>}
+                    <Input label="New Password" text="...................." ErrorMsg={newPasswordErrorMsg} type="password"  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setNewPassword(e.target.value)}
-                    />  
-                    <Input label="confirm Password" text="...................." type="password"  error={false} onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    />
+                    {newPasswordErrorMsg && <p className="text-red-600 mt-[-1.9vw] mb-[1.5vw] ml-[3.4vw] lg:ml-[2.4vw] text-[1.9vw] sm:text-[1.6vw] md:text-[1.4vw] lg:text-[0.9vw]">{newPasswordErrorMsg}</p>}
+                    <Input label="confirm Password" text="...................." ErrorMsg={confirmPasswordErrorMsg} type="password"  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setC_NewPassword(e.target.value)}
                     />  
-                    
+                    {confirmPasswordErrorMsg && <p className="text-red-600 mt-[-1.9vw] mb-[1.5vw] ml-[3.4vw] lg:ml-[2.4vw] text-[1.9vw] sm:text-[1.6vw] md:text-[1.4vw] lg:text-[0.9vw]">{confirmPasswordErrorMsg}</p>}
                 </div>
             </div>
             {/* <div className="h-0 w-0 xl:h-[27vw] xl:w-0.5 bg-[#27445E] ml-[1.2vw]"></div> */}

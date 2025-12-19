@@ -13,6 +13,18 @@ interface ErrorState {
   setErrorMsg: (msg: string) => void;
 }
 
+interface SettingsErrorState {
+  nameErrorMsg: string;
+  currentPasswordErrorMsg: string;
+  newPasswordErrorMsg: string;
+  confirmPasswordErrorMsg: string;
+  setNameErrorMsg: (msg: string) => void;
+  setCurrentPasswordErrorMsg: (msg: string) => void;
+  setNewPasswordErrorMsg: (msg: string) => void;
+  setConfirmPasswordErrorMsg: (msg: string) => void;
+}
+
+
 interface TokenState {
   token: string;
   userId: number | null;
@@ -34,6 +46,11 @@ type ShowOtpInputState = {
   setOtpFlag: (otpFlag: boolean) => void;
 };
 
+type imageDataUrlState = {
+  BgImageDataUrl: string;
+  setBgImageDataUrl: (imageDataURL: string) => void;
+};
+
 type OtpState = {
   otpOriginal: string;
   flag: string;
@@ -45,6 +62,17 @@ type OtpState = {
 export const UseErrorStore = create<ErrorState>((set) => ({
   errormsg: "",
   setErrorMsg: (msg) => set({ errormsg: msg }),
+}));
+
+export const UseSettingsErrorStore = create<SettingsErrorState>((set) => ({
+  nameErrorMsg: "",
+  currentPasswordErrorMsg: "",
+  newPasswordErrorMsg: "",
+  confirmPasswordErrorMsg: "",
+  setNameErrorMsg: (msg) => set({ nameErrorMsg: msg }),
+  setCurrentPasswordErrorMsg: (msg) => set({ currentPasswordErrorMsg: msg }),
+  setNewPasswordErrorMsg: (msg) => set({ newPasswordErrorMsg: msg }),
+  setConfirmPasswordErrorMsg: (msg) => set({ confirmPasswordErrorMsg: msg }),
 }));
 
 // ---------------------- Token Store ----------------------
@@ -106,6 +134,11 @@ export const UseOtpStore = create<OtpState>((set) => ({
 export const UseShowOtpInputStore = create<ShowOtpInputState>((set) => ({
   otpFlag: false,
   setOtpFlag: (flag) => set({ otpFlag: flag }),
+}));
+
+export const UseimageDataUrlStore = create<imageDataUrlState>((set) => ({
+  BgImageDataUrl: "",
+  setBgImageDataUrl: (url) => set({ BgImageDataUrl: url }),
 }));
 
 export const UseBioStore = create(

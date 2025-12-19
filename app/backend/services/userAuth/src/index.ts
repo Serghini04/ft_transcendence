@@ -10,6 +10,7 @@ import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import { generateOTP, sendOTPEmail } from "./2FA.ts";
 import { access } from "fs";
+import { str } from "ajv";
 
 
 interface User {
@@ -425,17 +426,34 @@ app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
   try {
     const {id , name, password, newpassword, cnewpassword, photoURL, bgPhotoURL, flag} = (request.body as {id: number; name: string; email: string; password:string; newpassword: string; cnewpassword:string; photoURL: string; bgPhotoURL: string; flag: string});
 
-    db.prepare("UPDATE users SET name = ?, photoURL = ?, bgPhotoURL = ? WHERE id = ?").run(name, photoURL, bgPhotoURL, id);
-    if (flag === "PW")
+    const user = db.prepare("SELECT * FROM users WHERE name = ?").get(name) as User;
+    if (user && user.id !== id) {
+      reply.status(400).send({ error: "Name already exists", code: "NAME_ALR_EXIST"});
+      return ;
+    }
+
+    if (name !== "")
+      db.prepare("UPDATE users SET name = ? WHERE id = ?").run(name, id);
+    if (photoURL !== "")
+      db.prepare("UPDATE users SET photoURL = ? WHERE id = ?").run(photoURL, id);
+    if (bgPhotoURL !== "")
+      db.prepare("UPDATE users SET bgPhotoURL = ? WHERE id = ?").run(bgPhotoURL, id);
+    if (password !== "" || newpassword !== "" || cnewpassword !== "")
     {
       const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
       if (!user) {
         reply.status(401).send({ error: "Invalid user id", code: "INVALID_USER_ID" });
         return ;
       }
-      const match = await bcrypt.compare(password, user.password!);
+      const match = await bcrypt.compare(password, user.password as string);
       if (!match) {
-        reply.status(401).send({ error: "Invalid current password", code: "INVALID_CREDENTIALS" });
+        reply.status(401).send({ error: "Invalid current password", code: "INVALID_PASSWORD" });
+        return ;
+      }
+      console.log("Current password verified for user id:", newpassword);
+      if (!strongPassword.test(newpassword))
+      {
+        reply.status(400).send({ error: "Min 8 chars, 1 uppercase, 1 number, 1 symbol", code: "PASSWORD_NOT_STRONG"})
         return ;
       }
       if (newpassword !== cnewpassword) {
