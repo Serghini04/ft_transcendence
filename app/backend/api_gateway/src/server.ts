@@ -8,6 +8,7 @@ import { userAuthService } from "./services/userAuth.service";
 import cookie from "@fastify/cookie"; 
 import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
+import { tictacService } from "./services/tictac.service";
 
 // Load environment variables FIRST
 dotenv.config();
@@ -56,16 +57,12 @@ app.register(chatService);
 app.register(userAuthService);
 app.register(gameService);
 app.register(NotificationService);
+app.register(tictacService);
 const start = async () => {
   try {
     await setupSocketGateway(app);
-<<<<<<< HEAD
     await app.listen({ port: 8080, host: "0.0.0.0" });
     app.log.info("API Gateway running at http://localhost:8080");
-=======
-    await app.listen({ port: 8081, host: "0.0.0.0" });
-    app.log.info("🚀 API Gateway running at http://localhost:8081");
->>>>>>> DvOps-hidriouc
   } catch (err) {
     app.log.error(err);
     process.exit(1);

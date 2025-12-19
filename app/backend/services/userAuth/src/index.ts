@@ -22,7 +22,7 @@ await app.register(cookie, {
   secret: process.env.COOKIE_SECRET,
 });
 await app.register(cors, {
-  origin: true, // for development only
+  origin: true,
   credentials: true,
 });
 

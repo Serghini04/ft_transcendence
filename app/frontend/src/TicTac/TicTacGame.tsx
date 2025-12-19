@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, RotateCcw, Trophy, User, Users, Sparkles, Crown, Star } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trophy, User, Users, Sparkles, Star } from "lucide-react";
 import Circle from "./Assets/circle.png";
 import cross from "./Assets/cross.png";
 import { UseUserStore } from "../userAuth/LoginAndSignup/zustand/useStore";
@@ -29,9 +29,9 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
   const [winningLine, setWinningLine] = useState<number[]>([]);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const { user: authUser } = UseUserStore();
-  const [playerXName, setPlayerXName] = useState(authUser?.name || "Player 1");
-  const [playerOName, setPlayerOName] = useState("Player 2");
-  const [showNameEntry, setShowNameEntry] = useState(false);
+  const [playerXName] = useState(authUser?.name || "Player 1");
+  const [playerOName] = useState("Player 2");
+  const [showNameEntry] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<number | null>(null);
 
   // For online mode, use props

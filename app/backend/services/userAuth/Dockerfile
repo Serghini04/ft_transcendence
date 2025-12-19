@@ -7,8 +7,8 @@ RUN apk add --no-cache python3 make g++
 
 COPY ./package*.json ./
 
-# Clean install to ensure native modules are built for Alpine Linux
-RUN npm ci --only=production=false
+# Install dependencies
+RUN npm install
 
 COPY ./src ./src
 COPY ./tsconfig.json ./

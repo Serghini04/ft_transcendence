@@ -54,70 +54,27 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  kafka-ui:
-    build:
-      context: ./infra/kafka-ui
-      dockerfile: Dockerfile
-    image: kafka-ui
-    container_name: kafka-ui
-    ports:
-      - "8080:8080"
-    environment:
-      - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-    depends_on:
-      - kafka
-    networks:
-      - ft_Transc
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # kafka-ui:
+  #   build:
+  #     context: ./infra/kafka-ui
+  #     dockerfile: Dockerfile
+  #   image: kafka-ui
+  #   container_name: kafka-ui
+  #   ports:
+  #     - "3022:3022"
+  #   environment:
+  #     - KAFKA_CLUSTERS_0_NAME=local
+  #     - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+  #   depends_on:
+  #     - kafka
+  #   networks:
+  #     - ft_Transc
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
 
-  kafka-producer:
-    build:
-      context: ./infra/kafka-producer
-      dockerfile: Dockerfile
-    image: kafka-producer
-    container_name: kafka-producer
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_TOPIC=test-topic
-    ports:
-      - "3001:3001"
-    depends_on:
-      - kafka
-    networks:
-      - ft_Transc
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  kafka-consumer:
-    build:
-      context: ./infra/kafka-consumer
-      dockerfile: Dockerfile
-    image: kafka-consumer
-    container_name: kafka-consumer
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_TOPIC=test-topic
-      - KAFKA_GROUP_ID=test-consumer-group
-      - KAFKA_CLIENT_ID=kafka-consumer-1
-    ports:
-      - "3002:3002"
-    depends_on:
-      - kafka
-    networks:
-      - ft_Transc
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
   chat-service:
     build:
       context: ./app/backend/services/chat
@@ -146,7 +103,11 @@ services:
     image: api-gateway
     container_name: api-gateway
     ports:
-      - "3022:3022"
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+      - JWT_REFRESH=${JWT_REFRESH:-your-jwt-refresh-key-change-in-production}
+      - COOKIE_SECRET=${COOKIE_SECRET:-your-cookie-secret-key}
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -435,8 +396,6 @@ services:
       - /app/node_modules
     networks:
       - ft_Transc
-    depends_on:
-      - tictac-game
     profiles:
       - development
     logging:
@@ -452,9 +411,9 @@ services:
     image: tictac-game
     container_name: tictac-game
     ports:
-      - "0.0.0.0:3003:3003"
+      - "0.0.0.0:3030:3030"
     environment:
-      - PORT=3003
+      - PORT=3030
       - HOST=0.0.0.0
       - NODE_ENV=production
       - DATABASE_PATH=/app/data/tictac.db
@@ -469,33 +428,11 @@ services:
       - ft_Transc
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3030/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 3s
       start_period: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  api_gateway:
-    build:
-      context: ./app/backend/api_gateway
-      dockerfile: dockerfile
-    image: api_gateway
-    container_name: api_gateway
-    ports:
-      - "8081:8081"
-    environment:
-      NODE_ENV: production
-    networks:
-      - ft_Transc
-    depends_on:
-      - kafka
-      - zookeeper
-    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
@@ -509,7 +446,7 @@ services:
     image: user_auth
     container_name: user_auth
     ports:
-      - "3020:3020"
+      - "3004:3004"
     environment:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-change-in-production}

@@ -13,7 +13,7 @@ export default function GoogleButton(props :any) {
 	const login = useGoogleLogin({
 		onSuccess: async (tokenResponse) => {
 			try {
-				const res = await fetch(`http://localhost:8081${props.route}`, {
+				const res = await fetch(`http://localhost:8080${props.route}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ accessToken: tokenResponse.access_token }),
@@ -46,7 +46,7 @@ export default function GoogleButton(props :any) {
 	return (
 		<>
 			<button onClick={() => login()} className=" flex justify-center items-center gap-[0.7vw]  font-medium w-[15vw] h-[2.5vw] rounded-full bg-[#DDDDDD] hover:bg-[rgba(221,221,221,85%)] text-[0.7vw] text-[#333333]">
-				<img src="/src/userAuth/LoginAndSignup/iconsAndImages/googleIcon.svg" alt="google icon" className="h-[8vw] w-[1vw]" />
+				<img src="frontend/public/enemy.jpeg" alt="google icon" className="h-[8vw] w-[1vw]" />
 					{props.text}
 			</button>
 		</>

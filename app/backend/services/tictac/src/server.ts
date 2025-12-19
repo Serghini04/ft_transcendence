@@ -13,7 +13,7 @@ import { WebSocketHandler } from './services/websocket.service.js';
 // Load environment variables
 config();
 
-const PORT = parseInt(process.env.PORT || '3004');
+const PORT = parseInt(process.env.PORT || '3030');
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Create Fastify instance
