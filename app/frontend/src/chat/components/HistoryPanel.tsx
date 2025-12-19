@@ -1,14 +1,15 @@
-import { CircleX, RotateCcw, Sword, Bell, UserX } from "lucide-react";
+import { CircleX, RotateCcw, Sword, Bell, UserX, UserCheck } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useState, useEffect } from "react";
 import { UseUserStore, UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, isNotificationsMuted, toggleNotificationsMute, onlineUsers} = useChatStore();
+    const {selectedContact, isNotificationsMuted, toggleNotificationsMute, onlineUsers, blockUser, unblockUser} = useChatStore();
     const { user } = UseUserStore();
     const { token } = UseTokenStore();
     const [challengeStatus, setChallengeStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+    const [isBlocking, setIsBlocking] = useState(false);
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     
@@ -208,9 +209,44 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
               </label>
             </div>
 
-            <button className="flex items-center justify-center gap-2 !bg-[#A33B2E] hover:!bg-[#8E3125] !border-none rounded-xl py-2.5 text-sm !transition-colors">
-              <UserX size={16} />
-              Block
+            <button 
+              onClick={async () => {
+                if (!selectedContact || isBlocking) return;
+                
+                setIsBlocking(true);
+                
+                try {
+                  let result;
+                  if (selectedContact.blockStatus === 'blocked_by_me') {
+                    result = await unblockUser(selectedContact.user.id);
+                  } else {
+                    result = await blockUser(selectedContact.user.id);
+                  }
+                  
+                  if (!result.success) {
+                    alert(result.message);
+                  }
+                } catch (error) {
+                  console.error('Block/Unblock error:', error);
+                  alert('An error occurred');
+                } finally {
+                  setIsBlocking(false);
+                }
+              }}
+              disabled={isBlocking || !selectedContact || selectedContact.blockStatus === 'blocked_by_them'}
+              className="flex items-center justify-center gap-2 !bg-[#A33B2E] hover:!bg-[#8E3125] !border-none rounded-xl py-2.5 text-sm !transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {selectedContact?.blockStatus === 'blocked_by_me' ? (
+                <>
+                  <UserCheck size={16} />
+                  Unblock
+                </>
+              ) : (
+                <>
+                  <UserX size={16} />
+                  Block
+                </>
+              )}
             </button>
           </div>
         </div>

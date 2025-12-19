@@ -14,7 +14,7 @@ type Contact = {
     id: number;
     user: ContactUser;
     unseenMessages: number;
-    isBlocked: boolean;
+    blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
 type Message = {
@@ -49,6 +49,9 @@ type ChatStore = {
     incrementUnseenMessages: (contactId: number) => void;
     initializeUnseenCounts: (contacts: Contact[]) => void;
     toggleNotificationsMute: () => void;
+    blockUser: (userId: number) => Promise<{ success: boolean; message: string }>;
+    unblockUser: (userId: number) => Promise<{ success: boolean; message: string }>;
+    refreshContacts: () => Promise<void>;
 
     handleIncomingMessage: (messageData: any) => void;
     handleMessageSent: (messageData: any) => void;
@@ -453,5 +456,85 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             newCounts.set(contact.user.id, contact.unseenMessages);
         });
         set({ unseenMessageCounts: newCounts });
-    }
+    },
+
+    toggleNotificationsMute: () => {
+        set((state) => ({ isNotificationsMuted: !state.isNotificationsMuted }));
+    },
+
+    blockUser: async (userId: number) => {
+        const { token } = UseTokenStore.getState();
+        try {
+            const response = await fetch(`http://localhost:8080/api/v1/chat/block/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                await get().refreshContacts();
+                return { success: true, message: data.message || 'User blocked successfully' };
+            }
+            return { success: false, message: data.error || 'Failed to block user' };
+        } catch (error) {
+            console.error('Block user error:', error);
+            return { success: false, message: 'Failed to block user' };
+        }
+    },
+
+    unblockUser: async (userId: number) => {
+        const { token } = UseTokenStore.getState();
+        try {
+            const response = await fetch(`http://localhost:8080/api/v1/chat/unblock/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                await get().refreshContacts();
+                return { success: true, message: data.message || 'User unblocked successfully' };
+            }
+            return { success: false, message: data.error || 'Failed to unblock user' };
+        } catch (error) {
+            console.error('Unblock user error:', error);
+            return { success: false, message: 'Failed to unblock user' };
+        }
+    },
+
+    refreshContacts: async () => {
+        const { token } = UseTokenStore.getState();
+        const currentSelectedContact = get().selectedContact;
+        
+        try {
+            const response = await fetch('http://localhost:8080/api/v1/chat/contacts', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            if (response.ok) {
+                const updatedContacts = await response.json();
+                if (currentSelectedContact) {
+                    const updatedSelectedContact = updatedContacts.find(
+                        (contact: Contact) => contact.user.id === currentSelectedContact.user.id
+                    );
+                    if (updatedSelectedContact)
+                        set({ selectedContact: updatedSelectedContact });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to refresh contacts:', error);
+        }
+    },
 }));

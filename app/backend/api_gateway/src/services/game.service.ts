@@ -10,17 +10,22 @@ export async function gameService(app: FastifyInstance) {
     rewritePrefix: "/api/v1/game",
     
     preHandler: async (req: FastifyRequest, reply: FastifyReply) => {
-      try {
-        // req.headers["x-user-id"] = String(req.id);
-        req.headers["x-user-id"] = String(req.user?.id);
-      } catch (error) {
-        const err = error as Error;
-        app.log.error(`Error in preHandler: ${err.message}`);
+      req.headers["x-user-id"] = String(req.user?.id);
+    },
+
+    replyOptions: {
+      onError(reply, error) {
+        app.log.error(
+          { err: error },
+          "Game Service is unavailable"
+        );
+
         reply.status(503).send({
           code: "SERVICE_UNAVAILABLE",
-          message: "An error occurred while processing the request.",
+          message:
+            "Game service is currently unavailable. Please try again later.",
         });
-      }
+      },
     },
   });
 }

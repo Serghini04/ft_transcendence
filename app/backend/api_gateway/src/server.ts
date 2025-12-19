@@ -9,7 +9,6 @@ import cookie from "@fastify/cookie";
 import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
 
-// Load environment variables FIRST
 dotenv.config();
 
 const app = Fastify({
@@ -22,7 +21,6 @@ const app = Fastify({
   },
 });
 
-// Log environment check
 app.log.info({
   hasJwtSecret: !!process.env.JWT_SECRET,
   hasJwtRefresh: !!process.env.JWT_REFRESH,
@@ -59,13 +57,8 @@ app.register(NotificationService);
 const start = async () => {
   try {
     await setupSocketGateway(app);
-<<<<<<< HEAD
     await app.listen({ port: 8080, host: "0.0.0.0" });
     app.log.info("API Gateway running at http://localhost:8080");
-=======
-    await app.listen({ port: 8081, host: "0.0.0.0" });
-    app.log.info("🚀 API Gateway running at http://localhost:8081");
->>>>>>> DvOps-hidriouc
   } catch (err) {
     app.log.error(err);
     process.exit(1);
