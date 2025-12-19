@@ -5,7 +5,7 @@ export async function gameService(app: FastifyInstance) {
   app.log.info("Registering User Auth Service proxy...");
 
   app.register(proxy, {
-    upstream: "http://localhost:3005",
+    upstream: "http://game-service:3005",
     prefix: "/api/v1/game",
     rewritePrefix: "/api/v1/game",
     
