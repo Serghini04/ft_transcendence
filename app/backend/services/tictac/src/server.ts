@@ -28,7 +28,7 @@ const fastify = Fastify({
 
 async function start() {
   try {
-    // Run database migrations
+    
     runMigrations();
 
     
@@ -46,7 +46,7 @@ async function start() {
       timeWindow: parseInt(process.env.RATE_LIMIT_TIMEWINDOW || '60000')
     });
 
-    // Register WebSocket
+    
     await fastify.register(websocket);
 
     // Health check
@@ -58,7 +58,7 @@ async function start() {
       };
     });
 
-    // Register routes
+    
     await fastify.register(userRoutes, { prefix: '/api' });
     await fastify.register(gameRoutes, { prefix: '/api' });
     await fastify.register(matchmakingRoutes, { prefix: '/api' });
@@ -71,12 +71,12 @@ async function start() {
       return WebSocketHandler.getStats();
     });
 
-    // Start server
+    
     await fastify.listen({ port: PORT, host: HOST });
     
-    fastify.log.info(`🎮 TicTac Game Service running on ${HOST}:${PORT}`);
-    fastify.log.info(`📊 Health check: http://${HOST}:${PORT}/health`);
-    fastify.log.info(`🔌 WebSocket: ws://${HOST}:${PORT}/ws`);
+    fastify.log.info(`TicTac Game Service running on ${HOST}:${PORT}`);
+    fastify.log.info(` Health check: http://${HOST}:${PORT}/health`);
+    fastify.log.info(`WebSocket: ws://${HOST}:${PORT}/ws`);
 
   } catch (error) {
     fastify.log.error(error);
@@ -84,7 +84,7 @@ async function start() {
   }
 }
 
-// Graceful shutdown
+
 const signals = ['SIGINT', 'SIGTERM'];
 signals.forEach(signal => {
   process.on(signal, async () => {

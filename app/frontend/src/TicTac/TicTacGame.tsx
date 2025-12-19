@@ -128,8 +128,8 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
         {/* Animated background gradient */}
         {!cellContent && canPlay && (
           <>
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 via-purple-500/0 to-pink-500/0 
-                          group-hover:from-cyan-500/20 group-hover:via-purple-500/20 group-hover:to-pink-500/20 
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 via-purple-500/0 to-green-500/0 
+                          group-hover:from-cyan-500/20 group-hover:via-purple-500/20 group-hover:to-green-500/20 
                           transition-all duration-500 rounded-2xl" />
             {isHovered && (
               <div className="absolute inset-0 animate-[pulse_1s_ease-in-out_infinite]">
@@ -460,7 +460,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
 
           <div className="flex items-center gap-3">
             {isOnline ? <Users className="w-6 h-6 text-cyan-400" /> : <User className="w-6 h-6 text-cyan-400" />}
-            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-400 to-green-400 bg-clip-text text-transparent">
               {isOnline ? 'Online Match' : 'Local Game'}
             </h1>
           </div>
@@ -602,7 +602,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
                 ) : (
                   <>
                     <div className="text-8xl mb-4">👑</div>
-                    <h2 className="text-5xl font-black mb-2 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    <h2 className="text-5xl font-black mb-2 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 bg-clip-text text-transparent">
                       {displayWinner} Wins!
                     </h2>
                     <p className="text-xl text-gray-300">Congratulations!</p>
