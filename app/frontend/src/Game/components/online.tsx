@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
 import verifyToken from "../../globalUtils/verifyToken";
 
