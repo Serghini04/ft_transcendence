@@ -36,8 +36,8 @@ const gameModes = [
 
 export default function GameMenu() {
   return (
-    <div className="relative w-full min-h-[calc(100vh-5rem)] flex justify-center items-center px-6 md:px-10 py-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md sm:max-w-2xl md:max-w-5xl mx-auto">
+    <div className="relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] overflow-y-auto flex justify-center items-start px-6 md:px-10 py-10 pb-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md sm:max-w-2xl md:max-w-5xl mx-auto my-auto">
         {gameModes.map((mode, i) => (
           <div
             key={i}

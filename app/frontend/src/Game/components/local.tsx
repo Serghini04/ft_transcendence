@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef} from "react";
 import { useLocation } from "react-router-dom";
-import axios from "axios";
+
 
 interface Player {
   id: number;
@@ -15,8 +15,8 @@ interface Players {
 
 export default function Local() {
   const [players, setPlayers] = useState<Players>({
-    first: { id: 0, name: "", image: "" },
-    second: { id: 0, name: "", image: "" },
+    first: { id: 1, name: "Heisenberg", image: "/src/assets/images/heisenberg.jpeg" },
+    second: { id: 2, name: "Jesse Pinkman", image: "/src/assets/images/jesse.jpeg" },
   });
   const [leftScore, setLeftScore] = useState(0);
   const [rightScore, setRightScore] = useState(0);
@@ -31,7 +31,6 @@ export default function Local() {
   const location = useLocation();
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
 
-  console.log("Game Options:", { map, powerUps, speed });
   const gameThemes = {
     Classic: {
       background: "bg-[rgba(0,0,0,0.75)]",
@@ -47,18 +46,11 @@ export default function Local() {
     },
   };
   const theme = gameThemes[map] || gameThemes.Classic;
-  const speedMultiplier = { Slow: 0.8, Normal: 1.3, Fast: 2.5};
+  const speedMultiplier = { Slow: 1, Normal: 1.8, Fast: 3 };
   
 
   const lScoreRef = useRef(0);
   const rScoreRef = useRef(0);
-
-  useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/players")
-      .then((response) => setPlayers(response.data))
-      .catch((error) => console.error("Error fetching players:", error));
-  }, []);
 
   // Simple timer
   useEffect(() => {
@@ -454,7 +446,7 @@ export default function Local() {
 
           {/* Player 1 Top */}
           <div className="flex flex-col items-center gap-2 text-white">
-            <img src={players.first.image} className="h-10 rounded-full" alt={players.first.name} />
+            <img src={players.first.image} className="h-10 rounded-full border-2 border-[#50614d80]-500" alt={players.first.name} />
             <span className="text-lg font-semibold">{leftScore}</span>
           </div>
 
@@ -487,7 +479,7 @@ export default function Local() {
           {/* Player 2 Bottom */}
           <div className="flex flex-col items-center gap-2 text-white">
             <span className="text-lg font-semibold">{rightScore}</span>
-            <img src={players.second.image} className="h-10 rounded-full" alt={players.second.name} />
+            <img src={players.second.image} className="h-10 rounded-full border-2 border-[#50614d80]-500" alt={players.second.name} />
           </div>
         </>
       ) : (
@@ -508,7 +500,7 @@ export default function Local() {
                 <img
                   src={players.first.image}
                   alt={players.first.name}
-                  className="h-10 rounded-full"
+                  className="h-10 rounded-full border-2 border-[#50614d80]-500"
                 />
                 <span className="text-[22px] font-semibold">{leftScore}</span>
               </div>
@@ -534,7 +526,7 @@ export default function Local() {
                 <img
                   src={players.second.image}
                   alt={players.second.name}
-                  className="h-10 rounded-full"
+                  className="h-10 rounded-full border-2 border-[#50614d80]-500"
                 />
               </div>
             </div>

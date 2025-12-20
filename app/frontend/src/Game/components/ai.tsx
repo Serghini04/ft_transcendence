@@ -22,6 +22,7 @@ class AIPlayer {
   private targetPosition: number = 0;
   private currentStrategy: "defensive" | "aggressive" | "balanced" = "balanced";
   private difficulty: number = 0.85;
+  private reactionDelay: number = 0; // Delay before AI reacts (in ms)
 
   constructor(difficulty: "easy" | "medium" | "hard" = "medium") {
     // Difficulty settings
@@ -29,14 +30,17 @@ class AIPlayer {
       case "easy":
         this.difficulty = 0.65;
         this.updateInterval = 1400;
+        this.reactionDelay = 800;
         break;
       case "medium":
         this.difficulty = 0.85;
         this.updateInterval = 1000;
+        this.reactionDelay = 400;
         break;
       case "hard":
         this.difficulty = 0.95;
         this.updateInterval = 800;
+        this.reactionDelay = 200;
         break;
     }
   }
@@ -75,7 +79,7 @@ class AIPlayer {
       }
       
       // heigher difficulty => less error
-      const error = (1 - this.difficulty) * 300;
+      const error = (1 - this.difficulty) * 100;
       simX += (Math.random() - 0.5) * error;
       
       return { x: Math.max(0, Math.min(canvasWidth, simX)), y: simY, bounces };
@@ -139,6 +143,17 @@ class AIPlayer {
     playerScore: number,
   ): { shouldMoveLeft: boolean; shouldMoveRight: boolean; shouldMoveUp: boolean; shouldMoveDown: boolean } {
     const currentTime = performance.now();
+    
+    // Check if AI has had enough time to react (reaction delay)
+    if (currentTime - this.lastUpdateTime < this.reactionDelay) {
+      // AI hasn't reacted yet - no movement
+      return {
+        shouldMoveLeft: false,
+        shouldMoveRight: false,
+        shouldMoveUp: false,
+        shouldMoveDown: false,
+      };
+    }
     
     // AI can only refresh its view once per second
     if (currentTime - this.lastUpdateTime < this.updateInterval) {
@@ -253,7 +268,7 @@ export default function Ai() {
     },
   };
   const theme = gameThemes[map as string] || gameThemes.Classic;
-  const speedMultiplier: Record<string, number> = { Slow: 0.8, Normal: 1.3, Fast: 2.5 };
+  const speedMultiplier: Record<string, number> = { Slow: 1, Normal: 1.8, Fast: 3 };
 
   const lScoreRef = useRef(0);
   const rScoreRef = useRef(0);
@@ -740,10 +755,6 @@ export default function Ai() {
 
           {/* AI Player Top */}
           <div className="flex flex-col items-center gap-2 text-white">
-            {/* <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-gray-400">AI</span>
-            </div> */}
             <img
               src={players.second.avatar}
               className="h-10 rounded-full border-2 border-[#50614d80]-500"
@@ -771,12 +782,20 @@ export default function Ai() {
                 <h2 className="text-white text-lg sm:text-2xl font-bold text-center leading-snug">
                   {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
                 </h2>
-                <button
-                  onClick={resetGame}
-                  className="mt-3 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md text-sm"
-                >
-                  Play Again
-                </button>
+                <div className="flex gap-3 mt-3">
+                  <button
+                    onClick={resetGame}
+                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md text-sm"
+                  >
+                    Play Again
+                  </button>
+                  <button
+                    onClick={() => navigate("/game")}
+                    className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md text-sm"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -828,7 +847,6 @@ export default function Ai() {
                     alt={players.second.name}
                     className="h-10 rounded-full border-2 border-[#50614d80]-500"
                   />
-                  {/* <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div> */}
                 </div>
               </div>
             </div>
@@ -851,12 +869,20 @@ export default function Ai() {
                 <h2 className="text-white text-2xl sm:text-3xl font-bold text-center">
                   {winner === "left" ? players.first.name : players.second.name} won the game! 🏆
                 </h2>
-                <button
-                  onClick={resetGame}
-                  className="mt-5 px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-                >
-                  Play Again
-                </button>
+                <div className="flex gap-4 mt-5">
+                  <button
+                    onClick={resetGame}
+                    className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
+                  >
+                    Play Again
+                  </button>
+                  <button
+                    onClick={() => navigate("/game")}
+                    className="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
               </div>
             )}
           </div>
