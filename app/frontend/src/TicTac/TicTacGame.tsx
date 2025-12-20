@@ -31,7 +31,7 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
   const { user: authUser } = UseUserStore();
   const [playerXName] = useState(authUser?.name || "Player 1");
   const [playerOName] = useState("Player 2");
-  const [showNameEntry] = useState(false);
+  // const [showNameEntry] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<number | null>(null);
 
   // For online mode, use props
@@ -129,11 +129,11 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
         {!cellContent && canPlay && (
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 via-purple-500/0 to-green-500/0 
-                          group-hover:from-cyan-500/20 group-hover:via-purple-500/20 group-hover:to-green-500/20 
+                          group-hover:from-cyan-500/20 group-hover:via-green-500/20 group-hover:to-green-500/20 
                           transition-all duration-500 rounded-2xl" />
             {isHovered && (
               <div className="absolute inset-0 animate-[pulse_1s_ease-in-out_infinite]">
-                <div className="absolute inset-2 border-2 border-cyan-400/30 rounded-xl" />
+                <div className="absolute inset-2 border-2 border-green-400/30 rounded-xl" />
               </div>
             )}
           </>
@@ -143,26 +143,26 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
         {cellContent === "X" && (
           <div className="relative w-3/4 h-3/4 flex items-center justify-center">
             <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl animate-pulse" />
-            <img 
-              src={cross} 
-              alt="cross" 
-              className="relative w-full h-full object-contain 
-                       animate-[zoomRotate_0.5s_cubic-bezier(0.34,1.56,0.64,1)]
-                       filter drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]"
-            />
+              <img 
+                src={cross} 
+                alt="cross" 
+                className="relative w-full h-full object-contain 
+                        animate-[zoomRotate_0.5s_cubic-bezier(0.34,1.56,0.64,1)]
+                        filter drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]"
+              />
           </div>
         )}
         
         {cellContent === "O" && (
           <div className="relative w-3/4 h-3/4 flex items-center justify-center">
-            <div className="absolute inset-0 bg-pink-400/20 rounded-full blur-xl animate-pulse" />
-            <img 
-              src={Circle} 
-              alt="circle" 
-              className="relative w-full h-full object-contain 
-                       animate-[zoomRotate_0.5s_cubic-bezier(0.34,1.56,0.64,1)]
-                       filter drop-shadow-[0_0_8px_rgba(244,114,182,0.6)]"
-            />
+            <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl animate-pulse" />
+              <img 
+                src={Circle} 
+                alt="circle" 
+                className="relative w-full h-full object-contain 
+                        animate-[zoomRotate_0.5s_cubic-bezier(0.34,1.56,0.64,1)]
+                        filter drop-shadow-[0_0_8px_rgba(244,114,182,0.6)]"
+              />
           </div>
         )}
         
@@ -179,113 +179,11 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
             />
           </div>
         )}
+        
       </button>
     );
   };
 
-  // Name Entry Screen (Local Mode Only)
-  if (!isOnline && showNameEntry) {
-    return (
-      // <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1a24] to-[#1a1f2e] text-white p-4 relative overflow-hidden">
-      //   {/* Animated background */}
-        
-      //   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      //     {[...Array(5)].map((_, i) => (
-      //       <div
-      //         key={i}
-      //         className="absolute rounded-full mix-blend-screen animate-[float_20s_ease-in-out_infinite]"
-      //         style={{
-      //           width: `${200 + i * 100}px`,
-      //           height: `${200 + i * 100}px`,
-      //           background: `radial-gradient(circle, ${['rgba(96,165,250,0.1)', 'rgba(168,85,247,0.1)', 'rgba(244,114,182,0.1)'][i % 3]} 0%, transparent 70%)`,
-      //           left: `${20 * i}%`,
-      //           top: `${15 * i}%`,
-      //           animationDelay: `${i * 2}s`,
-      //           animationDuration: `${15 + i * 3}s`
-      //         }}
-      //       />
-      //     ))}
-      //   </div>
-
-      //   <div className="relative z-10 w-full max-w-md">
-      //     <div className="bg-gradient-to-br from-[#1e293b]/90 via-[#334155]/90 to-[#1e293b]/90 backdrop-blur-xl 
-      //                   p-8 rounded-3xl border-2 border-cyan-400/30 shadow-2xl shadow-cyan-400/20">
-      //       {/* Header */}
-      //       <div className="text-center mb-8">
-      //         <div className="inline-flex items-center gap-3 mb-4">
-      //           <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
-      //           <h1 className="text-4xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-      //             TicTacToe
-      //           </h1>
-      //           <Trophy className="w-8 h-8 text-yellow-400 animate-pulse" />
-      //         </div>
-      //         <p className="text-gray-400 text-sm">Enter player names to start</p>
-      //       </div>
-
-      //       {/* Player 1 Input */}
-      //       <div className="space-y-4 mb-6">
-      //         <div>
-      //           <label className="flex items-center gap-2 text-sm font-medium mb-2 text-cyan-300">
-      //             <User className="w-4 h-4" />
-      //             Player 1 (X)
-      //           </label>
-      //           <input
-      //             type="text"
-      //             value={playerXName}
-      //             onChange={(e) => setPlayerXName(e.target.value)}
-      //             placeholder="Enter name..."
-      //             className="w-full px-4 py-3 bg-[#0f172a] border-2 border-cyan-400/30 rounded-xl 
-      //                      text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none
-      //                      transition-all duration-200 focus:shadow-lg focus:shadow-cyan-400/20"
-      //             maxLength={15}
-      //           />
-      //         </div>
-
-      //         <div>
-      //           <label className="flex items-center gap-2 text-sm font-medium mb-2 text-pink-300">
-      //             <User className="w-4 h-4" />
-      //             Player 2 (O)
-      //           </label>
-      //           <input
-      //             type="text"
-      //             value={playerOName}
-      //             onChange={(e) => setPlayerOName(e.target.value)}
-      //             placeholder="Enter name..."
-      //             className="w-full px-4 py-3 bg-[#0f172a] border-2 border-pink-400/30 rounded-xl 
-      //                      text-white placeholder-gray-500 focus:border-pink-400 focus:outline-none
-      //                      transition-all duration-200 focus:shadow-lg focus:shadow-pink-400/20"
-      //             maxLength={15}
-      //           />
-      //         </div>
-      //       </div>
-
-      //       {/* Start Button */}
-      //       <button
-      //         onClick={() => setShowNameEntry(false)}
-      //         className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 
-      //                  hover:from-cyan-600 hover:via-purple-600 hover:to-pink-600
-      //                  text-white font-bold rounded-xl shadow-lg hover:shadow-2xl
-      //                  transition-all duration-300 transform hover:scale-105 active:scale-95
-      //                  flex items-center justify-center gap-2"
-      //       >
-      //         <Star className="w-5 h-5" />
-      //         Start Game
-      //         <Star className="w-5 h-5" />
-      //       </button>
-
-      //       <Link to="/games" className="block mt-4">
-      //         <button className="w-full px-6 py-3 bg-gray-600/50 hover:bg-gray-600/70 text-white font-medium rounded-xl
-      //                          transition-all duration-200 flex items-center justify-center gap-2">
-      //           <ArrowLeft className="w-4 h-4" />
-      //           Back to Menu
-      //         </button>
-      //       </Link>
-      //     </div>
-      //   </div>
-      // </div>
-      <>ho</>
-    );
-  }
 
   // Matchmaking Screen (Online Mode Only)
   if (isOnline && !currentGame) {
@@ -372,10 +270,30 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
                            text-white font-bold rounded-xl shadow-lg hover:shadow-2xl
                            transition-all duration-300 transform hover:scale-105 active:scale-95
                            disabled:cursor-not-allowed disabled:transform-none
-                           flex items-center justify-center gap-2"
+                           flex items-center justify-center gap-3 relative overflow-hidden group"
                 >
-                  <Sparkles className="w-5 h-5" />
-                  {onlineProps?.isConnected ? 'Find Match' : 'Connecting...'}
+                  {/* Animated shine effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
+                                translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                  
+                  {/* Animated search icon */}
+                  <div className="relative">
+                    <svg 
+                      className="w-6 h-6 animate-[spin_3s_linear_infinite]" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2"
+                    >
+                      <circle cx="11" cy="11" r="8" className="animate-pulse" />
+                      <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                      <circle cx="11" cy="11" r="4" fill="currentColor" opacity="0.5" className="animate-ping" />
+                    </svg>
+                  </div>
+                  
+                  <span className="relative z-10">
+                    {onlineProps?.isConnected ? 'Find Match' : 'Connecting...'}
+                  </span>
                 </button>
 
                 <Link to="/SecondGame">
@@ -449,23 +367,13 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
 
       <div className="relative z-10 w-full max-w-4xl">
         {/* Header Section */}
-        <div className="flex items-center justify-between mb-6 px-2">
-          <Link to="/SecondGame">
-            <button className="px-4 py-2 bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm rounded-xl
-                             transition-all duration-200 flex items-center gap-2 border border-gray-600/50">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-          </Link>
-
+        <div className=" mask-b-from-green-600 flex items-center justify-center mb-6 px-2">
           <div className="flex items-center gap-3">
             {isOnline ? <Users className="w-6 h-6 text-cyan-400" /> : <User className="w-6 h-6 text-cyan-400" />}
             <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-400 to-green-400 bg-clip-text text-transparent">
               {isOnline ? 'Online Match' : 'Local Game'}
             </h1>
           </div>
-
-          <div className="w-20"></div>
         </div>
 
         {/* Score Board */}
@@ -481,10 +389,10 @@ const TicTacGame = ({ mode, onlineProps }: TicTacGameProps) => {
           </div>
 
           {!isOnline && (
-            <div className="flex flex-col items-center p-4 rounded-2xl bg-gray-800/50 border border-yellow-400/30">
-              <Star className="w-6 h-6 mb-2 text-yellow-400" />
+            <div className="flex flex-col items-center p-4 rounded-2xl bg-gray-800/50 border-0">
+              <Star className="w-6 h-6 mb-2 text-gray-400" />
               <p className="text-sm text-gray-400 mb-1">Draws</p>
-              <p className="text-3xl font-black text-yellow-400">{scores.draws}</p>
+              <p className="text-3xl font-black text-gray-400">{scores.draws}</p>
             </div>
           )}
 

@@ -53,11 +53,11 @@ app.register(cookie, {
 
 
 app.addHook("preHandler", authMiddleware);
+app.register(tictacService); // Register first to handle /api/* (non-v1) routes
 app.register(chatService);
 app.register(userAuthService);
 app.register(gameService);
 app.register(NotificationService);
-app.register(tictacService);
 const start = async () => {
   try {
     await setupSocketGateway(app);
