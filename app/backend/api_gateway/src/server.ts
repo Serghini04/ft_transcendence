@@ -8,6 +8,7 @@ import { userAuthService } from "./services/userAuth.service";
 import cookie from "@fastify/cookie"; 
 import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
+import { tictacService } from "./services/tictac.service";
 
 // Load environment variables FIRST
 dotenv.config();
@@ -31,16 +32,11 @@ app.log.info({
 
 app.register(cors, {
   origin: (origin, cb) => {
-    const allowedOrigins = [
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow all origins in development
+    if (!origin) {
       cb(null, true);
     } else {
-      app.log.warn(`CORS rejected: ${origin}`);
-      cb(null, false);
+      cb(null, true);
     }
   },
   credentials: true,
@@ -57,6 +53,7 @@ app.register(cookie, {
 
 
 app.addHook("preHandler", authMiddleware);
+app.register(tictacService); // Register first to handle /api/* (non-v1) routes
 app.register(chatService);
 app.register(userAuthService);
 app.register(gameService);

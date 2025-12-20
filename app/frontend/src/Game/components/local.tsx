@@ -48,7 +48,6 @@ export default function Local() {
   const theme = gameThemes[map] || gameThemes.Classic;
   const speedMultiplier = { Slow: 1, Normal: 1.8, Fast: 3 };
   
-
   const lScoreRef = useRef(0);
   const rScoreRef = useRef(0);
 
@@ -106,7 +105,7 @@ export default function Local() {
     const height = canvas.height;
 
     const ballRef = {
-      current: { x: width / 2, y: height / 2, dx: 4 * scale * speedMultiplier[speed], dy: 3 * scale * speedMultiplier[speed], size: 8 * scale, visible: true },
+      current: { x: width / 2, y: height / 2, dx: 4 * scale * speedMultiplier[speed as SpeedType], dy: 3 * scale * speedMultiplier[speed as SpeedType], size: 8 * scale, visible: true },
     } as const as { current: { x: number; y: number; dx: number; dy: number; size: number; visible: boolean } };
 
     const paddle1Ref = { current: { x: 0, y: height / 2 - 45 * scale, width: 10 * scale, height: 90 * scale, speed: 6 * scale} };
@@ -128,8 +127,8 @@ export default function Local() {
       paddle2Ref.current.width = 90 * scale;
       paddle2Ref.current.height = 10 * scale;
 
-      ballRef.current.dx = 3 * scale * speedMultiplier[speed];
-      ballRef.current.dy = 4 * scale * speedMultiplier[speed];
+      ballRef.current.dx = 3 * scale * speedMultiplier[speed as SpeedType];
+      ballRef.current.dy = 4 * scale * speedMultiplier[speed as SpeedType];
 
       powerUpRef.current.width = 150 * scale;
       powerUpRef.current.height = 12 * scale;
@@ -174,14 +173,14 @@ export default function Local() {
       setTimeout(() => {
         ball.x = width / 2;
         ball.y = height / 2;
-        ball.dx = 3 * direction * scale * speedMultiplier[speed];
-        ball.dy = 3 * scale * speedMultiplier[speed];
+        ball.dx = 3 * direction * scale * speedMultiplier[speed as SpeedType];
+        ball.dy = 3 * scale * speedMultiplier[speed as SpeedType];
         ball.visible = true;
         scoredRef.current = false;
         if (isVertical)
         {
-          ball.dy = 3 * direction * scale * speedMultiplier[speed];
-          ball.dx = 3 * scale * speedMultiplier[speed];
+          ball.dy = 3 * direction * scale * speedMultiplier[speed as SpeedType];
+          ball.dx = 3 * scale * speedMultiplier[speed as SpeedType];
         }
       }, 1000);
     };

@@ -14,6 +14,9 @@ import Tournament from "./Game/components/tournament";
 import Online from "./Game/components/online";
 import GameSetup from "./Game/components/setup";
 import { useState } from "react";
+import GameSelection from './TicTac/GameSelection';
+import TicTac from './TicTac/TicTac';
+import OnlineTicTac from './TicTac/OnlineTicTac';
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,6 +42,9 @@ export default function App() {
             <Route path="online" element={<Online />} />
             <Route path="challenge" element={<Online />} />
           </Route>
+          <Route path="/SecondGame" element={<GameSelection />} />
+          <Route path="/tictac" element={<TicTac />} />
+          <Route path="/tictac/online" element={<OnlineTicTac />} />
         </Route>
       </Routes>
     </Router>

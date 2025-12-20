@@ -81,7 +81,6 @@ export default function Online() {
   };
 
   const theme = gameThemes[map] || gameThemes.Classic;
-  const speedMultiplier = { Slow: 1, Normal: 1.8, Fast: 3 };
 
   // Connect to Socket.IO
   useEffect(() => {

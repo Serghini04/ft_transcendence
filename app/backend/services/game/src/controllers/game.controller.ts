@@ -59,9 +59,9 @@ interface Room {
 export const rooms = new Map<string, Room>();
 
 const speedMap: Record<string, number> = {
-  Slow: 0.8,
-  Normal: 1.3,
-  Fast: 2.5,
+  Slow: 1,
+  Normal: 1.8,
+  Fast: 3,
 };
 
 function initGameState(powerUps: boolean, speed: number): GameState {

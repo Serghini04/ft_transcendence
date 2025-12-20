@@ -11,6 +11,23 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    proxy: {
+      '/api': {
+        target: 'http://api-gateway:8080',
+        changeOrigin: true
+      },
+      '/ws': {
+        target: 'ws://tictac-game:3030',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path) => path
+      },
+      '/socket.io': {
+        target: 'http://api-gateway:8080',
+        changeOrigin: true,
+        ws: true
+      }
+    }
   },
   build: {
     outDir: 'dist',

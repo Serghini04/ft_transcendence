@@ -1,6 +1,6 @@
 import { Kafka, Producer } from "kafkajs";
 
-const KAFKA_BROKER = process.env.KAFKA_BROKER || "localhost:9092";
+const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
 const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "chat-service";
 
 export interface NotificationEvent {
