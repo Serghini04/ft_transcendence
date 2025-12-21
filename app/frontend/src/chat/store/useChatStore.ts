@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
+import { showToast } from '../hooks/useChatToast';
 
 type ContactUser = {
     id: number;
@@ -161,6 +162,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         socket.on("message:error", (e) => get().handleMessageError(e));
         socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
 
+        // Block/Unblock events
+        socket.on("user:blocked", (data: { userId: number, blockedBy: number }) => {
+            console.log("🚫 User blocked event:", data);
+            get().handleBlockEvent(data);
+        });
+
+        socket.on("user:unblocked", (data: { userId: number, unblockedBy: number }) => {
+            console.log("✅ User unblocked event:", data);
+            get().handleUnblockEvent(data);
+        });
+
         set({ socket });
         
         // Connect to game socket for challenge notifications
@@ -178,27 +190,50 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         // Game challenge events
         gameSocket.on("game:challenge:received", (data) => {
             console.log("🎮 Challenge received:", data);
-            const shouldAccept = window.confirm(`${data.challengerName} challenged you to a game! Accept?`);
-            if (shouldAccept) {
-                gameSocket.emit('game:challenge:accept', { challengeId: data.challengeId });
-            } else {
+            
+            showToast({
+                message: `${data.challengerName} challenged you to a game! Click Accept to start playing.`,
+                type: 'challenge',
+                duration: 10000,
+                onAccept: () => {
+                    gameSocket.emit('game:challenge:accept', { challengeId: data.challengeId });
+                }
+            });
+            
+            // Auto-decline after 10 seconds if no action taken
+            setTimeout(() => {
                 gameSocket.emit('game:challenge:decline', { challengeId: data.challengeId });
-            }
+            }, 10000);
         });
         
         gameSocket.on("game:challenge:accepted", (data) => {
             console.log("✅ Challenge accepted!", data);
-            window.location.href = `/game/challenge?roomId=${data.gameRoomId}`;
+            showToast({
+                message: 'Challenge accepted! Redirecting to game...',
+                type: 'success',
+                duration: 2000
+            });
+            setTimeout(() => {
+                window.location.href = `/game/challenge?roomId=${data.gameRoomId}`;
+            }, 1000);
         });
         
         gameSocket.on("game:challenge:declined", (data) => {
             console.log("❌ Challenge declined", data);
-            alert('Challenge was declined');
+            showToast({
+                message: 'Your challenge was declined',
+                type: 'info',
+                duration: 5000
+            });
         });
         
         gameSocket.on("game:challenge:unavailable", (data) => {
             console.log("⚠️ Challenge unavailable", data);
-            alert(data.reason || 'User is not available');
+            showToast({
+                message: data.reason || 'User is not available for a challenge',
+                type: 'error',
+                duration: 5000
+            });
         });
         
         set({ gameSocket });
@@ -458,10 +493,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         set({ unseenMessageCounts: newCounts });
     },
 
-    toggleNotificationsMute: () => {
-        set((state) => ({ isNotificationsMuted: !state.isNotificationsMuted }));
-    },
-
     blockUser: async (userId: number) => {
         const { token } = UseTokenStore.getState();
         try {
@@ -535,6 +566,58 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to refresh contacts:', error);
+        }
+    },
+    
+    handleBlockEvent: (data: { userId: number; blockedBy: number }) => {
+        const { loginId, selectedContact } = get();
+        
+        // If I'm the one being blocked
+        if (loginId === data.userId) {
+            console.log("You have been blocked by user:", data.blockedBy);
+            
+            // Refresh contacts to update block status
+            get().refreshContacts();
+            
+            // If currently chatting with the user who blocked me, show notification
+            if (selectedContact && selectedContact.user.id === data.blockedBy) {
+                showToast({
+                    message: `${selectedContact.user.fullName} has blocked you`,
+                    type: 'error',
+                    duration: 5000
+                });
+            }
+        }
+        // If I'm the one who blocked (update from another device/session)
+        else if (loginId === data.blockedBy) {
+            console.log("Block confirmed from server for user:", data.userId);
+            get().refreshContacts();
+        }
+    },
+
+    handleUnblockEvent: (data: { userId: number; unblockedBy: number }) => {
+        const { loginId, selectedContact } = get();
+        
+        // If I'm the one being unblocked
+        if (loginId === data.userId) {
+            console.log("You have been unblocked by user:", data.unblockedBy);
+            
+            // Refresh contacts to update block status
+            get().refreshContacts();
+            
+            // If currently chatting with the user who unblocked me, show notification
+            if (selectedContact && selectedContact.user.id === data.unblockedBy) {
+                showToast({
+                    message: `${selectedContact.user.fullName} has unblocked you`,
+                    type: 'success',
+                    duration: 5000
+                });
+            }
+        }
+        // If I'm the one who unblocked (update from another device/session)
+        else if (loginId === data.unblockedBy) {
+            console.log("Unblock confirmed from server for user:", data.userId);
+            get().refreshContacts();
         }
     },
 }));

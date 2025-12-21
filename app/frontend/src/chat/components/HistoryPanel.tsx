@@ -2,12 +2,14 @@ import { CircleX, RotateCcw, Sword, Bell, UserX, UserCheck } from "lucide-react"
 import { useChatStore } from "../store/useChatStore";
 import { useState, useEffect } from "react";
 import { UseUserStore, UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { useChatToast } from "../hooks/useChatToast";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
     const {selectedContact, isNotificationsMuted, toggleNotificationsMute, onlineUsers, blockUser, unblockUser} = useChatStore();
     const { user } = UseUserStore();
     const { token } = UseTokenStore();
+    const { showSuccessToast, showErrorToast, showInfoToast } = useChatToast();
     const [challengeStatus, setChallengeStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
     const [isBlocking, setIsBlocking] = useState(false);
     const [matches, setMatches] = useState<any[]>([]);
@@ -149,7 +151,7 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
                 
                 const isOnline = onlineUsers.has(selectedContact.user.id);
                 if (!isOnline) {
-                  alert('User is offline');
+                  showErrorToast('User is currently offline');
                   return;
                 }
                 
@@ -172,16 +174,17 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
                   
                   if (response.ok) {
                     setChallengeStatus('sent');
+                    showSuccessToast(`Challenge sent to ${selectedContact.user.fullName}!`);
                     setTimeout(() => setChallengeStatus('idle'), 3000);
                   } else {
                     const error = await response.json();
-                    alert(error.error || 'Failed to send challenge');
+                    showErrorToast(error.error || 'Failed to send challenge');
                     setChallengeStatus('error');
                     setTimeout(() => setChallengeStatus('idle'), 2000);
                   }
                 } catch (error) {
                   console.error('Challenge error:', error);
-                  alert('Failed to send challenge');
+                  showErrorToast('Failed to send challenge. Please try again.');
                   setChallengeStatus('error');
                   setTimeout(() => setChallengeStatus('idle'), 2000);
                 }
@@ -219,16 +222,22 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
                   let result;
                   if (selectedContact.blockStatus === 'blocked_by_me') {
                     result = await unblockUser(selectedContact.user.id);
+                    if (result.success) {
+                      showSuccessToast(`${selectedContact.user.fullName} has been unblocked`);
+                    } else {
+                      showErrorToast(result.message || 'Failed to unblock user');
+                    }
                   } else {
                     result = await blockUser(selectedContact.user.id);
-                  }
-                  
-                  if (!result.success) {
-                    alert(result.message);
+                    if (result.success) {
+                      showSuccessToast(`${selectedContact.user.fullName} has been blocked`);
+                    } else {
+                      showErrorToast(result.message || 'Failed to block user');
+                    }
                   }
                 } catch (error) {
                   console.error('Block/Unblock error:', error);
-                  alert('An error occurred');
+                  showErrorToast('An error occurred. Please try again.');
                 } finally {
                   setIsBlocking(false);
                 }

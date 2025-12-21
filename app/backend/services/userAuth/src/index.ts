@@ -28,7 +28,7 @@ await app.register(cors, {
 
 
 
-// db.prepare(`DROP TABLE IF EXISTS users`).run();
+db.prepare(`DROP TABLE IF EXISTS users`).run();
 // Create table if not exists
 
 db.prepare(`
