@@ -48,7 +48,15 @@ type ShowOtpInputState = {
 
 type imageDataUrlState = {
   BgImageDataUrl: string;
+  profileImageDataUrl: string;
+  setProfileImageDataUrl: (pimageDataURL: string) => void;
   setBgImageDataUrl: (imageDataURL: string) => void;
+};
+type photosFile = {
+  profileFile: File;
+  bgFile: File;
+  setProfileFile: (profileFile: File) => void;
+  setBgImageFile: (bgFile: File) => void;
 };
 
 type OtpState = {
@@ -131,6 +139,7 @@ export const UseOtpStore = create<OtpState>((set) => ({
   setOtpOriginal: (num) => set({ otpOriginal: num }),
 }));
 
+
 export const UseShowOtpInputStore = create<ShowOtpInputState>((set) => ({
   otpFlag: false,
   setOtpFlag: (flag) => set({ otpFlag: flag }),
@@ -138,7 +147,16 @@ export const UseShowOtpInputStore = create<ShowOtpInputState>((set) => ({
 
 export const UseimageDataUrlStore = create<imageDataUrlState>((set) => ({
   BgImageDataUrl: "",
+  profileImageDataUrl: "",
+  setProfileImageDataUrl: (url) => set({ profileImageDataUrl: url }),
   setBgImageDataUrl: (url) => set({ BgImageDataUrl: url }),
+}));
+
+export const UsephotosFileStore = create<photosFile>((set) => ({
+  profileFile: null,
+  bgFile: null,
+  setProfileFile: (file) => set({ profileFile: file }),
+  setBgImageFile: (file) => set({ bgFile: file }),
 }));
 
 export const UseBioStore = create(

@@ -89,7 +89,7 @@ export default function LoginSettings()
 					<Eye size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 					<EyeClosed size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 				</Input>
-				<p className="absolute top-[15.3vw] text-red-500 text-xs mt-[-0.2vw] ml-[0.5vw]">{errormsg}</p>
+				<p className="absolute top-[15.3vw] text-red-500 text-[0.7vw] mt-[0.7vw] md:mt-[0.2vw] lg:mt-[0.3vw] xl:mt-[-0.9vw] ml-[0.5vw]">{errormsg}</p>
 				<p className="absolute top-[16vw] xl:top-[14.5vw] left-[16vw] text-white font-outfit text-[0.8vw] hover:text-[#D2D2D2]" onClick={forgotPassword}>Forgotten password</p>
 				<div className="flex justify-center mt-[1vw]">
 					<LSButton  text="Login"/>

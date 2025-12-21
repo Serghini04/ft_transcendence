@@ -1,7 +1,7 @@
 import fastify from "fastify";
 import db from "./db.ts";
 import bcrypt from "bcrypt";
-import { Console, error } from "console";
+import { Console, error, profile } from "console";
 import {OAuth2Client } from "google-auth-library";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { request } from "http";
@@ -11,6 +11,11 @@ import cookie from "@fastify/cookie";
 import { generateOTP, sendOTPEmail } from "./2FA.ts";
 import { access } from "fs";
 import { str } from "ajv";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import multipart, { MultipartFile } from "@fastify/multipart"
+import { pipeline } from "stream/promises";
 
 
 interface User {
@@ -20,6 +25,9 @@ interface User {
   password?: string;
   photoURL?: string;
   bgPhotoURL?: string;
+  profileVisibility?: boolean;
+  showNotifications?: boolean;
+  bio?: string;
 }
 
 
@@ -31,6 +39,13 @@ await app.register(cors, {
   origin: ["http://localhost:5173"],
   credentials: true,
 });
+await app.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+    files: 2,
+  }
+});
+
 
 
 
@@ -47,7 +62,9 @@ db.prepare(`
     password TEXT NOT NULL,
     photoURL TEXT,
     bgPhotoURL TEXT,
-    profileVisibility BOOLEAN DEFAULT 1
+    bio TEXT NOT NULL,
+    profileVisibility BOOLEAN DEFAULT true,
+    showNotifications BOOLEAN DEFAULT true
     )
     `).run();
     db.prepare(`
@@ -57,7 +74,9 @@ db.prepare(`
         password TEXT NOT NULL,
         photoURL TEXT,
         bgPhotoURL TEXT,
-        profileVisibility BOOLEAN DEFAULT 1,
+        bio TEXT NOT NULL,
+        profileVisibility BOOLEAN DEFAULT true,
+        showNotifications BOOLEAN DEFAULT true,
         expiry INTEGER NOT NULL
         )
     `).run();
@@ -265,7 +284,7 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
       return ;
     }
 
-    db.prepare("INSERT INTO users (name, email, password, photoURL, bgPhotoURL) VALUES (?, ?, ?, ?, ?)").run(pending.name, pending.email, pending.password, pending.photoURL, pending.bgPhotoURL);
+    db.prepare("INSERT INTO users (name, email, password, photoURL, bgPhotoURL, bio) VALUES (?, ?, ?, ?, ?, ?)").run(pending.name, pending.email, pending.password, pending.photoURL, pending.bgPhotoURL, pending.bio);
 
     // Remove from pending_users
     db.prepare("DELETE FROM temp_users WHERE email = ?").run(emailOrName);
@@ -343,7 +362,7 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       //stor in db
       const expiry = Date.now() + 10 * 60 * 1000; 
-      db.prepare("INSERT INTO temp_users (name, email, password, expiry, photoURL, bgPhotoURL) VALUES (?, ?, ?, ?, ?, ?)").run(name, email, hashedPassword, expiry, photoURL, bgPhotoURL);
+      db.prepare("INSERT INTO temp_users (name, email, password, expiry, photoURL, bgPhotoURL, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(name, email, hashedPassword, expiry, photoURL, bgPhotoURL, "");
 
       //save user info for sending back to client
       const row = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(email) as User;
@@ -410,7 +429,10 @@ app.post("/api/v1/auth/setting/getUserData", async (request, reply) => {
       name: user.name,
       email: user.email,
       photoURL: user.photoURL,
-      bgPhotoURL: user.bgPhotoURL
+      bgPhotoURL: user.bgPhotoURL,
+      profileVisibility: user.profileVisibility,
+      showNotifications: user.showNotifications,
+      bio: user.bio
     }
     reply.status(201).send({ 
       message: "User data fetched successfully",
@@ -422,22 +444,73 @@ app.post("/api/v1/auth/setting/getUserData", async (request, reply) => {
   }
 });
 
+const uploadDir = path.join("../../../", "frontend/public/uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
+app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
+  const parts = req.parts();
+
+  let photoURL: string | null = null;
+  let bgPhotoURL: string | null = null;
+  let userId: number | null = null;
+
+  for await (const part of parts) {
+    // ✅ handle fields
+    if (part.type === "field" && part.fieldname === "id") {
+      userId = Number(part.value);
+    }
+
+    // ✅ handle files
+    if (part.type === "file") {
+      if (!userId) continue;
+
+      const filePart = part as MultipartFile;
+      const ext = path.extname(filePart.filename);
+      let filename = "";
+
+      if (part.fieldname === "photo") {
+        filename = `user-${userId}-photo${ext}`;
+        photoURL = `public/uploads/${filename}`;
+      }
+
+      if (part.fieldname === "bgPhoto") {
+        filename = `user-${userId}-bg${ext}`;
+        bgPhotoURL = `public/uploads/${filename}`;
+      }
+
+      if (!filename) continue;
+
+      const savePath = path.join(uploadDir, filename);
+      await pipeline(filePart.file, fs.createWriteStream(savePath));
+    }
+  }
+
+  reply.send({
+    photoURL,
+    bgPhotoURL,
+  });
+});
+
+
 app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
   try {
-    const {id , name, password, newpassword, cnewpassword, photoURL, bgPhotoURL, flag} = (request.body as {id: number; name: string; email: string; password:string; newpassword: string; cnewpassword:string; photoURL: string; bgPhotoURL: string; flag: string});
+    const {id , name, password, newpassword, cnewpassword, photoURL, bgPhotoURL, profileVisibility, showNotifications, bio} = (request.body as {id: number; name: string; email: string; password:string; newpassword: string; cnewpassword:string; photoURL: string; bgPhotoURL: string; profileVisibility: boolean; showNotifications: boolean; bio: string; });
 
-    const user = db.prepare("SELECT * FROM users WHERE name = ?").get(name) as User;
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User;
     if (user && user.id !== id) {
       reply.status(400).send({ error: "Name already exists", code: "NAME_ALR_EXIST"});
       return ;
     }
-
     if (name !== "")
       db.prepare("UPDATE users SET name = ? WHERE id = ?").run(name, id);
     if (photoURL !== "")
       db.prepare("UPDATE users SET photoURL = ? WHERE id = ?").run(photoURL, id);
     if (bgPhotoURL !== "")
       db.prepare("UPDATE users SET bgPhotoURL = ? WHERE id = ?").run(bgPhotoURL, id);
+    db.prepare("UPDATE users SET profileVisibility = ? WHERE id = ?").run(profileVisibility === true ? 1 : 0, id);
+    db.prepare("UPDATE users SET showNotifications = ? WHERE id = ?").run(showNotifications === true ? 1 : 0, id);
+    if (bio !== "")
+      db.prepare("UPDATE users SET bio = ? WHERE id = ?").run(bio, id);
     if (password !== "" || newpassword !== "" || cnewpassword !== "")
     {
       const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;

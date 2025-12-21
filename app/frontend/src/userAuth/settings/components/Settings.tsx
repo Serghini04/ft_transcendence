@@ -13,12 +13,14 @@ export default function Settings() {
     name: "",
     email: "",
     photoURL: "",
-    bgPhotoURL: "public/profileBG.png"
+    bgPhotoURL: "public/profileBG.png",
+    profileVisibility: true,
+    showNotifications: true,
+    bio: ""
   });
   useEffect(() => {
     async function fetchUserData() {
       try {
-        console.log("----------------------->", user.id);
         const res = await fetch("http://localhost:8080/api/v1/auth/setting/getUserData", {
           method: "POST",
           headers: { "Content-Type": "application/json",
@@ -34,15 +36,18 @@ export default function Settings() {
       name: data.user.name,
       email: data.user.email,
       photoURL: data.user.photoURL,
-      bgPhotoURL: data.user.bgPhotoURL
+      bgPhotoURL: data.user.bgPhotoURL,
+      profileVisibility: Boolean(data.user.profileVisibility),
+      showNotifications: Boolean(data.user.showNotifications),
+      bio: data.user.bio
     });
-
-    } catch (err) {
-      console.error("Error fetching user data:", err);
-    }
+    console.log("USER INFO IN SETTINGS: ", userInfo);
+  } catch (err) {
+    console.error("Error fetching user data:", err);
   }
-    fetchUserData();
-  }, []); 
+}
+fetchUserData();
+}, [token]); 
   return (
     <div
     className="
@@ -59,9 +64,9 @@ export default function Settings() {
       shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_0_#27445E]
       overflow-y-auto
       overflow-x-hidden
+      scrollbar-none
     "
   >
-    {/* 👇 THIS LINE IS THE FIX */}
     <div className="flex-shrink-0">
       <PhotosSide user={userInfo} />
     </div>

@@ -1,9 +1,9 @@
 
 import { Lock, ShieldCheck, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Input from "./Input";
 import { BioInput } from "./BioInput";
-import { UseBioStore, UseSettingsErrorStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { UseBioStore, UseimageDataUrlStore, UsephotosFileStore, UseSettingsErrorStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import { set } from "date-fns";
 
 interface params {
@@ -12,8 +12,8 @@ interface params {
         email: string;
         photoURL: string;
         bgPhotoURL: string;
-        showNotifications: string;
-        profileVisibility: string;
+        showNotifications: boolean;
+        profileVisibility: boolean;
     }
 }
 
@@ -22,18 +22,38 @@ export default function ModifyUserInformation(props: params) {
     const [password, setPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [c_NewPassword, setC_NewPassword] = useState("");
-    const [showNotifications, setShowNotifications] = useState();
-    const [profileVisibility, setProfileVisibility] = useState();
     const {nameErrorMsg, currentPasswordErrorMsg, newPasswordErrorMsg, confirmPasswordErrorMsg, setCurrentPasswordErrorMsg, setNewPasswordErrorMsg, setConfirmPasswordErrorMsg, setNameErrorMsg} = UseSettingsErrorStore();
     // const [c_NewPassword, setC_NewPassword] = useState("");
     const {bio, setBio} = UseBioStore();
     const { token } = UseTokenStore();
     const { user } = UseUserStore();
-    const [activeNotif, setActiveNotif] = useState(false);
-    const [activePvisibility, setActivePvisibility] = useState(false);
-    const flag = (password || newPassword || c_NewPassword) ? "PW" : "NO PW";
+    const [activeNotif, setActiveNotif] = useState(Boolean(props.user.showNotifications));
+    const [activePvisibility, setActivePvisibility] = useState(Boolean(props.user.profileVisibility));
+    const { profileImageDataUrl, BgImageDataUrl } = UseimageDataUrlStore();
+    const { profileFile, bgFile } = UsephotosFileStore();
 
+    useEffect(() => {
+        setActiveNotif(Boolean(props.user.showNotifications));
+        setActivePvisibility(Boolean(props.user.profileVisibility));
+      }, [props.user.showNotifications, props.user.profileVisibility]);
     const changeData = async () => {
+        const formData = new FormData();
+        formData.append("id", String(user.id));
+        if (profileFile) formData.append("photo", profileFile);
+        if (bgFile) formData.append("bgPhoto", bgFile);
+
+        // console.error("PROFILE FILE IN MODIFY USER INFO: ", );
+        const res_one = await fetch("http://localhost:8080/api/v1/auth/setting/uploadPhotos", {
+            method: "POST",
+            body: formData,
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include"
+        });
+        const data_one = await res_one.json();
+        console.log(data_one.photoURL, data_one.bgPhotoURL);
+
+        const finalPhotoURL = data_one.photoURL || profileImageDataUrl;
+        const finalBgPhotoURL = data_one.bgPhotoURL || BgImageDataUrl;
         const res = await fetch("http://localhost:8080/api/v1/auth/setting/updateUserData", {
             method: "POST",
             headers: { "Content-Type": "application/json",
@@ -46,12 +66,11 @@ export default function ModifyUserInformation(props: params) {
             password: password,
             newpassword: newPassword,
             cnewpassword: c_NewPassword,
-            showNotifications: showNotifications,
-            profileVisibility: profileVisibility,
-            photoURL: "",
-            bgPhotoURL: "",
+            showNotifications: activeNotif,
+            profileVisibility: activePvisibility,
+            photoURL: finalPhotoURL,
+            bgPhotoURL: finalBgPhotoURL,
             bio: bio,
-            flag: flag
         })
     });
         const data = await res.json();
@@ -90,10 +109,9 @@ export default function ModifyUserInformation(props: params) {
             setNewPasswordErrorMsg("");
             setConfirmPasswordErrorMsg("");
         }
-        console.log("updateUserData Reponse: ", data);
     }
     return (
-        <div className="grid grid-cols-1 place-content-center lg:place-items-center lg:grid-cols-2 lg:pl-0  gap-8 w-full pt-[5vw] lg:pt-0 lg:mt-[7vw] xl:mt-[1vw]">
+        <div className="grid grid-cols-1 place-content-center lg:place-items-center lg:grid-cols-2 lg:pl-0  gap-8 w-full pt-16 md:pt-20 lg:pt-12 lg:mt-[7vw] xl:mt-[4vw]">
             <div className="flex flex-col w-full md:pl-[15vw] lg:pl-0 lg:w-[30vw] ml-[27vw] md:ml-0 lg:ml-0  xl:ml-[1.4vw] gap-[0.36vw] mb-2  lg:scale-130 xl:scale-100">
                 <div className="flex gap-[0.3vw]">
                     <User color="#ffffff" className="mt-[0.45vw] w-5 h-5 md:w-[2vw] md:h-[2vw]"/>
@@ -111,7 +129,7 @@ export default function ModifyUserInformation(props: params) {
                 </div>
             </div>
             {/* <div className="h-0 w-0 xl:h-[27vw] xl:w-0.5 bg-[#27445E] ml-[1.2vw]"></div> */}
-            <div className="flex flex-col w:full md:pl-[15vw] lg:pl-0 lg:w-[30vw] ml-[27vw] md:ml-0 gap-[0.2vw] mb-2 md:mb-0 lg:col-start-2 lg:row-start-1 lg:scale-130 lg:mt-[-3.5vw] xl:scale-100">
+            <div className="flex flex-col md:pl-[15vw] lg:pl-0 lg:w-[30vw] ml-[27vw] md:ml-0 gap-[0.2vw] mb-2 md:mb-0 lg:col-start-2 lg:row-start-1 lg:scale-130 lg:mt-[-3.5vw] xl:scale-100">
                 <div className="flex gap-[0.3vw] ml-[1.4vw]">
                     <Lock color="#ffffff" className="mt-[0.45vw] w-5 h-5 md:w-[2vw] md:h-[2vw]"/>
                     <h2 className="font-[outfit] text-xl md:text-[2vw]">Security</h2>

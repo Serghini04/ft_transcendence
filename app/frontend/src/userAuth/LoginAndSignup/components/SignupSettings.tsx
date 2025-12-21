@@ -94,7 +94,7 @@ export default function SignuoSettings()
 					<Eye size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 					<EyeClosed size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 				</Input>
-					{errormsg && <p className=" text-red-500 text-[0.8vw] mt-[-0.2vw] ml-[0.5vw]">{errormsg}</p>}
+					{errormsg && <p className=" text-red-500 text-[0.7vw] mt-[-0.3vw] lg:mt-[-0.3rem] xl:mt-[-0.4vw] ml-[0.5vw]">{errormsg}</p>}
 				<div className="flex justify-center mb-[-1vw] mt-[1.1vw]">
 					<LSButton  text="Sign up"/>
 				</div>
