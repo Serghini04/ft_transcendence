@@ -149,6 +149,17 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
               onClick={async () => {
                 if (!selectedContact || !user || !token) return;
                 
+                // Check if user is blocked
+                if (selectedContact.blockStatus === 'blocked_by_me') {
+                  showErrorToast('You have blocked this user. Unblock to send a challenge.');
+                  return;
+                }
+                
+                if (selectedContact.blockStatus === 'blocked_by_them') {
+                  showErrorToast('This user has blocked you. Cannot send challenge.');
+                  return;
+                }
+                
                 const isOnline = onlineUsers.has(selectedContact.user.id);
                 if (!isOnline) {
                   showErrorToast('User is currently offline');
@@ -189,7 +200,12 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
                   setTimeout(() => setChallengeStatus('idle'), 2000);
                 }
               }}
-              disabled={challengeStatus !== 'idle' || !selectedContact || !onlineUsers.has(selectedContact?.user.id)}
+              disabled={
+                challengeStatus !== 'idle' || 
+                !selectedContact || 
+                !onlineUsers.has(selectedContact?.user.id) ||
+                selectedContact?.blockStatus !== 'none'
+              }
               className="flex items-center justify-center gap-2 !bg-[#112434] hover:!bg-[#1A2D42] !border-none rounded-xl py-2.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sword size={16} />
