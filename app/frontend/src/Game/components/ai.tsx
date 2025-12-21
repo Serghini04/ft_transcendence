@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation , useNavigate } from "react-router-dom";
 import { verifyToken } from "../../globalUtils/verifyToken";
 import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import user1Img from "../../assets/images/profiles/hidriouc.png";
+import aiImg from "../../assets/images/ai.png";
+import aiAvatarImg from "../../assets/images/aiAvatar.jpg";
 
 interface Player {
   id: number;
@@ -232,8 +235,8 @@ class AIPlayer {
 
 export default function Ai() {
   const [players, setPlayers] = useState<Players>({
-    first: { id: 0, name: "You", avatar: "/src/assets/images/user1.jpeg" },
-    second: { id: 1, name: "AI Opponent", avatar: "/src/assets/images/ai.png" },
+    first: { id: 0, name: "You", avatar: user1Img },
+    second: { id: 1, name: "AI Opponent", avatar: aiImg },
   });
   const [leftScore, setLeftScore] = useState(0);
   const [rightScore, setRightScore] = useState(0);
@@ -300,12 +303,12 @@ export default function Ai() {
         const data: Player = {
           id: raw.id,
           name: raw.username,
-          avatar: raw.avatarUrl || "/src/assets/images/user1.jpeg",
+          avatar: raw.avatarUrl || user1Img,
         };
         
         setPlayers({
           first: data,
-          second: { id: 1, name: "AI Opponent", avatar: "/src/assets/images/aiAvatar.jpg" },
+          second: { id: 1, name: "AI Opponent", avatar: aiAvatarImg },
         });
         console.log("Fetched user profile:", data);
       } catch (err) {

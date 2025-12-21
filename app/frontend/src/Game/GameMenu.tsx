@@ -1,34 +1,38 @@
 import { motion } from "framer-motion";
 import { ArrowRightIcon } from "lucide-react"; 
 import { Link } from "react-router-dom";
+import tournamentImg from "../assets/images/tournament.png";
+import onlineImg from "../assets/images/online.png";
+import aiImg from "../assets/images/ai.png";
+import localImg from "../assets/images/local.png";
 
 
 const gameModes = [
   {
     title: "Tournament",
     desc: "Compete against the best players and rise through the leaderboard.",
-    img: "/src/assets/images/tournament.png",
+    img: tournamentImg,
     button: "Enter Tournament",
     route: "tournament",
   },
   {
     title: "Play Online",
     desc: "Challenge real opponents across the web in real-time matches.",
-    img: "/src/assets/images/online.png",
+    img: onlineImg,
     button: "Play Online",
     route: "online",
   },
   {
     title: "Play with AI",
     desc: "Test your skills against an intelligent AI opponent.",
-    img: "/src/assets/images/ai.png",
+    img: aiImg,
     button: "Play with AI",
     route: "ai",
   },
   {
     title: "Play Local",
     desc: "Enjoy the game with a friend on the same device.",
-    img: "/src/assets/images/local.png",
+    img: localImg,
     button: "Play with a Friend",
     route: "local",
   },

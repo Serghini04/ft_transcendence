@@ -58,14 +58,16 @@ export default function Online() {
   });
 
   const location = useLocation();
+  type MapType = "Classic" | "Desert" | "Chemistry";
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
-  
+  const typedMap = ["Classic", "Desert", "Chemistry"].includes(map) ? map as MapType : "Classic";
+
   // Check if this is a challenge game (roomId in URL params)
   const searchParams = new URLSearchParams(location.search);
   const roomId = searchParams.get('roomId');
   const isChallenge = !!roomId;
 
-  const gameThemes = {
+  const gameThemes: Record<MapType, { background: string; color: string }> = {
     Classic: {
       background: "bg-[rgba(0,0,0,0.75)]",
       color: "#8ADDD4",
@@ -80,7 +82,7 @@ export default function Online() {
     },
   };
 
-  const theme = gameThemes[map] || gameThemes.Classic;
+  const theme = gameThemes[typedMap];
 
   // Connect to Socket.IO
   useEffect(() => {

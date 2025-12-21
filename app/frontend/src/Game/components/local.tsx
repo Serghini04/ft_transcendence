@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef} from "react";
+import heisenbergImg from "../../assets/images/heisenberg.jpeg";
+import jesseImg from "../../assets/images/jesse.jpeg";
+
+// Define SpeedType for use in speedMultiplier and related code
+type SpeedType = "Slow" | "Normal" | "Fast";
 import { useLocation } from "react-router-dom";
 
 
@@ -14,9 +19,9 @@ interface Players {
 }
 
 export default function Local() {
-  const [players, setPlayers] = useState<Players>({
-    first: { id: 1, name: "Heisenberg", image: "/src/assets/images/heisenberg.jpeg" },
-    second: { id: 2, name: "Jesse Pinkman", image: "/src/assets/images/jesse.jpeg" },
+  const [players] = useState<Players>({
+    first: { id: 1, name: "Heisenberg", image: heisenbergImg },
+    second: { id: 2, name: "Jesse Pinkman", image: jesseImg },
   });
   const [leftScore, setLeftScore] = useState(0);
   const [rightScore, setRightScore] = useState(0);
@@ -30,8 +35,11 @@ export default function Local() {
   // Game options from navigation state 
   const location = useLocation();
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
+  type MapType = "Classic" | "Desert" | "Chemistry";
+  const typedMap = ["Classic", "Desert", "Chemistry"].includes(map) ? (map as MapType) : "Classic";
+  const typedSpeed = speed as SpeedType;
 
-  const gameThemes = {
+  const gameThemes: Record<MapType, { background: string; color: string }> = {
     Classic: {
       background: "bg-[rgba(0,0,0,0.75)]",
       color: "#8ADDD4",
@@ -45,8 +53,8 @@ export default function Local() {
       color: "#A8FF60",
     },
   };
-  const theme = gameThemes[map] || gameThemes.Classic;
-  const speedMultiplier = { Slow: 1, Normal: 1.8, Fast: 3 };
+  const theme = gameThemes[typedMap];
+  const speedMultiplier: Record<SpeedType, number> = { Slow: 1, Normal: 1.8, Fast: 3 };
   
   const lScoreRef = useRef(0);
   const rScoreRef = useRef(0);
@@ -105,7 +113,7 @@ export default function Local() {
     const height = canvas.height;
 
     const ballRef = {
-      current: { x: width / 2, y: height / 2, dx: 4 * scale * speedMultiplier[speed as SpeedType], dy: 3 * scale * speedMultiplier[speed as SpeedType], size: 8 * scale, visible: true },
+      current: { x: width / 2, y: height / 2, dx: 4 * scale * speedMultiplier[typedSpeed], dy: 3 * scale * speedMultiplier[typedSpeed], size: 8 * scale, visible: true },
     } as const as { current: { x: number; y: number; dx: number; dy: number; size: number; visible: boolean } };
 
     const paddle1Ref = { current: { x: 0, y: height / 2 - 45 * scale, width: 10 * scale, height: 90 * scale, speed: 6 * scale} };
@@ -127,8 +135,8 @@ export default function Local() {
       paddle2Ref.current.width = 90 * scale;
       paddle2Ref.current.height = 10 * scale;
 
-      ballRef.current.dx = 3 * scale * speedMultiplier[speed as SpeedType];
-      ballRef.current.dy = 4 * scale * speedMultiplier[speed as SpeedType];
+      ballRef.current.dx = 3 * scale * speedMultiplier[typedSpeed];
+      ballRef.current.dy = 4 * scale * speedMultiplier[typedSpeed];
 
       powerUpRef.current.width = 150 * scale;
       powerUpRef.current.height = 12 * scale;
@@ -173,14 +181,14 @@ export default function Local() {
       setTimeout(() => {
         ball.x = width / 2;
         ball.y = height / 2;
-        ball.dx = 3 * direction * scale * speedMultiplier[speed as SpeedType];
-        ball.dy = 3 * scale * speedMultiplier[speed as SpeedType];
+        ball.dx = 3 * direction * scale * speedMultiplier[typedSpeed];
+        ball.dy = 3 * scale * speedMultiplier[typedSpeed];
         ball.visible = true;
         scoredRef.current = false;
         if (isVertical)
         {
-          ball.dy = 3 * direction * scale * speedMultiplier[speed as SpeedType];
-          ball.dx = 3 * scale * speedMultiplier[speed as SpeedType];
+          ball.dy = 3 * direction * scale * speedMultiplier[typedSpeed];
+          ball.dx = 3 * scale * speedMultiplier[typedSpeed];
         }
       }, 1000);
     };
