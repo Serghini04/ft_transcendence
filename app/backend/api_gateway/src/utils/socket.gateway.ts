@@ -9,7 +9,12 @@ export function setupSocketGateway(app: FastifyInstance) {
   const io = new Server(app.server, {
     path: "/socket.io",
     cors: { origin: true, credentials: true },
-    transports: ["polling", "websocket"],
+    transports: ["websocket", "polling"],
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 30000,
+    maxHttpBufferSize: 1e6,
+    allowUpgrades: true,
   });
 
   const authMiddleware = async (socket: any, next: any) => {
@@ -71,7 +76,10 @@ export function setupSocketGateway(app: FastifyInstance) {
       path: "/socket.io",
       withCredentials: true,
       auth: { userId: user.id },
-      transports: ["websocket", "polling"],
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      timeout: 10000,
     });
 
     socket.onAny((event, ...args) => {

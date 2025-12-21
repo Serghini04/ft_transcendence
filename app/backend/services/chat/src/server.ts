@@ -34,7 +34,7 @@ app.register(chatRoutes, { prefix: "/api/v1/chat"});
 const start = async () => {
   try {
     await app.listen({ port: 3003, host: '0.0.0.0' });
-    await kafkaProducerService.connect();
+    // await kafkaProducerService.connect();
     app.log.info("Kafka producer connected successfully");
     app.log.info("Chat Service running at http://0.0.0.0:3003");
   } catch (err) {

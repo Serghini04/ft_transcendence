@@ -15,7 +15,6 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     
-    // Fetch match history when contact is selected
     useEffect(() => {
       const fetchMatchHistory = async () => {
         if (!selectedContact || !user || !token) return;
@@ -211,22 +210,6 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
               <Sword size={16} />
               {challengeStatus === 'sending' ? 'Sending...' : challengeStatus === 'sent' ? '✓ Challenge Sent!' : challengeStatus === 'error' ? '❌ Error' : 'Launch a challenge'}
             </button>
-
-            <div className="flex items-center justify-between bg-[#112434] rounded-xl py-3 px-4">
-              <div className="flex items-center gap-3">
-                <Bell size={16} />
-                Mute notifications
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={isNotificationsMuted}
-                  onChange={toggleNotificationsMute}
-                />
-                <div className="w-9 h-5 bg-gray-600 rounded-full peer peer-checked:bg-[#1EC49F] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-4 after:w-4 after:rounded-full after:transition-all peer-checked:after:translate-x-full"></div>
-              </label>
-            </div>
 
             <button 
               onClick={async () => {

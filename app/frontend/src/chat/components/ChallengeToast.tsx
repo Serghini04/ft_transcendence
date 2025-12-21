@@ -20,15 +20,12 @@ export function ChallengeToast({
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
-    // Trigger entrance animation
     setTimeout(() => setIsVisible(true), 10);
 
-    // Auto-hide timer
     const hideTimer = setTimeout(() => {
       handleClose();
     }, autoHideDuration);
 
-    // Progress bar animation
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         const newProgress = prev - (100 / (autoHideDuration / 100));

@@ -34,8 +34,7 @@ export const showToast = (options: ToastOptions) => {
   
   const container = getToastContainer();
   const toastId = `toast-${Date.now()}-${Math.random()}`;
-  
-  // Remove any existing toasts
+
   activeToasts.forEach(({ root, element }) => {
     root.unmount();
     element.remove();

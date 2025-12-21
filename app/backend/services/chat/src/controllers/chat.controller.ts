@@ -53,7 +53,6 @@ async function blockUser(req: FastifyRequest, res: FastifyReply) {
     const result = chatRepo.blockUser(userId, id);
     
     if (result.success) {
-        // Emit socket event to notify the blocked user
         const io = req.server.io;
         if (io) {
             const chatNS = io.of("/chat");
