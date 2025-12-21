@@ -166,14 +166,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         socket.on("message:error", (e) => get().handleMessageError(e));
         socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
 
-        // Block/Unblock events
         socket.on("user:blocked", (data: { userId: number, blockedBy: number }) => {
-            console.log("🚫 User blocked event:", data);
             get().handleBlockEvent(data);
         });
 
         socket.on("user:unblocked", (data: { userId: number, unblockedBy: number }) => {
-            console.log("✅ User unblocked event:", data);
             get().handleUnblockEvent(data);
         });
 
@@ -323,19 +320,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     },
 
     addMessage: (message) => {
-        console.log("📝 Adding message:", message);
         set((state) => {
-            // Check for duplicates before adding
             const exists = state.messages.some(msg => 
                 msg.id === message.id || 
                 (msg.text === message.text && msg.timestamp === message.timestamp && msg.from === message.from)
             );
             
-            if (exists) {
-                console.log("⚠️ Duplicate message detected in addMessage, skipping");
+            if (exists)
                 return state;
-            }
-            
             return { messages: [...state.messages, message] };
         });
     },
@@ -348,10 +340,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             return;
         }
         
-        if (!loginId) {
-            console.error("No loginId");
+        if (!loginId)
             return;
-        }
 
         const messageId = generateMessageId();
         const timestamp = new Date().toISOString();
@@ -383,7 +373,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     },
 
     handleIncomingMessage: (messageData) => {
-        console.log("🔔 Incoming message received:", messageData);
         const { from, message, timestamp, id } = messageData;
         const { selectedContact, loginId, messages } = get();
 
@@ -395,10 +384,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             currentMessagesCount: messages.length
         });
 
-        if (from === loginId) {
-            console.log("⚠️ Ignoring message from self");
+        if (from === loginId)
             return;
-        }
 
         // Check if this message already exists
         const messageExists = messages.some(msg => 
@@ -406,13 +393,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             (msg.text === message && msg.timestamp === timestamp && msg.from === from)
         );
 
-        if (messageExists) {
-            console.log("⚠️ Message already exists, skipping duplicate");
+        if (messageExists)
             return;
-        }
 
         if (selectedContact && selectedContact.user.id === from && loginId) {
-            console.log("✅ Adding incoming message to current chat");
             const newMessage: Message = {
                 id: id || generateMessageId(),
                 text: message,
@@ -423,38 +407,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 status: 'sent'
             };
             
-            // Use set directly to ensure state update triggers re-render
             set((state) => ({
                 messages: [...state.messages, newMessage]
             }));
-            
-            console.log("✅ Message added, new count:", get().messages.length);
         } else {
-            console.log("📬 Message from different user, incrementing unseen count");
             get().incrementUnseenMessages(from);
         }
     },
 
     handleMessageSent: (messageData) => {
-        console.log("✉️ Message sent confirmation:", messageData);
         const { id: realId, message, timestamp, from, to } = messageData;
         const { selectedContact, loginId, messages } = get();
         
-        if (!selectedContact || !loginId) {
-            console.log("⚠️ No selected contact or loginId");
+        if (!selectedContact || !loginId)
             return;
-        }
         
         const isCurrentConversation = 
             (from === loginId && to === selectedContact.user.id) || 
             (from === selectedContact.user.id && to === loginId);
             
-        if (!isCurrentConversation) {
-            console.log("⚠️ Message sent confirmation for different conversation");
+        if (!isCurrentConversation)
             return;
-        }
         
-        // Find the optimistic message by text and status
         const existingMessage = messages.find(msg => 
             msg.text === message && 
             msg.status === 'sending' &&
@@ -463,7 +437,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         );
 
         if (existingMessage) {
-            console.log("✅ Updating optimistic message with real ID:", realId);
             set((state) => ({
                 messages: state.messages.map(msg => {
                     if (msg.id === existingMessage.id) {
@@ -482,7 +455,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             const messageWithRealIdExists = messages.some(msg => msg.id === realId);
             
             if (!messageWithRealIdExists) {
-                console.log("📝 Adding new message from sent confirmation");
                 const newMessage: Message = {
                     id: realId,
                     text: message,
@@ -496,11 +468,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 set((state) => ({
                     messages: [...state.messages, newMessage]
                 }));
-            } else {
-                console.log("⚠️ Message with real ID already exists, skipping");
             }
         }
-        
         // Clean up any duplicates
         get().deduplicateMessages();
     },
@@ -641,11 +610,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     handleBlockEvent: (data: { userId: number; blockedBy: number }) => {
         const { loginId, selectedContact } = get();
         
-        // If I'm the one being blocked
         if (loginId === data.userId) {
             console.log("You have been blocked by user:", data.blockedBy);
-            
-            // Refresh contacts to update block status
             get().refreshContacts();
             
             // If currently chatting with the user who blocked me, show notification

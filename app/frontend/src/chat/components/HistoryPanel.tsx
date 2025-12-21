@@ -14,7 +14,7 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
     const [isBlocking, setIsBlocking] = useState(false);
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    
+
     useEffect(() => {
       const fetchMatchHistory = async () => {
         if (!selectedContact || !user || !token) return;
@@ -146,9 +146,9 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
           <div className="mt-6 flex flex-col gap-3 w-full">
             <button 
               onClick={async () => {
-                if (!selectedContact || !user || !token) return;
-                
-                // Check if user is blocked
+                if (!selectedContact || !user || !token)
+                  return;
+
                 if (selectedContact.blockStatus === 'blocked_by_me') {
                   showErrorToast('You have blocked this user. Unblock to send a challenge.');
                   return;
