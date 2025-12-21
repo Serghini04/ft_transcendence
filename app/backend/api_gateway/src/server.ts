@@ -10,7 +10,6 @@ import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
 import { tictacService } from "./services/tictac.service";
 
-// Load environment variables FIRST
 dotenv.config();
 
 const app = Fastify({
@@ -23,7 +22,6 @@ const app = Fastify({
   },
 });
 
-// Log environment check
 app.log.info({
   hasJwtSecret: !!process.env.JWT_SECRET,
   hasJwtRefresh: !!process.env.JWT_REFRESH,

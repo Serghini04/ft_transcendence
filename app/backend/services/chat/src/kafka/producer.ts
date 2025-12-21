@@ -57,10 +57,13 @@ export class KafkaProducerService {
   }
 
   async publishNotification(event: NotificationEvent): Promise<void> {
-    if (!this.isConnected)
+    if (!this.isConnected) {
+      console.error("❌ Cannot publish notification: Producer not connected");
       return;
+    }
 
     try {
+      console.log("📤 Publishing notification to Kafka topic 'notifications':", event);
       await this.producer.send({
         topic: "notifications",
         messages: [
@@ -73,13 +76,12 @@ export class KafkaProducerService {
           },
         ],
       });
-      console.log(`Notification event published for user ${event.userId}`);
+      console.log(`✅ Notification event published successfully for user ${event.userId}`);
     } catch (error) {
-      console.error("Failed to publish notification event:", error);
+      console.error("❌ Failed to publish notification event:", error);
+      throw error;
     }
-  }
-
-  async publishNewMessageNotification(recipientId: number, senderName: string, messagePreview: string, timestamp: Date | string): Promise<void> {
+  }  async publishNewMessageNotification(recipientId: number, senderName: string, messagePreview: string, timestamp: Date | string): Promise<void> {
     const event: NotificationEvent = {
       userId: recipientId,
       title: `New message from ${senderName}`,

@@ -1,6 +1,8 @@
 import './index.css';
+import 'react-toastify/dist/ReactToastify.css';
 
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { ToastContainer } from 'react-toastify';
 import MainLayout from './components/MainLayout';
 import Home from './userAuth/dashboard/Home';
 import Settings from './userAuth/settings/components/Settings';
@@ -21,32 +23,46 @@ import OnlineTicTac from './TicTac/OnlineTicTac';
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <Router>
-      <Routes>
+    <>
+      <Router>
+        <Routes>
 
-        {/* Auth is outside MainLayout */}
-        <Route path="/auth" element={<Auth />} />
+          {/* Auth is outside MainLayout */}
+          <Route path="/auth" element={<Auth />} />
 
-        {/* All other routes use MainLayout */}
-        <Route element={<MainLayout menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/settings/*" element={<Settings />} />
-          <Route path="/game" element={<Game menuOpen={menuOpen} />}>
-            <Route index element={<GameMenu />} />
-            <Route path="setup" element={<GameSetup />} />
-            <Route path="tournament" element={<Tournament />} />
-            <Route path="ai" element={<Ai />} />
-            <Route path="local" element={<Local />} />
-            <Route path="online" element={<Online />} />
-            <Route path="challenge" element={<Online />} />
+          {/* All other routes use MainLayout */}
+          <Route element={<MainLayout menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/settings/*" element={<Settings />} />
+            <Route path="/game" element={<Game menuOpen={menuOpen} />}>
+              <Route index element={<GameMenu />} />
+              <Route path="setup" element={<GameSetup />} />
+              <Route path="tournament" element={<Tournament />} />
+              <Route path="ai" element={<Ai />} />
+              <Route path="local" element={<Local />} />
+              <Route path="online" element={<Online />} />
+              <Route path="challenge" element={<Online />} />
+              <Route path="SecondGame" element={<GameSelection />} />
+            <Route path="tictac" element={<TicTac />} />
+            <Route path="tictac/online" element={<OnlineTicTac />} />
+            </Route>
           </Route>
-          <Route path="/SecondGame" element={<GameSelection />} />
-          <Route path="/tictac" element={<TicTac />} />
-          <Route path="/tictac/online" element={<OnlineTicTac />} />
-        </Route>
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+      <ToastContainer 
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick={true}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
+    </>
   );
 }

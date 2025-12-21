@@ -44,11 +44,15 @@ export class KafkaConsumerService {
       return;
 
     try {
+      console.log("Connecting Kafka consumer...");
       await this.consumer.connect();
+      console.log("Subscribing to 'notifications' topic...");
       await this.consumer.subscribe({ topic: "notifications", fromBeginning: false });
       
+      console.log("Starting consumer run...");
       await this.consumer.run({
         eachMessage: async (payload: EachMessagePayload) => {
+          console.log("🎯 eachMessage handler called!");
           await this.handleMessage(payload);
         },
       });

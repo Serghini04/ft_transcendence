@@ -15,7 +15,7 @@ type Contact = {
     avatarUrl: string;
   };
   unseenMessages: number;
-  isBlocked: boolean;
+  blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
 export default function ContactsList({ closeSidebar }: any) {
