@@ -5,10 +5,10 @@ export async function userAuthService(app: FastifyInstance) {
   app.log.info("Registering User Auth Service proxy...");
 
   app.register(proxy, {
-    upstream: "http://localhost:3004",
+    upstream: "http://user_auth:3004",
     prefix: "/api/v1/auth",
     rewritePrefix: "/api/v1/auth",
-    http2: false,
+    // http2: false,
     
     replyOptions: {
       rewriteRequestHeaders: (originalReq, headers) => {

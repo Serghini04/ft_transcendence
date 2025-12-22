@@ -69,7 +69,7 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
     // Fetch challenger profile
     let challengerData;
     try {
-      const challengerRes = await fetch(`http://api-gateway:8080/api/v1/game/user/${challengerId}`, {
+      const challengerRes = await fetch(`http://localhost:8080/api/v1/game/user/${challengerId}`, {
         method: "GET",
         headers: { 
           Authorization: request.headers.authorization || '',
