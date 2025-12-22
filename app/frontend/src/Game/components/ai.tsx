@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation , useNavigate } from "react-router-dom";
 import { verifyToken } from "../../globalUtils/verifyToken";
 import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
-import user1Img from "../../assets/images/profiles/hidriouc.png";
-import aiImg from "../../assets/images/ai.png";
 import aiAvatarImg from "../../assets/images/aiAvatar.jpg";
+import user1Img from "../../assets/images/aiAvatar.jpg";
 
 interface Player {
   id: number;
@@ -43,7 +42,7 @@ class AIPlayer {
       case "hard":
         this.difficulty = 0.95;
         this.updateInterval = 800;
-        this.reactionDelay = 200;
+        this.reactionDelay = 300;
         break;
     }
   }
@@ -236,7 +235,7 @@ class AIPlayer {
 export default function Ai() {
   const [players, setPlayers] = useState<Players>({
     first: { id: 0, name: "You", avatar: user1Img },
-    second: { id: 1, name: "AI Opponent", avatar: aiImg },
+    second: { id: 1, name: "AI Opponent", avatar: aiAvatarImg },
   });
   const [leftScore, setLeftScore] = useState(0);
   const [rightScore, setRightScore] = useState(0);
