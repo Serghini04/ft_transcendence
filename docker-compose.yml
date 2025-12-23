@@ -368,6 +368,9 @@ services:
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
+    depends_on:
+      - api-gateway
+      - tictac-game
     networks:
       - ft_Transc
     restart: unless-stopped

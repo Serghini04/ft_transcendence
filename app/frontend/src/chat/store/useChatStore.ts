@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
 import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
+import { showToast } from '../hooks/useChatToast';
 
 type ContactUser = {
     id: number;
@@ -14,7 +15,7 @@ type Contact = {
     id: number;
     user: ContactUser;
     unseenMessages: number;
-    isBlocked: boolean;
+    blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
 type Message = {
@@ -33,7 +34,7 @@ type ChatStore = {
     gameSocket: Socket | null;
     selectedContact: Contact | null;
     messages: Message[];
-    contacts: ContactUser[];
+    contacts: Contact[];
     onlineUsers: Set<number>;
     unseenMessageCounts: Map<number, number>;
     isNotificationsMuted: boolean;
@@ -49,12 +50,19 @@ type ChatStore = {
     incrementUnseenMessages: (contactId: number) => void;
     initializeUnseenCounts: (contacts: Contact[]) => void;
     toggleNotificationsMute: () => void;
+    blockUser: (userId: number) => Promise<{ success: boolean; message: string }>;
+    unblockUser: (userId: number) => Promise<{ success: boolean; message: string }>;
+    setContacts: (contacts: Contact[]) => void;
+    fetchContacts: () => Promise<void>;
+    refreshContacts: () => Promise<void>;
 
     handleIncomingMessage: (messageData: any) => void;
     handleMessageSent: (messageData: any) => void;
     handleMessageError: (errorData: any) => void;
     updateMessageStatus: (messageId: string | number, status: Message['status']) => void;
     deduplicateMessages: () => void;
+    handleBlockEvent: (data: { userId: number; blockedBy: number }) => void;
+    handleUnblockEvent: (data: { userId: number; unblockedBy: number }) => void;
 };
 
 const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -105,10 +113,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         const socket = io("http://localhost:8080/chat", {
             withCredentials: true,
             auth: { token },
-            transports: ['polling', 'websocket'],
+            transports: ['websocket'],
             path: '/socket.io',
             reconnection: true,
             reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            timeout: 10000,
+            upgrade: false,
+            forceNew: false,
         });
 
         socket.io.on("error", (err) => console.error("Socket.IO manager error", err));
@@ -158,6 +170,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         socket.on("message:error", (e) => get().handleMessageError(e));
         socket.on("users:online", (ids) => set({ onlineUsers: new Set(ids) }));
 
+        socket.on("user:blocked", (data: { userId: number, blockedBy: number }) => {
+            get().handleBlockEvent(data);
+        });
+
+        socket.on("user:unblocked", (data: { userId: number, unblockedBy: number }) => {
+            get().handleUnblockEvent(data);
+        });
+
         set({ socket });
         
         // Connect to game socket for challenge notifications
@@ -175,27 +195,50 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         // Game challenge events
         gameSocket.on("game:challenge:received", (data) => {
             console.log("🎮 Challenge received:", data);
-            const shouldAccept = window.confirm(`${data.challengerName} challenged you to a game! Accept?`);
-            if (shouldAccept) {
-                gameSocket.emit('game:challenge:accept', { challengeId: data.challengeId });
-            } else {
+            
+            showToast({
+                message: `${data.challengerName} challenged you to a game! Click Accept to start playing.`,
+                type: 'challenge',
+                duration: 10000,
+                onAccept: () => {
+                    gameSocket.emit('game:challenge:accept', { challengeId: data.challengeId });
+                }
+            });
+            
+            // Auto-decline after 10 seconds if no action taken
+            setTimeout(() => {
                 gameSocket.emit('game:challenge:decline', { challengeId: data.challengeId });
-            }
+            }, 10000);
         });
         
         gameSocket.on("game:challenge:accepted", (data) => {
             console.log("✅ Challenge accepted!", data);
-            window.location.href = `/game/challenge?roomId=${data.gameRoomId}`;
+            showToast({
+                message: 'Challenge accepted! Redirecting to game...',
+                type: 'success',
+                duration: 2000
+            });
+            setTimeout(() => {
+                window.location.href = `/game/challenge?roomId=${data.gameRoomId}`;
+            }, 1000);
         });
         
         gameSocket.on("game:challenge:declined", (data) => {
             console.log("❌ Challenge declined", data);
-            alert('Challenge was declined');
+            showToast({
+                message: 'Your challenge was declined',
+                type: 'info',
+                duration: 5000
+            });
         });
         
         gameSocket.on("game:challenge:unavailable", (data) => {
             console.log("⚠️ Challenge unavailable", data);
-            alert(data.reason || 'User is not available');
+            showToast({
+                message: data.reason || 'User is not available for a challenge',
+                type: 'error',
+                duration: 5000
+            });
         });
         
         set({ gameSocket });
@@ -281,9 +324,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     },
 
     addMessage: (message) => {
-        console.log("📝 Adding message:", message);
-        set((state) => ({ messages: [...state.messages, message] }));
-        get().deduplicateMessages();
+        set((state) => {
+            const exists = state.messages.some(msg => 
+                msg.id === message.id || 
+                (msg.text === message.text && msg.timestamp === message.timestamp && msg.from === message.from)
+            );
+            
+            if (exists)
+                return state;
+            return { messages: [...state.messages, message] };
+        });
     },
 
     sendMessage: (text, receiverId) => {
@@ -294,10 +344,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             return;
         }
         
-        if (!loginId) {
-            console.error("No loginId");
+        if (!loginId)
             return;
-        }
 
         const messageId = generateMessageId();
         const timestamp = new Date().toISOString();
@@ -330,9 +378,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     handleIncomingMessage: (messageData) => {
         const { from, message, timestamp, id } = messageData;
-        const { selectedContact, loginId } = get();
+        const { selectedContact, loginId, messages } = get();
 
-        if (from === loginId) 
+        console.log("Current state:", { 
+            from, 
+            loginId, 
+            selectedContactId: selectedContact?.user.id,
+            hasSelectedContact: !!selectedContact,
+            currentMessagesCount: messages.length
+        });
+
+        if (from === loginId)
+            return;
+
+        // Check if this message already exists
+        const messageExists = messages.some(msg => 
+            msg.id === id || 
+            (msg.text === message && msg.timestamp === timestamp && msg.from === from)
+        );
+
+        if (messageExists)
             return;
 
         if (selectedContact && selectedContact.user.id === from && loginId) {
@@ -342,9 +407,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 isSender: false,
                 timestamp,
                 from,
-                to: loginId
+                to: loginId,
+                status: 'sent'
             };
-            get().addMessage(newMessage);
+            
+            set((state) => ({
+                messages: [...state.messages, newMessage]
+            }));
         } else {
             get().incrementUnseenMessages(from);
         }
@@ -352,7 +421,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     handleMessageSent: (messageData) => {
         const { id: realId, message, timestamp, from, to } = messageData;
-        const { selectedContact, loginId } = get();
+        const { selectedContact, loginId, messages } = get();
         
         if (!selectedContact || !loginId)
             return;
@@ -364,19 +433,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         if (!isCurrentConversation)
             return;
         
-        const existingMessage = get().messages.find(msg => 
-            msg.id === realId || 
-            (msg.text === message && msg.status === 'sending')
+        const existingMessage = messages.find(msg => 
+            msg.text === message && 
+            msg.status === 'sending' &&
+            msg.from === from &&
+            msg.to === to
         );
 
         if (existingMessage) {
             set((state) => ({
                 messages: state.messages.map(msg => {
-                    if (msg.id === existingMessage.id || 
-                        (msg.text === message && msg.status === 'sending')) {
+                    if (msg.id === existingMessage.id) {
                         return {
                             ...msg,
                             id: realId,
+                            timestamp: timestamp,
                             status: 'sent' as const
                         };
                     }
@@ -384,18 +455,27 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 })
             }));
         } else {
-            const newMessage: Message = {
-                id: realId,
-                text: message,
-                isSender: from === loginId,
-                timestamp,
-                from,
-                to,
-                status: 'sent'
-            };
+            // Check if message with this real ID already exists
+            const messageWithRealIdExists = messages.some(msg => msg.id === realId);
             
-            get().addMessage(newMessage);
+            if (!messageWithRealIdExists) {
+                const newMessage: Message = {
+                    id: realId,
+                    text: message,
+                    isSender: from === loginId,
+                    timestamp,
+                    from,
+                    to,
+                    status: 'sent'
+                };
+                
+                set((state) => ({
+                    messages: [...state.messages, newMessage]
+                }));
+            }
         }
+        // Clean up any duplicates
+        get().deduplicateMessages();
     },
 
     handleMessageError: (errorData) => {
@@ -453,5 +533,133 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             newCounts.set(contact.user.id, contact.unseenMessages);
         });
         set({ unseenMessageCounts: newCounts });
-    }
+    },
+
+    setContacts: (contacts: Contact[]) => {
+        set({ contacts });
+    },
+
+    fetchContacts: async () => {
+        const { token } = UseTokenStore.getState();
+        try {
+            const response = await fetch('http://localhost:8080/api/v1/chat/contacts', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            if (response.ok) {
+                const contacts = await response.json();
+                set({ contacts });
+                get().initializeUnseenCounts(contacts);
+                
+                // Update selected contact if it exists
+                const currentSelectedContact = get().selectedContact;
+                if (currentSelectedContact) {
+                    const updatedSelectedContact = contacts.find(
+                        (contact: Contact) => contact.user.id === currentSelectedContact.user.id
+                    );
+                    if (updatedSelectedContact) {
+                        set({ selectedContact: updatedSelectedContact });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch contacts:', error);
+        }
+    },
+
+    blockUser: async (userId: number) => {
+        const { token } = UseTokenStore.getState();
+        try {
+            const response = await fetch(`http://localhost:8080/api/v1/chat/block/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                await get().refreshContacts();
+                return { success: true, message: data.message || 'User blocked successfully' };
+            }
+            return { success: false, message: data.error || 'Failed to block user' };
+        } catch (error) {
+            console.error('Block user error:', error);
+            return { success: false, message: 'Failed to block user' };
+        }
+    },
+
+    unblockUser: async (userId: number) => {
+        const { token } = UseTokenStore.getState();
+        try {
+            const response = await fetch(`http://localhost:8080/api/v1/chat/unblock/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                await get().refreshContacts();
+                return { success: true, message: data.message || 'User unblocked successfully' };
+            }
+            return { success: false, message: data.error || 'Failed to unblock user' };
+        } catch (error) {
+            console.error('Unblock user error:', error);
+            return { success: false, message: 'Failed to unblock user' };
+        }
+    },
+
+    refreshContacts: async () => {
+        // Use fetchContacts to update both contacts list and selectedContact
+        await get().fetchContacts();
+    },
+
+    handleBlockEvent: (data: { userId: number; blockedBy: number }) => {
+        const { loginId, selectedContact } = get();
+        
+        if (loginId === data.userId) {
+            console.log("You have been blocked by user:", data.blockedBy);
+            get().refreshContacts();
+            if (selectedContact && selectedContact.user.id === data.blockedBy) {
+                showToast({
+                    message: `${selectedContact.user.fullName} has blocked you`,
+                    type: 'error',
+                    duration: 5000
+                });
+            }
+        }
+        else if (loginId === data.blockedBy) {
+            console.log("Block confirmed from server for user:", data.userId);
+            get().refreshContacts();
+        }
+    },
+
+    handleUnblockEvent: (data: { userId: number; unblockedBy: number }) => {
+        const { loginId, selectedContact } = get();
+        if (loginId === data.userId) {
+            console.log("You have been unblocked by user:", data.unblockedBy);
+            get().refreshContacts();
+            if (selectedContact && selectedContact.user.id === data.unblockedBy) {
+                showToast({
+                    message: `${selectedContact.user.fullName} has unblocked you`,
+                    type: 'success',
+                    duration: 5000
+                });
+            }
+        }
+        else if (loginId === data.unblockedBy) {
+            console.log("Unblock confirmed from server for user:", data.userId);
+            get().refreshContacts();
+        }
+    },
 }));

@@ -44,11 +44,15 @@ export class KafkaConsumerService {
       return;
 
     try {
+      console.log("Connecting Kafka consumer...");
       await this.consumer.connect();
+      console.log("Subscribing to 'notifications' topic...");
       await this.consumer.subscribe({ topic: "notifications", fromBeginning: false });
       
+      console.log("Starting consumer run...");
       await this.consumer.run({
         eachMessage: async (payload: EachMessagePayload) => {
+          console.log("🎯 eachMessage handler called!");
           await this.handleMessage(payload);
         },
       });
@@ -99,15 +103,18 @@ export class KafkaConsumerService {
 
       const socketIds = userSockets.get(eventData.userId);
       
-      if (socketIds && socketIds.size > 0) {
+      if (eventData.type === 'challenge')
+        console.log(`Challenge notification stored in DB for user ${eventData.userId}, skipping toast (handled by game socket)`);
+      else if (socketIds && socketIds.size > 0) {
         const notificationNS = this.io.of("/notification");
         socketIds.forEach(socketId => {
           notificationNS.to(socketId).emit("notification:new", notification);
         });
         console.log(`Toast notification sent to online user ${eventData.userId} (${socketIds.size} socket(s))`);
       }
-      else
+      else {
         console.log(`User ${eventData.userId} is offline, notification stored for later`);
+      }
     } catch (error) {
       console.error("Failed to process notification event:", error);
       console.error("Message value:", message.value?.toString());

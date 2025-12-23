@@ -1,18 +1,20 @@
-import { CircleX, RotateCcw, Sword, Bell, UserX } from "lucide-react";
+import { CircleX, RotateCcw, Sword, UserX, UserCheck } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useState, useEffect } from "react";
 import { UseUserStore, UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { useChatToast } from "../hooks/useChatToast";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, isNotificationsMuted, toggleNotificationsMute, onlineUsers} = useChatStore();
+    const {selectedContact, onlineUsers, blockUser, unblockUser} = useChatStore();
     const { user } = UseUserStore();
     const { token } = UseTokenStore();
+    const { showSuccessToast, showErrorToast } = useChatToast();
     const [challengeStatus, setChallengeStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+    const [isBlocking, setIsBlocking] = useState(false);
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    
-    // Fetch match history when contact is selected
+
     useEffect(() => {
       const fetchMatchHistory = async () => {
         if (!selectedContact || !user || !token) return;
@@ -144,11 +146,22 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
           <div className="mt-6 flex flex-col gap-3 w-full">
             <button 
               onClick={async () => {
-                if (!selectedContact || !user || !token) return;
+                if (!selectedContact || !user || !token)
+                  return;
+
+                if (selectedContact.blockStatus === 'blocked_by_me') {
+                  showErrorToast('You have blocked this user. Unblock to send a challenge.');
+                  return;
+                }
+                
+                if (selectedContact.blockStatus === 'blocked_by_them') {
+                  showErrorToast('This user has blocked you. Cannot send challenge.');
+                  return;
+                }
                 
                 const isOnline = onlineUsers.has(selectedContact.user.id);
                 if (!isOnline) {
-                  alert('User is offline');
+                  showErrorToast('User is currently offline');
                   return;
                 }
                 
@@ -171,46 +184,77 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
                   
                   if (response.ok) {
                     setChallengeStatus('sent');
+                    showSuccessToast(`Challenge sent to ${selectedContact.user.fullName}!`);
                     setTimeout(() => setChallengeStatus('idle'), 3000);
                   } else {
                     const error = await response.json();
-                    alert(error.error || 'Failed to send challenge');
+                    showErrorToast(error.error || 'Failed to send challenge');
                     setChallengeStatus('error');
                     setTimeout(() => setChallengeStatus('idle'), 2000);
                   }
                 } catch (error) {
                   console.error('Challenge error:', error);
-                  alert('Failed to send challenge');
+                  showErrorToast('Failed to send challenge. Please try again.');
                   setChallengeStatus('error');
                   setTimeout(() => setChallengeStatus('idle'), 2000);
                 }
               }}
-              disabled={challengeStatus !== 'idle' || !selectedContact || !onlineUsers.has(selectedContact?.user.id)}
+              disabled={
+                challengeStatus !== 'idle' || 
+                !selectedContact || 
+                !onlineUsers.has(selectedContact?.user.id) ||
+                selectedContact?.blockStatus !== 'none'
+              }
               className="flex items-center justify-center gap-2 !bg-[#112434] hover:!bg-[#1A2D42] !border-none rounded-xl py-2.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sword size={16} />
               {challengeStatus === 'sending' ? 'Sending...' : challengeStatus === 'sent' ? '✓ Challenge Sent!' : challengeStatus === 'error' ? '❌ Error' : 'Launch a challenge'}
             </button>
 
-            <div className="flex items-center justify-between bg-[#112434] rounded-xl py-3 px-4">
-              <div className="flex items-center gap-3">
-                <Bell size={16} />
-                Mute notifications
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={isNotificationsMuted}
-                  onChange={toggleNotificationsMute}
-                />
-                <div className="w-9 h-5 bg-gray-600 rounded-full peer peer-checked:bg-[#1EC49F] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-4 after:w-4 after:rounded-full after:transition-all peer-checked:after:translate-x-full"></div>
-              </label>
-            </div>
-
-            <button className="flex items-center justify-center gap-2 !bg-[#A33B2E] hover:!bg-[#8E3125] !border-none rounded-xl py-2.5 text-sm !transition-colors">
-              <UserX size={16} />
-              Block
+            <button 
+              onClick={async () => {
+                if (!selectedContact || isBlocking) return;
+                
+                setIsBlocking(true);
+                
+                try {
+                  let result;
+                  if (selectedContact.blockStatus === 'blocked_by_me') {
+                    result = await unblockUser(selectedContact.user.id);
+                    if (result.success) {
+                      showSuccessToast(`${selectedContact.user.fullName} has been unblocked`);
+                    } else {
+                      showErrorToast(result.message || 'Failed to unblock user');
+                    }
+                  } else {
+                    result = await blockUser(selectedContact.user.id);
+                    if (result.success) {
+                      showSuccessToast(`${selectedContact.user.fullName} has been blocked`);
+                    } else {
+                      showErrorToast(result.message || 'Failed to block user');
+                    }
+                  }
+                } catch (error) {
+                  console.error('Block/Unblock error:', error);
+                  showErrorToast('An error occurred. Please try again.');
+                } finally {
+                  setIsBlocking(false);
+                }
+              }}
+              disabled={isBlocking || !selectedContact || selectedContact.blockStatus === 'blocked_by_them'}
+              className="flex items-center justify-center gap-2 !bg-[#A33B2E] hover:!bg-[#8E3125] !border-none rounded-xl py-2.5 text-sm !transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {selectedContact?.blockStatus === 'blocked_by_me' ? (
+                <>
+                  <UserCheck size={16} />
+                  Unblock
+                </>
+              ) : (
+                <>
+                  <UserX size={16} />
+                  Block
+                </>
+              )}
             </button>
           </div>
         </div>

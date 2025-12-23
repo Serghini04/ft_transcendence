@@ -41,7 +41,7 @@ interface GameState {
   paddles: { left: Paddle; right: Paddle };
   scores: { left: number; right: number };
   powerUp: PowerUp;
-  winner: string | null; // Now stores user ID instead of side
+  winner: string | null;
 }
 
 interface Room {
@@ -59,9 +59,9 @@ interface Room {
 export const rooms = new Map<string, Room>();
 
 const speedMap: Record<string, number> = {
-  Slow: 0.8,
-  Normal: 1.3,
-  Fast: 2.5,
+  Slow: 1,
+  Normal: 1.8,
+  Fast: 3,
 };
 
 function initGameState(powerUps: boolean, speed: number): GameState {
@@ -71,9 +71,9 @@ function initGameState(powerUps: boolean, speed: number): GameState {
       x: 600,
       y: 337.5,
       radius: 8,
-      vx: 4 * speed, // Apply speed multiplier here once
+      vx: 4 * speed,
       vy: 3 * speed,
-      speed, // Keep for reference
+      speed,
       visible: true,
     },
     paddles: {

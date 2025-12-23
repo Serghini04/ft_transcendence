@@ -15,4 +15,14 @@ export class User{
         this.status = status;
         this.avatarUrl = avatarUrl;
     }
+
+    toJSON() {
+        return {
+            id: this.id,
+            fullName: this.fullName,
+            username: this.username,
+            status: this.status,
+            avatarUrl: this.avatarUrl
+        };
+    }
 }

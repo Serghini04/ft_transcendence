@@ -8,47 +8,30 @@ export async function userAuthService(app: FastifyInstance) {
     upstream: "http://user_auth:3004",
     prefix: "/api/v1/auth",
     rewritePrefix: "/api/v1/auth",
-    http2: false,
+    // http2: false,
     
     replyOptions: {
       rewriteRequestHeaders: (originalReq, headers) => {
-        // Explicitly preserve the authorization header
-        if (originalReq.headers.authorization) {
+        if (originalReq.headers.authorization)
           headers.authorization = originalReq.headers.authorization;
-        }
-        app.log.info(`Forwarding headers - Auth: ${headers.authorization ? 'YES' : 'NO'}`);
         return headers;
-      }
+      },
+      onError(reply, error) {
+        app.log.error(
+          { err: error },
+          "UserAuth Service is unavailable"
+        );
+
+        reply.status(503).send({
+          code: "SERVICE_UNAVAILABLE",
+          message:
+            "UserAuth service is currently unavailable. Please try again later.",
+        });
+      },
     },
     
     preHandler: async (req: FastifyRequest, reply: FastifyReply) => {
-      try {
         req.headers["x-user-id"] = String(req.id);
-        app.log.info(`PreHandler - Authorization: ${req.headers.authorization ? 'Present' : 'Missing'}`);
-      } catch (error) {
-        const err = error as Error;
-        app.log.error(`Error in preHandler: ${err.message}`);
-        reply.status(503).send({
-          code: "SERVICE_UNAVAILABLE",
-          message: "An error occurred while processing the request.",
-        });
-      }
     },
   });
-
-  // app.setErrorHandler((error, req, reply) => {
-  //   if (error.code === "ECONNREFUSED") {
-  //     app.log.error(`Error connecting to User Auth Service: ${error.message}`);
-  //     reply.status(503).send({
-  //       code: "SERVICE_UNAVAILABLE",
-  //       message: "User Auth Service is currently unavailable. Please try again later.",
-  //     });
-  //   } else {
-  //     app.log.error(`Unexpected error: ${error.message}`);
-  //     reply.status(503).send({
-  //       code: "SERVICE_UNAVAILABLE",
-  //       message: "An unexpected error occurred.",
-  //     });
-  //   }
-  // });
 }

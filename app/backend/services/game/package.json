@@ -25,6 +25,7 @@
     "@fastify/websocket": "^8.3.1",
     "better-sqlite3": "^9.2.2",
     "fastify": "^4.25.2",
+    "kafkajs": "^2.2.4",
     "socket.io": "^4.6.0",
     "pino": "^8.17.2",
     "pino-pretty": "^10.3.1"

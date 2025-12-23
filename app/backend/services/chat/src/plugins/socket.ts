@@ -23,6 +23,10 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
       origin: true,
       credentials: true,
     },
+    transports: ["websocket", "polling"],
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    allowUpgrades: true,
   });
 
   fastify.decorate("io", io);
@@ -144,13 +148,24 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
           // Don't fail the message send if Kafka fails
         }
 
-        if (isUserOnline(receiverUserId))
+        // Emit to receiver if online
+        const receiverOnline = isUserOnline(receiverUserId);
+        fastify.log.info(`📤 Emitting message to receiver ${receiverUserId} (online: ${receiverOnline})`);
+        
+        if (receiverOnline) {
           chatNS.to(`user_${receiverUserId}`).emit("message:receive", finalMessageData);
+          fastify.log.info(`✅ message:receive emitted to user_${receiverUserId}`);
+        } else {
+          fastify.log.info(`⚠️ Receiver ${receiverUserId} is offline, message not emitted`);
+        }
 
+        // Emit confirmation to sender
+        fastify.log.info(`📤 Emitting message:sent confirmation to sender ${userIdNum}`);
         chatNS.to(`user_${userIdNum}`).emit("message:sent", {
           ...finalMessageData,
           isSender: true
         });
+        fastify.log.info(`✅ message:sent emitted to user_${userIdNum}`);
 
       } catch (error) {
         socket.emit("message:error", { 

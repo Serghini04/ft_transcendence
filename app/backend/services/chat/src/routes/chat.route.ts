@@ -20,4 +20,20 @@ export default async function chatRoutes(fastify: FastifyInstance) {
             })
         }
     }, chatController.markMessagesAsSeen);
+
+    fastify.post("/block/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.blockUser);
+
+    fastify.post("/unblock/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.unblockUser);
 }

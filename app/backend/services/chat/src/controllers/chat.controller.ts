@@ -42,8 +42,61 @@ async function markMessagesAsSeen(req: FastifyRequest, res: FastifyReply) {
     return res.code(200).send({ success: true });
 }
 
+async function blockUser(req: FastifyRequest, res: FastifyReply) {
+    const chatRepo = new ChatRepository(req.server.db);
+    const {id} = req.params as {id:number}
+    const userId = Number(req.headers['x-user-id']);
+    
+    if (userId === id)
+        return res.code(400).send({ error: "You cannot block yourself"});
+    
+    const result = chatRepo.blockUser(userId, id);
+    
+    if (result.success) {
+        const io = req.server.io;
+        if (io) {
+            const chatNS = io.of("/chat");
+            chatNS.emit("user:blocked", { 
+                userId: id, 
+                blockedBy: userId 
+            });
+        }
+        
+        return res.code(200).send(result);
+    }
+    return res.code(400).send(result);
+}
+
+async function unblockUser(req: FastifyRequest, res: FastifyReply) {
+    const chatRepo = new ChatRepository(req.server.db);
+    const {id} = req.params as {id:number}
+    const userId = Number(req.headers['x-user-id']);
+    
+    if (userId === id)
+        return res.code(400).send({ error: "You cannot unblock yourself"});
+    
+    const result = chatRepo.unblockUser(userId, id);
+    
+    if (result.success) {
+        // Emit socket event to notify the unblocked user
+        const io = req.server.io;
+        if (io) {
+            const chatNS = io.of("/chat");
+            chatNS.emit("user:unblocked", { 
+                userId: id, 
+                unblockedBy: userId 
+            });
+        }
+        
+        return res.code(200).send(result);
+    }
+    return res.code(400).send(result);
+}
+
 export const chatController = {
     getAllContacts,
     getConversationBetweenUsers,
-    markMessagesAsSeen
+    markMessagesAsSeen,
+    blockUser,
+    unblockUser
 }

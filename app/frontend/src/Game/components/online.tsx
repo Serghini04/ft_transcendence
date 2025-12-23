@@ -46,27 +46,28 @@ export default function Online() {
   const [yourProfile, setYourProfile] = useState<UserProfile | null>(null);
   const [opponentProfile, setOpponentProfile] = useState<UserProfile | null>(null);
   const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
-  const [_loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
 
 
   const [state, setState] = useState<GameState>({
     canvas: { width: 1200, height: 675 },
     ball: { x: 600, y: 337.5, radius: 8, vx: 0, vy: 0, speed: 0, visible: true },
-    paddles: { left: { x: 20, y: 200, width: 10, height: 90, speed: 10 }, right: { x: 770, y: 200, width: 10, height: 90, speed: 10 } },
+    paddles: { left: { x: 20, y: 200, width: 10, height: 90, speed: 6 }, right: { x: 770, y: 200, width: 10, height: 90, speed: 6 } },
     scores: { left: 0, right: 0 },
     powerUp: { found: false, x: 0, y: 0, width: 0, height: 0, visible: false, duration: 0, spawnTime: null },
     winner: null,
   });
 
   const location = useLocation();
+  type MapType = "Classic" | "Desert" | "Chemistry";
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
-  
+  const typedMap = ["Classic", "Desert", "Chemistry"].includes(map) ? map as MapType : "Classic";
+
   // Check if this is a challenge game (roomId in URL params)
   const searchParams = new URLSearchParams(location.search);
   const roomId = searchParams.get('roomId');
   const isChallenge = !!roomId;
 
-  const gameThemes = {
+  const gameThemes: Record<MapType, { background: string; color: string }> = {
     Classic: {
       background: "bg-[rgba(0,0,0,0.75)]",
       color: "#8ADDD4",
@@ -81,7 +82,7 @@ export default function Online() {
     },
   };
 
-  const theme = gameThemes[map as keyof typeof gameThemes] || gameThemes.Classic;
+  const theme = gameThemes[typedMap];
 
   // Connect to Socket.IO
   useEffect(() => {
@@ -201,11 +202,9 @@ export default function Online() {
         if (currentYourProfile && currentOpponentProfile) {
           if (winnerId === currentYourProfile.id) {
             setWinnerProfile(currentYourProfile);
-            setLoserProfile(currentOpponentProfile);
             console.log("🏆 You won!");
           } else {
             setWinnerProfile(currentOpponentProfile);
-            setLoserProfile(currentYourProfile);
             console.log("😞 You lost to", currentOpponentProfile.name);
           }
         }
@@ -225,7 +224,6 @@ export default function Online() {
         setForfeitWin(false);
         setOpponentLeftPostGame(false);
         setWinnerProfile(null);
-        setLoserProfile(null);
         console.log("🔄 Game restarted!");
       });
 
@@ -255,10 +253,8 @@ export default function Online() {
         if (currentYourProfile && currentOpponentProfile) {
           if (winnerId === currentYourProfile.id) {
             setWinnerProfile(currentYourProfile);
-            setLoserProfile(currentOpponentProfile);
           } else {
             setWinnerProfile(currentOpponentProfile);
-            setLoserProfile(currentYourProfile);
           }
         }
       });
@@ -461,7 +457,7 @@ export default function Online() {
                 <img 
                   src={playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar} 
                   alt={playerPositionRef.current === "left" ? yourProfile.name : opponentProfile.name} 
-                  className="h-10 w-10 rounded-full object-cover" 
+                  className="h-10 rounded-full border-2 border-[#50614d80]-500"
                 />
                 <span className="text-[22px] font-semibold">{state.scores.left}</span>
               </>
@@ -487,7 +483,7 @@ export default function Online() {
               <img 
                 src={playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar} 
                 alt={playerPositionRef.current === "right" ? yourProfile.name : opponentProfile.name} 
-                className="h-10 w-10 rounded-full object-cover" 
+                className="h-10 rounded-full border-2 border-[#50614d80]-500" 
               />
             )}
           </div>
@@ -513,7 +509,7 @@ export default function Online() {
                 ? "Your opponent left"
                 : forfeitWin 
                   ? (user && winner === String(user.id) ? "🏆 You Won by Forfeit!" : "😞 You Lost - Disconnected")
-                  : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 You Lost`)
+                  : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 You Lost To ${winnerProfile.name}`)
               }
             </h2>
             {forfeitWin && !opponentLeftPostGame && (
