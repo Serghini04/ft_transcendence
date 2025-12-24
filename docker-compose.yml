@@ -81,8 +81,8 @@ services:
       dockerfile: Dockerfile
     image: chat-service
     container_name: chat-service
-    ports:
-      - "3003:3003"
+    # ports:
+    #   - "3003:3003"
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:

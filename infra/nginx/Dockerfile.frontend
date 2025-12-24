@@ -12,12 +12,8 @@ RUN npm run build
 
 FROM owasp/modsecurity-crs:nginx-alpine
 
-# Switch to root for installation
 USER root
 
-# ============================================================================
-# Install Dependencies
-# ============================================================================
 RUN apk add --no-cache \
     openssl \
     curl \
@@ -25,9 +21,6 @@ RUN apk add --no-cache \
     ca-certificates \
     && rm -rf /var/cache/apk/*
 
-# ============================================================================
-# Create Required Directories
-# ============================================================================
 RUN mkdir -p \
     /etc/nginx/ssl \
     /var/log/modsec \
@@ -35,10 +28,6 @@ RUN mkdir -p \
     /etc/modsecurity.d/custom-rules \
     && chown -R nginx:nginx /var/log/modsec /tmp/modsecurity
 
-# ============================================================================
-# Generate Self-Signed SSL Certificate
-# NOTE: Replace with proper certificates in production (Let's Encrypt)
-# ============================================================================
 RUN openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
     -keyout /etc/nginx/ssl/nginx-selfsigned.key \
     -out /etc/nginx/ssl/nginx-selfsigned.crt \
@@ -46,29 +35,14 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
     && chmod 644 /etc/nginx/ssl/nginx-selfsigned.crt \
     && chmod 600 /etc/nginx/ssl/nginx-selfsigned.key
 
-# ============================================================================
-# Copy Built Frontend
-# ============================================================================
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
-# ============================================================================
-# Copy Configuration Files
-# ============================================================================
-# Rate limiting configuration (HTTP level)
-COPY --chown=nginx:nginx infra/nginx/http-rate-limit.conf /etc/nginx/conf.d/http-rate-limit.conf
-
-# Nginx configuration
 COPY --chown=nginx:nginx infra/nginx/nginx.conf /etc/nginx/templates/conf.d/default.conf.template
 
-# ModSecurity custom rules
 COPY --chown=nginx:nginx security/waf/custom-rules.conf /etc/modsecurity.d/custom-rules/custom-rules.conf
 
-# ModSecurity override configuration
 COPY --chown=nginx:nginx security/waf/modsecurity-override.conf /etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template
 
-# ============================================================================
-# Set Permissions
-# ============================================================================
 RUN chown -R nginx:nginx \
     /usr/share/nginx/html \
     /etc/modsecurity.d/custom-rules \
@@ -77,56 +51,20 @@ RUN chown -R nginx:nginx \
     && chmod 755 /etc/modsecurity.d/custom-rules \
     && chmod 644 /etc/modsecurity.d/custom-rules/*.conf
 
-# ============================================================================
-# ModSecurity Environment Variables
-# ============================================================================
-# Paranoia Level (1-4, higher = more strict)
-ENV PARANOIA=2
 
-# Anomaly Scoring Thresholds
-ENV ANOMALY_INBOUND=5 \
-    ANOMALY_OUTBOUND=4
 
-# Allowed HTTP Methods
-ENV ALLOWED_METHODS="GET HEAD POST OPTIONS PUT DELETE PATCH"
-
-# Request size limits (10MB)
-ENV MAX_FILE_SIZE=10485760 \
+ENV PARANOIA=2\
+    ANOMALY_INBOUND=5 \
+    ANOMALY_OUTBOUND=4 \
+    ALLOWED_METHODS="GET HEAD POST OPTIONS PUT DELETE PATCH"\
+    MAX_FILE_SIZE=10485760 \
     COMBINED_FILE_SIZES=10485760
 
-# CRS Settings
-ENV BLOCKING_PARANOIA=2 \
-    DETECTION_PARANOIA=2 \
-    EXECUTING_PARANOIA=2
-
-# Enable specific CRS rule sets
-ENV CRS_ENABLE_TEST_MARKER=0 \
-    CRS_ENABLE_SCANNER_DETECTION=1
-
-# ============================================================================
-# Add Labels for Metadata
-# ============================================================================
-LABEL maintainer="your-email@example.com" \
-      description="Nginx with ModSecurity WAF and React Frontend" \
-      version="1.0"
-
-# ============================================================================
-# Expose Ports
-# ============================================================================
 EXPOSE 80 443
 
-# ============================================================================
-# Health Check
-# ============================================================================
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -f -k https://localhost/health || exit 1
 
-# ============================================================================
-# Switch to Non-Root User
-# ============================================================================
 USER nginx
 
-# ============================================================================
-# Start Nginx
-# ============================================================================
 CMD ["nginx", "-g", "daemon off;"]
