@@ -13,14 +13,19 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://tictac-game:3003',
+        target: 'http://api-gateway:8080',
         changeOrigin: true
       },
       '/ws': {
-        target: 'http://tictac-game:3003',
+        target: 'ws://tictac-game:3030',
         ws: true,
         changeOrigin: true,
         rewrite: (path) => path
+      },
+      '/socket.io': {
+        target: 'http://api-gateway:8080',
+        changeOrigin: true,
+        ws: true
       }
     }
   },

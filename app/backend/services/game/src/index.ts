@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import {db} from "./plugins/game.db";
 import gameSocket from "./plugins/game.socket";
+import { kafkaProducerService } from "./kafka/producer";
 
 const app = Fastify({
   logger: {
@@ -68,7 +69,7 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
     // Fetch challenger profile
     let challengerData;
     try {
-      const challengerRes = await fetch(`http://localhost:8080/api/v1/game/user/${challengerId}`, {
+      const challengerRes = await fetch(`http:/api-gateway:8080/api/v1/game/user/${challengerId}`, {
         method: "GET",
         headers: { 
           Authorization: request.headers.authorization || '',
@@ -88,10 +89,8 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
       return reply.status(500).send({ error: "Failed to fetch user profile" });
     }
     
-    // Get challenger socket
     const challengerSocket = userSocketMap.get(Number(challengerId));
     
-    // Store challenge
     pendingChallenges.set(challengeId, {
       challengeId,
       challengerId,
@@ -100,16 +99,24 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
       challengedSocket: opponentSocket,
       createdAt: Date.now(),
     });
-    
-    // Send challenge to opponent via their game socket
+
     opponentSocket.emit("game:challenge:received", {
       challengeId,
       challengerId,
       challengerName: challengerData.username,
       challengerAvatar: challengerData.avatarUrl,
     });
-    
-    console.log(`✅ Challenge ${challengeId} sent to ${challengedId}`);
+
+    try {
+      await kafkaProducerService.publishChallengeNotification(
+        challengedId,
+        challengerData.username,
+        challengeId,
+        new Date()
+      );
+    } catch (kafkaError) {
+      console.error(`Failed to publish Kafka challenge notification: ${kafkaError}`);
+    }
     
     // Auto-expire after 2 minutes
     setTimeout(() => {
@@ -132,22 +139,20 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
 app.get("/api/v1/game/user/:userId", async (request, reply) => {
   const { userId } = request.params as { userId: string };
   
-  // db.prepare(`INSERT INTO users (id, name, avatar) VALUES (?, ?, ?)`)
-  // .run(userId, "souaouri", "");
 
   // Clear tables
   // db.exec("DELETE FROM users;");
   // db.exec("DELETE FROM games;");
 
-  // // Insert test users
+  // Insert test users
   // const insertUser = db.prepare(`
   //   INSERT INTO users (id, name, avatar, level) VALUES (?, ?, ?, 0)
   // `);
 
-  // insertUser.run("1", "User1", "../../../frontend/public/user1.png");
-  // insertUser.run("2", "User2", "../../../frontend/public/user2.png");
-  // insertUser.run("3", "User3", "../../../frontend/public/user3.png");
-  // insertUser.run("4", "User4", "../../../frontend/public/user4.png");
+  // insertUser.run("1", "skarim", "/src/assets/images/profiles/skarim.png");
+  // insertUser.run("2", "meserghi", "/src/assets/images/profiles/meserghi.png");
+  // insertUser.run("3", "souaouri", "/src/assets/images/profiles/souaouri.png");
+  // insertUser.run("4", "hidriouc", "/src/assets/images/profiles/hidriouc.png");
 
   const row = db.prepare("SELECT id, name, avatar FROM users WHERE id = ?").get(userId) as { id: string; name: string; avatar: string } | undefined;
 
@@ -224,6 +229,9 @@ app.get("/api/v1/game/history/:userId/:opponentId", async (request, reply) => {
 
 const start = async () => {
   try {
+    await kafkaProducerService.connect();
+    app.log.info("Kafka producer connected successfully");
+    
     await app.listen({ port: 3005, host: "0.0.0.0" });
     app.log.info("🎮 Game Service running at http://0.0.0.0:3005");
   } catch (err) {

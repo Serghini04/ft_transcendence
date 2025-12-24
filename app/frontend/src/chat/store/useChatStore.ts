@@ -34,7 +34,7 @@ type ChatStore = {
     gameSocket: Socket | null;
     selectedContact: Contact | null;
     messages: Message[];
-    contacts: ContactUser[];
+    contacts: Contact[];
     onlineUsers: Set<number>;
     unseenMessageCounts: Map<number, number>;
     isNotificationsMuted: boolean;
@@ -52,6 +52,8 @@ type ChatStore = {
     toggleNotificationsMute: () => void;
     blockUser: (userId: number) => Promise<{ success: boolean; message: string }>;
     unblockUser: (userId: number) => Promise<{ success: boolean; message: string }>;
+    setContacts: (contacts: Contact[]) => void;
+    fetchContacts: () => Promise<void>;
     refreshContacts: () => Promise<void>;
 
     handleIncomingMessage: (messageData: any) => void;
@@ -59,6 +61,8 @@ type ChatStore = {
     handleMessageError: (errorData: any) => void;
     updateMessageStatus: (messageId: string | number, status: Message['status']) => void;
     deduplicateMessages: () => void;
+    handleBlockEvent: (data: { userId: number; blockedBy: number }) => void;
+    handleUnblockEvent: (data: { userId: number; unblockedBy: number }) => void;
 };
 
 const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -531,6 +535,42 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         set({ unseenMessageCounts: newCounts });
     },
 
+    setContacts: (contacts: Contact[]) => {
+        set({ contacts });
+    },
+
+    fetchContacts: async () => {
+        const { token } = UseTokenStore.getState();
+        try {
+            const response = await fetch('http://localhost:8080/api/v1/chat/contacts', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+            });
+            
+            if (response.ok) {
+                const contacts = await response.json();
+                set({ contacts });
+                get().initializeUnseenCounts(contacts);
+                
+                // Update selected contact if it exists
+                const currentSelectedContact = get().selectedContact;
+                if (currentSelectedContact) {
+                    const updatedSelectedContact = contacts.find(
+                        (contact: Contact) => contact.user.id === currentSelectedContact.user.id
+                    );
+                    if (updatedSelectedContact) {
+                        set({ selectedContact: updatedSelectedContact });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch contacts:', error);
+        }
+    },
+
     blockUser: async (userId: number) => {
         const { token } = UseTokenStore.getState();
         try {
@@ -580,31 +620,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     },
 
     refreshContacts: async () => {
-        const { token } = UseTokenStore.getState();
-        const currentSelectedContact = get().selectedContact;
-        
-        try {
-            const response = await fetch('http://localhost:8080/api/v1/chat/contacts', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-                credentials: 'include',
-            });
-            
-            if (response.ok) {
-                const updatedContacts = await response.json();
-                if (currentSelectedContact) {
-                    const updatedSelectedContact = updatedContacts.find(
-                        (contact: Contact) => contact.user.id === currentSelectedContact.user.id
-                    );
-                    if (updatedSelectedContact)
-                        set({ selectedContact: updatedSelectedContact });
-                }
-            }
-        } catch (error) {
-            console.error('Failed to refresh contacts:', error);
-        }
+        // Use fetchContacts to update both contacts list and selectedContact
+        await get().fetchContacts();
     },
 
     handleBlockEvent: (data: { userId: number; blockedBy: number }) => {
@@ -613,8 +630,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         if (loginId === data.userId) {
             console.log("You have been blocked by user:", data.blockedBy);
             get().refreshContacts();
-            
-            // If currently chatting with the user who blocked me, show notification
             if (selectedContact && selectedContact.user.id === data.blockedBy) {
                 showToast({
                     message: `${selectedContact.user.fullName} has blocked you`,
@@ -623,7 +638,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 });
             }
         }
-        // If I'm the one who blocked (update from another device/session)
         else if (loginId === data.blockedBy) {
             console.log("Block confirmed from server for user:", data.userId);
             get().refreshContacts();
@@ -632,15 +646,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     handleUnblockEvent: (data: { userId: number; unblockedBy: number }) => {
         const { loginId, selectedContact } = get();
-        
-        // If I'm the one being unblocked
         if (loginId === data.userId) {
             console.log("You have been unblocked by user:", data.unblockedBy);
-            
-            // Refresh contacts to update block status
             get().refreshContacts();
-            
-            // If currently chatting with the user who unblocked me, show notification
             if (selectedContact && selectedContact.user.id === data.unblockedBy) {
                 showToast({
                     message: `${selectedContact.user.fullName} has unblocked you`,
@@ -649,7 +657,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 });
             }
         }
-        // If I'm the one who unblocked (update from another device/session)
         else if (loginId === data.unblockedBy) {
             console.log("Unblock confirmed from server for user:", data.userId);
             get().refreshContacts();

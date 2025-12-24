@@ -36,7 +36,7 @@ RUN mkdir -p /app/data && chown -R node:node /app/data
 USER node
 
 
-EXPOSE 3003
+EXPOSE 3030
 
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

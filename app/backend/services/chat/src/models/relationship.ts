@@ -11,4 +11,13 @@ export class Relationship {
         this.blockStatus = blockStatus;
         this.unseenMessages = unseenMessages;
     }
+
+    toJSON() {
+        return {
+            id: this.id,
+            user: this.user,
+            blockStatus: this.blockStatus,
+            unseenMessages: this.unseenMessages
+        };
+    }
 }

@@ -72,7 +72,7 @@ export function setupSocketGateway(app: FastifyInstance) {
 
     app.log.info(`User ${user.id} connected to /chat namespace`);
 
-    const chatSocket = ClientIO("http://localhost:3003/chat", {
+    const chatSocket = ClientIO("http://chat-service:3003/chat", {
       path: "/socket.io",
       withCredentials: true,
       auth: { userId: user.id },
@@ -102,7 +102,7 @@ export function setupSocketGateway(app: FastifyInstance) {
 
     app.log.info(`User ${user.id} connected to /game namespace`);
 
-    const gameSocket = ClientIO("http://localhost:3005/game", {
+    const gameSocket = ClientIO("http://game-service:3005/game", {
       path: "/socket.io",
       withCredentials: true,
       auth: { userId: user.id },
@@ -137,7 +137,7 @@ export function setupSocketGateway(app: FastifyInstance) {
 
     app.log.info(`User ${user.id} connected to /notification namespace`);
 
-    const notificationSocket = ClientIO("http://localhost:3006/notification", {
+    const notificationSocket = ClientIO("http://notification-service:3006/notification", {
       path: "/socket.io",
       withCredentials: true,
       auth: { userId: user.id },

@@ -12,7 +12,7 @@ export default function OnlineSetup() {
     
     const handleStart = () => {
         navigate(`/game/${mode}`, {
-            state: { map, powerUps, speed },
+            state: { map, powerUps, speed, difficulty },
         });
     };
 
@@ -20,6 +20,7 @@ export default function OnlineSetup() {
     const [map, setMap] = useState("Classic");
     const [powerUps, setPowerUps] = useState(false);
     const [speed, setSpeed] = useState("Normal");
+    const [difficulty, setDifficulty] = useState("medium");
 
 
     return (
@@ -65,12 +66,33 @@ export default function OnlineSetup() {
         </select>
         </div>
 
+        {/* AI Difficulty Selection - Only shown for AI mode */}
+        {mode === "ai" && (
+        <div className="w-full max-w-md mb-6">
+            <label className="block text-lg font-semibold mb-2">AI Difficulty</label>
+            <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white"
+            >
+            <option value="easy">Easy - Forgiving AI</option>
+            <option value="medium">Medium - Balanced Challenge</option>
+            <option value="hard">Hard - Expert AI</option>
+            </select>
+            <p className="mt-2 text-sm text-gray-400">
+            {difficulty === "easy" && "AI reacts slowly and makes mistakes"}
+            {difficulty === "medium" && "AI provides a balanced challenge"}
+            {difficulty === "hard" && "AI reacts quickly with accurate predictions"}
+            </p>
+        </div>
+        )}
+
         {/* Start Matchmaking */}
         <button
         onClick={handleStart}
         className="mt-4 bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-8 py-3 rounded-lg shadow-md"
         >
-        🔍 Find Match
+        {mode === "ai" ? "🤖 Start AI Match" : "🔍 Find Match"}
         </button>
     </div>
     );

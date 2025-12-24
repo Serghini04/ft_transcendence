@@ -12,7 +12,7 @@ export function generateJwtAccessToken({id, name, email}: {id: number; name:stri
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined");
     }
-    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "10h" }) // ✅ Changed from 15s to 15m
+    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "15m" }) // ✅ Changed from 15s to 15m
     return token;
 }
 
@@ -22,6 +22,10 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
     return;
   }
   if (req.url.startsWith("/socket.io/")) {
+    return;
+  }
+  // Skip tictac game routes - they handle their own auth
+  if (req.url.startsWith("/api/") && !req.url.startsWith("/api/v1/")) {
     return;
   }
   const authHeader = req.headers.authorization;

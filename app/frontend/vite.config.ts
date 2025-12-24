@@ -9,11 +9,16 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://tictac-game:3003',
+        target: 'http://api-gateway:8080',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://tictac-game:3003',
+        target: 'ws://tictac-game:3030',
+        ws: true
+      },
+      '/socket.io': {
+        target: 'http://api-gateway:8080',
+        changeOrigin: true,
         ws: true
       }
     }

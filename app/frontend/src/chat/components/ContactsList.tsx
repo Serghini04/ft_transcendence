@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "react-toastify";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
@@ -15,41 +15,17 @@ type Contact = {
     avatarUrl: string;
   };
   unseenMessages: number;
-  isBlocked: boolean;
+  blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
 export default function ContactsList({ closeSidebar }: any) {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const { selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, initializeUnseenCounts } = useChatStore();
+  const { contacts, selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, fetchContacts } = useChatStore();
   const { token} = UseTokenStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        const res = await fetch("http://localhost:8080/api/v1/chat/contacts", {
-          method: "GET",
-          credentials: "include",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        const isValid = verifyToken(data);
-        
-        if (isValid) {
-          console.log("Contacts fetched:", data);
-          setContacts(data);
-          initializeUnseenCounts(data);
-        }
-      } catch (err) {
-        toast.error("Failed to fetch contacts.");
-        console.error("Failed to fetch contacts: ", err);
-      }
-    };
-    
     fetchContacts();
-  }, [loginId, token, navigate]);
+  }, [loginId, token, navigate, fetchContacts]);
 
   const handleSelectContact = async (contact: Contact) => {
     setMessages([]);

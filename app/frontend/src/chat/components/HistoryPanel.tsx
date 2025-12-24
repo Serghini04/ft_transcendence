@@ -1,4 +1,4 @@
-import { CircleX, RotateCcw, Sword, Bell, UserX, UserCheck } from "lucide-react";
+import { CircleX, RotateCcw, Sword, UserX, UserCheck } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useState, useEffect } from "react";
 import { UseUserStore, UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
@@ -6,10 +6,10 @@ import { useChatToast } from "../hooks/useChatToast";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, isNotificationsMuted, toggleNotificationsMute, onlineUsers, blockUser, unblockUser} = useChatStore();
+    const {selectedContact, onlineUsers, blockUser, unblockUser} = useChatStore();
     const { user } = UseUserStore();
     const { token } = UseTokenStore();
-    const { showSuccessToast, showErrorToast, showInfoToast } = useChatToast();
+    const { showSuccessToast, showErrorToast } = useChatToast();
     const [challengeStatus, setChallengeStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
     const [isBlocking, setIsBlocking] = useState(false);
     const [matches, setMatches] = useState<any[]>([]);

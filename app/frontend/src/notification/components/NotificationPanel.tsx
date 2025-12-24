@@ -52,7 +52,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-500">
               <CheckCheck size={40} className="mb-2 opacity-40" />
-              <p className="text-sm">All caught up! 🎉</p>
+              <p className="text-sm">All caught up!</p>
             </div>
           ) : (
             <div>

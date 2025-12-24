@@ -8,6 +8,7 @@ import { userAuthService } from "./services/userAuth.service";
 import cookie from "@fastify/cookie"; 
 import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
+import { tictacService } from "./services/tictac.service";
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.register(cookie, {
 
 
 app.addHook("preHandler", authMiddleware);
+app.register(tictacService); // Register first to handle /api/* (non-v1) routes
 app.register(chatService);
 app.register(userAuthService);
 app.register(gameService);

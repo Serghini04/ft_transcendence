@@ -64,6 +64,11 @@ html, body {
   animation-delay: 0.4s;
 }
 
+/* body {
+  overflow: hidden;
+  overflow-y: auto;
+} */
+
 @keyframes typing {
   0%, 60%, 100% {
     opacity: 0.6;

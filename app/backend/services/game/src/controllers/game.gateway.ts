@@ -39,7 +39,6 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
             socket.emit("waiting");
           } else {
             waitingPlayers.delete(configKey);
-            // ✅ FIX 1: Pass 'namespace' as the 5th argument
             await createRoom(waiting, socket, configKey, options, namespace);
           }
         }
@@ -147,40 +146,6 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
       }
     });
 
-    // socket.on("leavePostGame", async () => {
-    //   console.log(`🚪 ${socket.id} left post-game`);
-
-    //   if (socket.data.roomId) {
-    //     const roomId = socket.data.roomId;
-    //     const room = rooms.get(roomId);
-
-    //     if (room) {
-    //       // Notify opponent that this player left after game over
-    //       socket.to(roomId).emit("opponentLeftPostGame");
-
-    //       // Remove this player from the room but don't delete the room yet
-    //       const playerIndex = room.players.findIndex(p => p.id === socket.id);
-    //       if (playerIndex !== -1) {
-    //         room.players.splice(playerIndex, 1);
-    //       }
-
-    //       // If no players left in room, clean up
-    //       if (room.players.length === 0) {
-    //         if (room.intervalId) {
-    //           clearInterval(room.intervalId);
-    //         }
-    //         rooms.delete(roomId);
-    //         console.log(`🗑️ Room ${roomId} deleted - no players remaining`);
-    //       }
-    //     }
-    //   }
-
-    //   // Disconnect the socket
-    //   socket.disconnect();
-    // });
-
-    
-    
     socket.on("game:challenge:accept", async ({ challengeId }: any) => {
       console.log(`✅ Challenge ${challengeId} accepted`);
       
@@ -304,12 +269,5 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
       }
     });
 
-    // ❌ FIX 3: DELETE THIS ENTIRE BLOCK
-    // The game loop is now started inside createRoom() in game.controller.ts
-    /*
-    setInterval(() => {
-      for (const roomId of rooms.keys()) updateGame(roomId, namespace);
-    }, 16);
-    */
   });
 };

@@ -1,7 +1,7 @@
 import { Kafka, Producer } from "kafkajs";
 
 const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
-const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "chat-service";
+const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "game-service";
 
 export interface NotificationEvent {
   userId: number;
@@ -57,13 +57,10 @@ export class KafkaProducerService {
   }
 
   async publishNotification(event: NotificationEvent): Promise<void> {
-    if (!this.isConnected) {
-      console.error("❌ Cannot publish notification: Producer not connected");
+    if (!this.isConnected)
       return;
-    }
 
     try {
-      console.log("📤 Publishing notification to Kafka topic 'notifications':", event);
       await this.producer.send({
         topic: "notifications",
         messages: [
@@ -76,23 +73,24 @@ export class KafkaProducerService {
           },
         ],
       });
-      console.log(`✅ Notification event published successfully for user ${event.userId}`);
     } catch (error) {
-      console.error("❌ Failed to publish notification event:", error);
       throw error;
     }
-  }  async publishNewMessageNotification(recipientId: number, senderName: string, messagePreview: string, timestamp: Date | string): Promise<void> {
+  }
+
+  async publishChallengeNotification(
+    recipientId: number,
+    challengerName: string,
+    challengeId: string,
+    timestamp: Date | string
+  ): Promise<void> {
     const event: NotificationEvent = {
       userId: recipientId,
-      title: `New message from ${senderName}`,
-      message: messagePreview.length > 50 
-        ? messagePreview.substring(0, 50) + "..." 
-        : messagePreview,
-      type: "message",
+      title: "Game Challenge Received",
+      message: `${challengerName} challenged you to a game!`,
+      type: "challenge",
       timestamp: timestamp instanceof Date ? timestamp.toISOString() : timestamp,
     };
-
-    console.log(`Publishing notification event:`, event);
     await this.publishNotification(event);
   }
 }

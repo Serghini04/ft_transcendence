@@ -5,7 +5,7 @@ export async function NotificationService(app: FastifyInstance) {
   app.log.info("Registering Notification Service proxy...");
 
   app.register(proxy, {
-    upstream: "http://localhost:3006",
+    upstream: "http://notification-service:3006",
     prefix: "/api/v1/notifications",
     rewritePrefix: "/api/v1/notifications",
 

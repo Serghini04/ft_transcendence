@@ -22,7 +22,7 @@ await app.register(cookie, {
   secret: process.env.COOKIE_SECRET,
 });
 await app.register(cors, {
-  origin: true, // for development only
+  origin: true,
   credentials: true,
 });
 
@@ -96,12 +96,13 @@ app.post("/api/v1/auth/googleSignup", async (request, reply) => {
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     console.log("Refresh Token:", RefreshToken); 
     // console.log("Generated JWT Token:", AccessToken);
+    const isProd = process.env.NODE_ENV === "production";
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
-      secure: false,     
-      sameSite: "lax",
-      path: "/",          
-      maxAge: 60 * 60 * 24 * 7, 
+      secure: isProd,                    // true only in prod
+      sameSite: isProd ? "none" : "lax", // none only in prod
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
     })
     .status(201).send({
         message: "Google signup success",
@@ -150,12 +151,14 @@ app.post("/api/v1/auth/googleLogin", async (request, reply) => {
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     console.log("Generated JWT Token:", AccessToken);
+    const isProd = process.env.NODE_ENV === "production";
+
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
-      secure: false,     
-      sameSite: "lax",
-      path: "/",       
-      maxAge: 60 * 60 * 24 * 7, 
+      secure: isProd,                    // true only in prod
+      sameSite: isProd ? "none" : "lax", // none only in prod
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
     })
     .status(201).send({
       message : "Google Login successful",
@@ -206,10 +209,12 @@ app.post("/api/v1/auth/login", async (request, reply) => {
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     console.log("Generated JWT Token:", AccessToken);
+    const isProd = process.env.NODE_ENV === "production";
+    
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
-      secure: false, 
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     })
@@ -272,15 +277,16 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
       const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
       const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
       const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+      const isProd = process.env.NODE_ENV === "production";
       
       reply.setCookie("refreshToken", RefreshToken, {
         httpOnly: true,
-        secure: false,      
-        sameSite: "lax",
+        secure: isProd,      
+        sameSite: isProd ? "none" : "lax",
         path: "/",           
         maxAge: 60 * 60 * 24 * 7, 
       })
-      .status(201).status(201).send({
+      .status(201).send({
         message: "User added successfully",
         AccessToken: AccessToken,
         user: userInfo,
