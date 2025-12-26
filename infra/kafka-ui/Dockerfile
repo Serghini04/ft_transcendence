@@ -1,5 +1,5 @@
 FROM provectuslabs/kafka-ui:latest
 
-EXPOSE 8080
+EXPOSE 3022
 
 

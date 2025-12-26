@@ -2,9 +2,7 @@ import { Lock, User, Mail, Eye, EyeClosed} from "lucide-react";
 import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
-import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore} from "../../zustand/useStore";
-import { useNavigate } from "react-router-dom";
-import OtpInput from "./Otpinput";
+import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseUserStore} from "../../zustand/useStore";
 
 export default function SignuoSettings()
 {
@@ -14,11 +12,9 @@ export default function SignuoSettings()
 	const [cpassword, setCpassword] = useState("");
 	const {errormsg, setErrorMsg} = UseErrorStore();
 	const {setUser} = UseUserStore();
-	const {setToken} = UseTokenStore();
 	const {setOtpFlag} = UseShowOtpInputStore();
 	const {setOtpOriginal} = UseOtpStore();
 	const {setFlag} = UseOtpStore();
-	const navigate = useNavigate();
 	// const [errormsg, setErrormsg] = useState("");
 	const [error, setError] = useState({
 		name: false,

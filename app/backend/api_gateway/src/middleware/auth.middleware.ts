@@ -1,13 +1,12 @@
 import { fastify, UserPayload, type FastifyReply, type FastifyRequest } from "fastify";
 import jwt, { TokenExpiredError, type JwtPayload } from "jsonwebtoken";
 import dotenv from "dotenv";
-import cookie from "@fastify/cookie";
+// import cookie from "@fastify/cookie";
 import "fastify";
-import cors from "@fastify/cors";
+// import cors from "@fastify/cors";
+// import { ref } from "process";
 
 dotenv.config();
-
-
 
 export function generateJwtAccessToken({id, name, email}: {id: number; name:string; email: string}){
     if (!process.env.JWT_SECRET) {
@@ -25,6 +24,10 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
   if (req.url.startsWith("/socket.io/")) {
     return;
   }
+  // Skip tictac game routes - they handle their own auth
+  if (req.url.startsWith("/api/") && !req.url.startsWith("/api/v1/")) {
+    return;
+  }
   const authHeader = req.headers.authorization;
   const accessToken = authHeader?.split(" ")[1];
 
@@ -33,6 +36,7 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
   }
 
   try {
+    
     const decoded = jwt.verify(accessToken, process.env.JWT_SECRET!) as UserPayload;
     req.user = decoded;
     return; // Access allowed
@@ -43,7 +47,7 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
       if (!refreshToken) {
         return reply.status(401).send({ code: "NO_REFRESH_TOKEN" });
       }
-
+      
       try {
         const decodedRefresh = jwt.verify(
           refreshToken,

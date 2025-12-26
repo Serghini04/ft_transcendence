@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
-import  axiosInstance  from "../app/axios";
+import { useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "react-toastify";
 import { UseTokenStore } from "../../userAuth/zustand/useStore";
-import isValidToken from "../../globalUtils/isValidToken";
 import { useNavigate } from "react-router-dom";
 import verifyToken from "../../globalUtils/verifyToken";
 
@@ -17,65 +15,17 @@ type Contact = {
     avatarUrl: string;
   };
   unseenMessages: number;
-  isBlocked: boolean;
+  blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
 export default function ContactsList({ closeSidebar }: any) {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const { selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, initializeUnseenCounts } = useChatStore();
-  const { token, setToken } = UseTokenStore();
+  const { contacts, selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, fetchContacts } = useChatStore();
+  const { token} = UseTokenStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        // const response = await axiosInstance.get<Contact[]>("/api/v1/chat/contacts", {
-        //   headers: { Authorization: `Bearer ${token}` }
-        // });
-        // const result = await isValidToken(token);
-        // if (!result.valid)
-        // {
-        //   navigate("/auth");
-        //   return;
-        // }
-        
-        // if (result.newToken) {
-        //   setToken(result.newToken);
-        // }
-        const res = await fetch("http://localhost:8080/api/v1/chat/contacts", {
-          method: "GET",
-          credentials: "include",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        const isValid = verifyToken(data);
-        // if (!result.valid)
-        // {
-        //   navigate("/auth");
-        //   return;
-        // }
-        
-        // if (result.newToken) {
-        //   setToken(result.newToken);
-        // }
-        
-        if (isValid) {
-          console.log("Contacts fetched:", data);
-          setContacts(data);
-          
-          // Initialize unseen message counts from backend data
-          initializeUnseenCounts(data);
-        }
-      } catch (err) {
-        toast.error("Failed to fetch contacts.");
-        console.error("Failed to fetch contacts: ", err);
-      }
-    };
-    
     fetchContacts();
-  }, [loginId, token, navigate]);
+  }, [loginId, token, navigate, fetchContacts]);
 
   const handleSelectContact = async (contact: Contact) => {
     setMessages([]);
@@ -83,18 +33,6 @@ export default function ContactsList({ closeSidebar }: any) {
     closeSidebar();
 
     try {
-      // const res = await axiosInstance.get(`/api/v1/chat/conversation/${contact.user.id}`, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      // const result = await isValidToken(token);
-      // if (!result.valid)
-      // {
-      //   navigate("/auth");
-      // }
-      
-      // if (result.newToken) {
-      //   setToken(result.newToken);
-      // }
       const res = await fetch(`http://localhost:8080/api/v1/chat/conversation/${contact.user.id}`, {
         method: "GET",
         credentials: "include",
@@ -103,15 +41,6 @@ export default function ContactsList({ closeSidebar }: any) {
 
       const data = await res.json();
       const isValid = verifyToken(data);
-      // if (!result.valid)
-      // {
-      //   navigate("/auth");
-      //   return;
-      // }
-      
-      // if (result.newToken) {
-      //   setToken(result.newToken);
-      // }
       if (isValid) 
       setMessages(data);
     } catch (err) {

@@ -1,34 +1,38 @@
 import { motion } from "framer-motion";
 import { ArrowRightIcon } from "lucide-react"; 
 import { Link } from "react-router-dom";
+import tournamentImg from "../assets/images/tournament.png";
+import onlineImg from "../assets/images/online.png";
+import aiImg from "../assets/images/ai.png";
+import localImg from "../assets/images/local.png";
 
 
 const gameModes = [
   {
     title: "Tournament",
     desc: "Compete against the best players and rise through the leaderboard.",
-    img: "/src/assets/images/tournament.png",
+    img: tournamentImg,
     button: "Enter Tournament",
     route: "tournament",
   },
   {
     title: "Play Online",
     desc: "Challenge real opponents across the web in real-time matches.",
-    img: "/src/assets/images/online.png",
+    img: onlineImg,
     button: "Play Online",
     route: "online",
   },
   {
     title: "Play with AI",
     desc: "Test your skills against an intelligent AI opponent.",
-    img: "/src/assets/images/ai.png",
+    img: aiImg,
     button: "Play with AI",
     route: "ai",
   },
   {
     title: "Play Local",
     desc: "Enjoy the game with a friend on the same device.",
-    img: "/src/assets/images/local.png",
+    img: localImg,
     button: "Play with a Friend",
     route: "local",
   },
@@ -36,8 +40,8 @@ const gameModes = [
 
 export default function GameMenu() {
   return (
-    <div className="relative w-full min-h-[calc(100vh-5rem)] flex justify-center items-center px-6 md:px-10 py-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md sm:max-w-2xl md:max-w-5xl mx-auto">
+    <div className="relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] overflow-y-auto flex justify-center items-start px-6 md:px-10 py-10 pb-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md sm:max-w-2xl md:max-w-5xl mx-auto my-auto">
         {gameModes.map((mode, i) => (
           <div
             key={i}

@@ -7,22 +7,40 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
 *.local
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 package-lock.json
@@ -94,6 +112,8 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+=======
+>>>>>>> 8825f8bf7a6e3cbc9b6e2f3babde3aa95ae99ad9
 # Testing
 coverage/
 .nyc_output/

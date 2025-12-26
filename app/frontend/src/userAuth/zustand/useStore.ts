@@ -53,8 +53,8 @@ type imageDataUrlState = {
   setBgImageDataUrl: (imageDataURL: string) => void;
 };
 type photosFile = {
-  profileFile: File;
-  bgFile: File;
+  profileFile: File | null;
+  bgFile: File | null;
   setProfileFile: (profileFile: File) => void;
   setBgImageFile: (bgFile: File) => void;
 };

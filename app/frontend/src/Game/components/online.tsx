@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { UseTokenStore, UseUserStore } from "../../userAuth/zustand/useStore";
+import verifyToken from "../../globalUtils/verifyToken";
 
 
 interface GameState {
@@ -11,54 +11,63 @@ interface GameState {
   paddles: { left: { x: number; y: number; width: number; height: number; speed: number }, right: { x: number; y: number; width: number; height: number; speed: number } };
   scores: { left: number; right: number };
   powerUp: { found: boolean; x: number; y: number; width: number; height: number; visible: boolean; duration: number; spawnTime: number | null};
-  winner?: "left" | "right" | null;
+  winner?: null;
 }
 
 interface UserProfile {
   id: string;
   name: string;
   avatar: string;
-  side: "left" | "right";
 }
 
 export default function Online() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const winnerRef = useRef<"left" | "right" | null>(null);
+  const winnerRef = useRef<string | null>(null);
+  const yourProfileRef = useRef<UserProfile | null>(null);
+  const opponentProfileRef = useRef<UserProfile | null>(null);
+  const playerPositionRef = useRef<"left" | "right" | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
 
+  const { token } = UseTokenStore();
+  const { user } = UseUserStore();
+
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [side, setSide] = useState<"left" | "right" | null>(null);
   const [waiting, setWaiting] = useState(true);
-  const [winner, setWinner] = useState<"left" | "right" | null>(null);
+  const [winner, setWinner] = useState<string | null>(null); // Store user ID, not side
   const [time, setTime] = useState(0);
   const [restartReady, setRestartReady] = useState({ left: false, right: false });
   const [waitingForRestart, setWaitingForRestart] = useState(false);
   const [forfeitWin, setForfeitWin] = useState(false);
+  const [opponentLeftPostGame, setOpponentLeftPostGame] = useState(false);
   
   // User profiles
   const [yourProfile, setYourProfile] = useState<UserProfile | null>(null);
   const [opponentProfile, setOpponentProfile] = useState<UserProfile | null>(null);
   const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
-  const [loserProfile, setLoserProfile] = useState<UserProfile | null>(null);
-
-  // const { token } = UseTokenStore();
-  // const { user } = UseUserStore();
 
 
   const [state, setState] = useState<GameState>({
     canvas: { width: 1200, height: 675 },
     ball: { x: 600, y: 337.5, radius: 8, vx: 0, vy: 0, speed: 0, visible: true },
-    paddles: { left: { x: 20, y: 200, width: 10, height: 90, speed: 10 }, right: { x: 770, y: 200, width: 10, height: 90, speed: 10 } },
+    paddles: { left: { x: 20, y: 200, width: 10, height: 90, speed: 6 }, right: { x: 770, y: 200, width: 10, height: 90, speed: 6 } },
     scores: { left: 0, right: 0 },
     powerUp: { found: false, x: 0, y: 0, width: 0, height: 0, visible: false, duration: 0, spawnTime: null },
     winner: null,
   });
 
   const location = useLocation();
+  type MapType = "Classic" | "Desert" | "Chemistry";
   const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
+  const typedMap = ["Classic", "Desert", "Chemistry"].includes(map) ? map as MapType : "Classic";
 
-  const gameThemes = {
+  // Check if this is a challenge game (roomId in URL params)
+  const searchParams = new URLSearchParams(location.search);
+  const roomId = searchParams.get('roomId');
+  const isChallenge = !!roomId;
+
+  const gameThemes: Record<MapType, { background: string; color: string }> = {
     Classic: {
       background: "bg-[rgba(0,0,0,0.75)]",
       color: "#8ADDD4",
@@ -73,109 +82,208 @@ export default function Online() {
     },
   };
 
-  const theme = gameThemes[map] || gameThemes.Classic;
-  const speedMultiplier = { Slow: 0.8, Normal: 1.3, Fast: 2.5 };
+  const theme = gameThemes[typedMap];
 
   // Connect to Socket.IO
   useEffect(() => {
-    const s = io("http://localhost:8080", {transports: ['websocket']});
-    setSocket(s);
+    const init = async () => {
+      // Check if user is authenticated
+      if (!token || !user) {
+        console.error("❌ User not authenticated");
+        navigate("/auth");
+        return;
+      }
+  
+      // Fetch user data
+      try {
+        const res = await fetch(`http://localhost:8080/api/v1/game/user/${user.id}`, {
+          method: "GET",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+  
+        const raw = await res.json();
+        verifyToken(raw);
+        
+        // Normalize backend response
+        const data: UserProfile = {
+          id: raw.id,
+          name: raw.username,
+          avatar: raw.avatarUrl,
+        };
+        
+        setYourProfile(data);
+        yourProfileRef.current = data;
+        console.log("---------> : Fetched user profile:", data); // Log data, not state
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        return;
+      }
+      
+      // Connect to the /game namespace on the API Gateway so events reach the game service
+      const s = io("http://localhost:8080/game", {
+        path: "/socket.io",
+        transports: ["websocket"],
+        auth: { token, userId: user.id },
+        extraHeaders: { Authorization: `Bearer ${token}` },
+      });
+      setSocket(s);
+      socketRef.current = s; // Store in ref for cleanup
+      
+      // Only emit joinGame for regular online mode, not for challenges
+      if (!isChallenge) {
+        s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
+        console.log("Joining game with settings:", { map, powerUps, speed });
+      } else {
+        // For challenge mode, join the specific room
+        s.emit("joinChallengeRoom", { roomId, userId: user.id });
+        console.log("Joining challenge room:", roomId);
+      }
+  
+      s.on("connect", () => console.log("🔗 Connected:", s.id));
+      s.on("waiting", () => setWaiting(true));
+  
+      s.on("start", async ({ opponentId, yourId, position }: { opponentId: string, yourId: string, position: "left" | "right" }) => {
+        console.log("🚀 Match started - Position:", position);
+        playerPositionRef.current = position;
+        
+        const currentYourProfile = yourProfileRef.current;
+        if (currentYourProfile && currentYourProfile.id !== yourId) {
+          console.error("⚠️ Your ID mismatch:", currentYourProfile.id, yourId);
+        }
+        
+        // Fetch opponent profile
+        try {
+          const res = await fetch(`http://localhost:8080/api/v1/game/user/${opponentId}`, {
+            method: "GET",
+            credentials: "include",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          
+          const raw = await res.json();
+          verifyToken(raw);
+          
+          const opponentData: UserProfile = {
+            id: raw.id,
+            name: raw.username,
+            avatar: raw.avatarUrl,
+          };
+          
+          setOpponentProfile(opponentData);
+          opponentProfileRef.current = opponentData;
+          console.log("---------> : Fetched opponent profile:", opponentData);
+        } catch (err) {
+          console.error("Failed to fetch opponent profile:", err);
+        }
+        
+        setWaiting(false);
+        setTime(0);
+        setWinner(null);
+        winnerRef.current = null;
+        setForfeitWin(false);
+      });
+  
+      s.on("state", (data: GameState) => {
+        setState(data);
+      });
 
-    // const res = await fetch(`http://localhost:8080/api/v1/chat/conversation/${contact.user.id}`, {
-    //         method: "POST",
-    //         credentials: "include",
-    //         headers: { Authorization: `Bearer ${token}` },
-    //         body: JSON.stringify({ userId: user.id }),
+      s.on("gameOver", ({ winnerId }) => {
+        const currentYourProfile = yourProfileRef.current;
+        const currentOpponentProfile = opponentProfileRef.current;
+        
+        console.log("🏁 Game Over! Winner:", winnerId === currentYourProfile?.id ? currentYourProfile : currentOpponentProfile);
 
-    //       });
+        setWinner(winnerId);
+        winnerRef.current = winnerId;
+        
+        // Determine winner/loser from existing profiles
+        if (currentYourProfile && currentOpponentProfile) {
+          if (winnerId === currentYourProfile.id) {
+            setWinnerProfile(currentYourProfile);
+            console.log("🏆 You won!");
+          } else {
+            setWinnerProfile(currentOpponentProfile);
+            console.log("😞 You lost to", currentOpponentProfile.name);
+          }
+        }
+      });
+
+      s.on("restartReady", ({ leftReady, rightReady }: { leftReady: boolean, rightReady: boolean }) => {
+        setRestartReady({ left: leftReady, right: rightReady });
+        console.log("Restart ready status:", { leftReady, rightReady });
+      });
+
+      s.on("gameRestarted", () => {
+        setWinner(null);
+        winnerRef.current = null;
+        setTime(0);
+        setRestartReady({ left: false, right: false });
+        setWaitingForRestart(false);
+        setForfeitWin(false);
+        setOpponentLeftPostGame(false);
+        setWinnerProfile(null);
+        console.log("🔄 Game restarted!");
+      });
+
+      s.on("opponentLeftPostGame", () => {
+        console.log("⚠️ Opponent left after game over");
+        setOpponentLeftPostGame(true);
+        setWaitingForRestart(false);
+      });
+
+      s.on("opponentDisconnected", ({ winnerId, gameActive }: { winnerId: string, reason: string, gameActive: boolean }) => {
+        console.log("⚠️ Opponent disconnected", { gameActive });
+        const currentYourProfile = yourProfileRef.current;
+        const currentOpponentProfile = opponentProfileRef.current;
+        
+        setWinner(winnerId);
+        winnerRef.current = winnerId;
+        setWaitingForRestart(false);
+        
+        // Only set forfeitWin if game was active (not after game over)
+        if (gameActive) {
+          setForfeitWin(true);
+        } else {
+          setOpponentLeftPostGame(true);
+        }
+        
+        // Set winner/loser profiles
+        if (currentYourProfile && currentOpponentProfile) {
+          if (winnerId === currentYourProfile.id) {
+            setWinnerProfile(currentYourProfile);
+          } else {
+            setWinnerProfile(currentOpponentProfile);
+          }
+        }
+      });
+
+      s.on("end", () => {
+        alert("Opponent disconnected");
+        setWaiting(true);
     
-    // const data = await res.json();
-    // const isValid = verifyToken(data);
-    const currentUserId = localStorage.getItem('userId') || `user_${Date.now()}`;
-    
-    s.emit("joinGame", { userId: currentUserId, options: { map, powerUps, speed } });
-    console.log("Joining game with settings:", { map, powerUps, speed });
-    s.on("connect", () => console.log("🔗 Connected:", s.id));
-    s.on("waiting", () => setWaiting(true));
+        return () => s.disconnect();
+      });
+    };
+  
+    init(); // Call the async function
 
-    s.on("start", ({ side, opponent, you }: { side: "left" | "right", opponent: UserProfile, you: UserProfile }) => {
-      console.log("🚀 Match started as:", side);
-      console.log("👤 Your profile:", you);
-      console.log("🎮 Opponent:", opponent);
-      setSide(side);
-      setYourProfile(you);
-      yourProfile!.side = side;
-      setOpponentProfile(opponent);
-      opponentProfile!.side = side === "left" ? "right" : "left";
-      setWaiting(false);
-      setTime(0);
-      setWinner(null);
-      winnerRef.current = null;
-      setForfeitWin(false);
-    });
-
-    s.on("state", (data: GameState) => {
-      setState(data);
-    });
-
-    s.on("gameOver", ({ winner, winnerProfile, loserProfile}: { 
-      winner: "left" | "right", 
-      winnerProfile: UserProfile,
-      loserProfile: UserProfile,
-      scores: { left: number, right: number },
-      duration: number
-    }) => {
-      console.log("🏆 Game Over!", { winner, winnerProfile, loserProfile});
-      setWinner(winner);
-      winnerRef.current = winner;
-      setWinnerProfile(winnerProfile);
-      setLoserProfile(loserProfile);
-    });
-
-    s.on("restartReady", ({side, leftReady, rightReady }: { side: string, leftReady: boolean, rightReady: boolean }) => {
-      setRestartReady({ left: leftReady, right: rightReady });
-      if (side ===  opponentProfile?.side)
-        console.log("🔄 Opponent is ready to restart");
-    });
-
-    s.on("gameRestarted", () => {
-      console.log("🔄 Game restarted!");
-      setWinner(null);
-      winnerRef.current = null;
-      setTime(0);
-      setRestartReady({ left: false, right: false });
-      setWaitingForRestart(false);
-      setForfeitWin(false);
-    });
-
-    s.on("opponentDisconnected", ({ winner: forfeitWinner }: { winner: "left" | "right", reason: string }) => {
-      console.log("⚠️ Opponent disconnected");
-      setWinner(forfeitWinner);
-      winnerRef.current = forfeitWinner;
-      setWaitingForRestart(false);
-      setForfeitWin(true);
-      // Update score to reflect forfeit win
-      setState(prev => ({
-        ...prev,
-        winner: forfeitWinner,
-        scores: forfeitWinner === "left" 
-          ? { left: 5, right: prev.scores.right }
-          : { left: prev.scores.left, right: 5 }
-      }));
-    });
-
-    s.on("end", () => {
-      alert("Opponent disconnected");
-      setWaiting(true);
-      setSide(null);
-    });
-
-    return () => s.disconnect();
+    // Cleanup on unmount (when user navigates away, reloads, or closes tab)
+    return () => {
+      if (socketRef.current) {
+        console.log("🚪 Component unmounting - disconnecting socket");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, []);
+  
 
   // Handle paddle movement - continuous movement while key is held
   useEffect(() => {
-    if (!socket || !side) return;
+    // console.log("Setting up paddle movement listeners started");
+    if (!socket || waiting) return;
 
     const keysPressed: Record<string, boolean> = {};
 
@@ -203,12 +311,13 @@ export default function Online() {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     
+    // console.log("Setting up paddle movement listeners ended");
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       clearInterval(moveInterval);
     };
-  }, [socket, side]);
+  }, [socket, waiting]);
 
   // Timer
   useEffect(() => {
@@ -284,28 +393,36 @@ export default function Online() {
     };
 
     const loop = () => {
+      // console.log("Drawing frame");
       if (!canvasRef.current) return;
       draw();
-      if (!winnerRef.current)
-        requestAnimationFrame(loop);
-      else
-      {
-        if (rafRef.current)
+      if (!winnerRef.current) {
+        rafRef.current = requestAnimationFrame(loop);
+      } else {
+        if (rafRef.current) {
           cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
+      }
+    };
+    
+    // Cancel any existing animation frame before starting new loop
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    
+    loop();
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
     };
-    loop();
-    return () => {
-      if (rafRef.current)
-        cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
 
-  }, [state]);
+  }, [state, winner]);
 
   const resetGame = () => {
-    setWaitingForRestart(true);
+    setWaitingForRestart(true)
     socket?.emit("restart");
   };
 
@@ -335,15 +452,13 @@ export default function Online() {
           }}
         >
           <div className="flex items-center gap-3 w-20">
-            {side === "left" && yourProfile && (
+            {yourProfile && opponentProfile && (
               <>
-                <img src={yourProfile.avatar} alt={yourProfile.name} className="h-10 w-10 rounded-full object-cover" />
-                <span className="text-[22px] font-semibold">{state.scores.left}</span>
-              </>
-            )}
-            {side === "right" && opponentProfile && (
-              <>
-                <img src={opponentProfile.avatar} alt={opponentProfile.name} className="h-10 w-10 rounded-full object-cover" />
+                <img 
+                  src={playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar} 
+                  alt={playerPositionRef.current === "left" ? yourProfile.name : opponentProfile.name} 
+                  className="h-10 rounded-full border-2 border-[#50614d80]-500"
+                />
                 <span className="text-[22px] font-semibold">{state.scores.left}</span>
               </>
             )}
@@ -364,11 +479,12 @@ export default function Online() {
 
           <div className="flex items-center gap-3 w-20">
             <span className="text-[22px] font-semibold">{state.scores.right}</span>
-            {side === "right" && yourProfile && (
-              <img src={yourProfile.avatar} alt={yourProfile.name} className="h-10 w-10 rounded-full object-cover" />
-            )}
-            {side === "left" && opponentProfile && (
-              <img src={opponentProfile.avatar} alt={opponentProfile.name} className="h-10 w-10 rounded-full object-cover" />
+            {yourProfile && opponentProfile && (
+              <img 
+                src={playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar} 
+                alt={playerPositionRef.current === "right" ? yourProfile.name : opponentProfile.name} 
+                className="h-10 rounded-full border-2 border-[#50614d80]-500" 
+              />
             )}
           </div>
         </div>
@@ -389,12 +505,14 @@ export default function Online() {
               className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4 object-cover"
             />
             <h2 className="text-white text-3xl font-bold text-center mb-4">
-              {forfeitWin 
-                ? (winner === side ? "🏆 You Won by Forfeit!" : "😞 Opponent Disconnected")
-                : (winner === side ? "🏆 You Won!" : `😞 ${winnerProfile.name} Won!`)
+              {opponentLeftPostGame
+                ? "Your opponent left"
+                : forfeitWin 
+                  ? (user && winner === String(user.id) ? "🏆 You Won by Forfeit!" : "😞 You Lost - Disconnected")
+                  : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 You Lost To ${winnerProfile.name}`)
               }
             </h2>
-            {forfeitWin && (
+            {forfeitWin && !opponentLeftPostGame && (
               <p className="text-gray-300 text-sm mb-4">Your opponent left the game</p>
             )}
             
@@ -403,8 +521,11 @@ export default function Online() {
                 <div className="text-white text-xl font-semibold">
                   Waiting for your opponent...
                 </div>
+                {/* <div className="text-green-400 text-sm">
+                  ✓ You are ready
+                </div> */}
               </div>
-            ) : forfeitWin ? (
+            ) : (forfeitWin || opponentLeftPostGame) ? (
               <button
                 onClick={() => navigate("/game")}
                 className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
@@ -412,12 +533,32 @@ export default function Online() {
                 Return to Menu
               </button>
             ) : (
-              <button
-                onClick={resetGame}
-                className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-              >
-                Play Again
-              </button>
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={resetGame}
+                    className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
+                  >
+                    Play Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      // socket?.emit("leavePostGame");
+                      socket?.disconnect();
+                      navigate("/game");
+                    }}
+                    className="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
+                {((playerPositionRef.current === "left" && restartReady.right) || 
+                  (playerPositionRef.current === "right" && restartReady.left)) && (
+                  <div className="text-green-400 text-sm">
+                    ✓ Opponent is ready
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

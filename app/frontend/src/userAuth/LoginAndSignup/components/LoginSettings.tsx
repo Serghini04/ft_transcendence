@@ -2,19 +2,16 @@ import { Eye, EyeClosed, Lock, User } from "lucide-react";
 import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
-import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore} from "../../zustand/useStore";
-import { useNavigate } from "react-router-dom";
+import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseUserStore} from "../../zustand/useStore";
 
 export default function LoginSettings()
 {
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const {errormsg, setErrorMsg} = UseErrorStore();
-	const {setToken} = UseTokenStore();
 	const {setUser} = UseUserStore();
 	const {setOtpOriginal, setFlag} = UseOtpStore();
 	const {setOtpFlag} = UseShowOtpInputStore();
-	const navigate = useNavigate();
 	const [error, setError] = useState({
 		username: false,
 		password: false

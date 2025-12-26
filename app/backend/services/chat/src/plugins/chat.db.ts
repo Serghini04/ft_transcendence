@@ -30,33 +30,35 @@ db.exec(`
     user1_id INTEGER NOT NULL,
     user2_id INTEGER NOT NULL,
     type VARCHAR(20) NOT NULL CHECK(type IN ('friend', 'blocked', 'pending')),
+    blocked_by_user_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     user1_unseen_messages INTEGER NOT NULL DEFAULT 0,
     user2_unseen_messages INTEGER NOT NULL DEFAULT 0,
     UNIQUE(user1_id, user2_id),
     FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_by_user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);
 
-// const relationshipsInsert = db.prepare(`
-//   INSERT INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
-// `);
+const relationshipsInsert = db.prepare(`
+  INSERT INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
+`);
 
-// const userInsert = db.prepare(`
-//   INSERT OR IGNORE INTO users (id, full_name, username, status) VALUES (?, ?, ?, ?)
-// `);
+const userInsert = db.prepare(`
+  INSERT OR IGNORE INTO users (id, full_name, username, status) VALUES (?, ?, ?, ?)
+`);
 
-// const messageInsert = db.prepare(`
-//   INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
-// `);
+const messageInsert = db.prepare(`
+  INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
+`);
 
-// userInsert.run(1, "Mehdi Serghini", "meserghi", "online");
-// userInsert.run(2, "King Ana", "king", "online");
+userInsert.run(1, "Mehdi Serghini", "meserghi", "online");
+userInsert.run(2, "King Ana", "king", "online");
 
-// relationshipsInsert.run(1, 2, 'friend');
+relationshipsInsert.run(1, 2, 'friend');
 
-// messageInsert.run(1, 2, "hey, king!");
-// messageInsert.run(2, 1, "hey, Mehdi!");
-// messageInsert.run(2, 1, "how are you?");
-// messageInsert.run(1, 2, "I'm fine");
+messageInsert.run(1, 2, "hey, king!");
+messageInsert.run(2, 1, "hey, Mehdi!");
+messageInsert.run(2, 1, "how are you?");
+messageInsert.run(1, 2, "I'm fine");

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import LoginArea from "./LoginArea";
 import SignupArea from "./SignupArea";
-import {UseErrorStore, UseOtpStore, UseShowOtpInputStore} from "../../zustand/useStore";
+import {UseErrorStore, UseShowOtpInputStore} from "../../zustand/useStore";
 import OtpInput from "./Otpinput";
 
 export default function SwitchBetweenLoginAndSignin()

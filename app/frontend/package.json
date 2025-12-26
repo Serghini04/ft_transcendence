@@ -2,10 +2,9 @@
   "name": "frontend",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -32,7 +31,6 @@
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",
     "react-toastify": "^11.0.5",
-    "rolldown": "^1.0.0-beta.51",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tailwind-scrollbar": "^4.0.2",
@@ -55,12 +53,9 @@
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17",
+    "tailwindcss": "^4.1.14",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
-    "vite": "npm:rolldown-vite@7.1.14"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.1.14"
+    "vite": "^7.1.9"
   }
 }

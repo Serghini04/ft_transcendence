@@ -1,6 +1,3 @@
-import { Link } from "lucide-react";
-
-
 export default function LSButton(props : any)
 {
 

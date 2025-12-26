@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Input from "./Input";
 import { BioInput } from "./BioInput";
 import { UseBioStore, UseimageDataUrlStore, UsephotosFileStore, UseSettingsErrorStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
-import { set } from "date-fns";
 
 interface params {
     user :{

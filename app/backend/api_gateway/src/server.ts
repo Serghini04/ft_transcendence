@@ -7,8 +7,9 @@ import { setupSocketGateway } from "./utils/socket.gateway";
 import { userAuthService } from "./services/userAuth.service";
 import cookie from "@fastify/cookie"; 
 import { gameService } from "./services/game.service";
+import { NotificationService } from "./services/notification.service";
+import { tictacService } from "./services/tictac.service";
 
-// Load environment variables FIRST
 dotenv.config();
 
 const app = Fastify({
@@ -21,7 +22,6 @@ const app = Fastify({
   },
 });
 
-// Log environment check
 app.log.info({
   hasJwtSecret: !!process.env.JWT_SECRET,
   hasJwtRefresh: !!process.env.JWT_REFRESH,
@@ -30,16 +30,11 @@ app.log.info({
 
 app.register(cors, {
   origin: (origin, cb) => {
-    const allowedOrigins = [
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow all origins in development
+    if (!origin) {
       cb(null, true);
     } else {
-      app.log.warn(`CORS rejected: ${origin}`);
-      cb(null, false);
+      cb(null, true);
     }
   },
   credentials: true,
@@ -56,20 +51,16 @@ app.register(cookie, {
 
 
 app.addHook("preHandler", authMiddleware);
-app.register(chatService);
 app.register(userAuthService);
+app.register(tictacService); // Register first to handle /api/* (non-v1) routes
+app.register(chatService);
 app.register(gameService);
+app.register(NotificationService);
 const start = async () => {
   try {
-    // await app.register(cookie, {
-    //   secret: process.env.COOKIE_SECRET || "my-secret", // ✅ Add this
-    //   parseOptions: {}
-    // });
-
-    // Setup socket gateway before listening
     await setupSocketGateway(app);
     await app.listen({ port: 8080, host: "0.0.0.0" });
-    app.log.info("🚀 API Gateway running at http://localhost:8080");
+    app.log.info("API Gateway running at http://localhost:8080");
   } catch (err) {
     app.log.error(err);
     process.exit(1);

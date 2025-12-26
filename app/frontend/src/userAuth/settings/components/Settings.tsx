@@ -1,10 +1,9 @@
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ModifyUserInformation from "./ModifyUserInformation";
 import PhotosSide from "./PhotosSide";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import verifyToken from "../../../globalUtils/verifyToken";
-import { set } from "date-fns";
 
 export default function Settings() {
   const { user } = UseUserStore();

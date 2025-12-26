@@ -1,14 +1,14 @@
 import fastify from "fastify";
-import db from "./db.ts";
+import db from "./db.js";
 import bcrypt from "bcrypt";
 import { Console, error, profile } from "console";
 import {OAuth2Client } from "google-auth-library";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { request } from "http";
-import {generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.ts";
+import {generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.js";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
-import { generateOTP, sendOTPEmail } from "./2FA.ts";
+import { generateOTP, sendOTPEmail } from "./2FA.js";
 import { access } from "fs";
 import { str } from "ajv";
 import multer from "multer";
@@ -138,13 +138,16 @@ app.post("/api/v1/auth/googleSignup", async (request, reply) => {
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     console.log("Refresh Token:", RefreshToken); 
+
+    const isProd = process.env.NODE_ENV === "production";
+
     // console.log("Generated JWT Token:", AccessToken);
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
-      secure: false,     
-      sameSite: "lax",
+      secure: isProd,                    // true only in prod
+      sameSite: isProd ? "none" : "lax", // none only in prod
       path: "/",          
-      maxAge: 60 * 60 * 24 * 7, 
+      maxAge: 60 * 60 * 24 * 7,
     })
     .status(201).send({
         message: "Google signup success",
@@ -192,13 +195,15 @@ app.post("/api/v1/auth/googleLogin", async (request, reply) => {
     const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-    console.log("Generated JWT Token:", AccessToken);
+    const isProd = process.env.NODE_ENV === "production";
+
+    // console.log("Generated JWT Token:", AccessToken);
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
-      secure: false,     
-      sameSite: "lax",
-      path: "/",       
-      maxAge: 60 * 60 * 24 * 7, 
+      secure: isProd,                    // true only in prod
+      sameSite: isProd ? "none" : "lax", // none only in prod
+      path: "/",          
+      maxAge: 60 * 60 * 24 * 7,
     })
     .status(201).send({
       message : "Google Login successful",
@@ -310,13 +315,16 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
       const AccessToken = generateJwtAccessToken({id: row.id, name: row.name, email: row.email});
       const RefreshToken = generateJwtRefreshToken({id: row.id, name: row.name, email: row.email});
 
-    return reply.setCookie("refreshToken", RefreshToken, {
-              httpOnly: true,
-              secure: false,      
-              sameSite: "lax",
-              path: "/",           
-              maxAge: 60 * 60 * 24 * 7, 
-            }).status(200).send({ message: "Signup completed", code: "VERIFICATION_SUCCESS", accessToken: AccessToken, user: userInfo });
+      const isProd = process.env.NODE_ENV === "production";
+
+      // console.log("Generated JWT Token:", AccessToken);
+      reply.setCookie("refreshToken", RefreshToken, {
+        httpOnly: true,
+        secure: isProd,                    // true only in prod
+        sameSite: isProd ? "none" : "lax", // none only in prod
+        path: "/",          
+        maxAge: 60 * 60 * 24 * 7,
+      }).status(200).send({ message: "Signup completed", code: "VERIFICATION_SUCCESS", accessToken: AccessToken, user: userInfo });
 
 
   } catch (err) {
@@ -445,7 +453,7 @@ app.post("/api/v1/auth/setting/getUserData", async (request, reply) => {
 });
 
 const uploadDir = path.join("../../../", "frontend/public/uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
   const parts = req.parts();
@@ -641,7 +649,7 @@ app.get("/api/v1/auth/protect", async (request, reply) => {
 // });
 
 
-app.listen({ port: 3004 }, (err, address) => {
+app.listen({ port: 3004, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);

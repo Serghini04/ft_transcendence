@@ -9,7 +9,6 @@ export default function Home() {
 
   useEffect(() => {
     async function check() {
-      console.error("-----> Checking token validity on Home:", token);
       const result = await isValidToken(token);
       if (!result.valid)
       {
@@ -36,6 +35,6 @@ export default function Home() {
                 flex
               "
             >
-            </div>
+      </div>
     );
   }

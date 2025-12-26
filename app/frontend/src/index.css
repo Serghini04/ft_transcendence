@@ -30,6 +30,14 @@ html, body {
 	--color-primary-border: #DDDDDD;
 }
 
+@media (min-width: 768px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 @theme {
 	--color-primary: #0C7368;
 }
@@ -55,6 +63,11 @@ html, body {
 .typing-dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
+
+/* body {
+  overflow: hidden;
+  overflow-y: auto;
+} */
 
 @keyframes typing {
   0%, 60%, 100% {

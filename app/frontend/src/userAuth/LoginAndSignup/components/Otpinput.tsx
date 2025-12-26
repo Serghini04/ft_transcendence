@@ -1,7 +1,6 @@
-import { useRef, useState } from "react";
+import { useRef, useState, KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
-import { set } from "date-fns";
 
 export default function OtpInput() {
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
@@ -68,7 +67,7 @@ export default function OtpInput() {
     }
   };
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement | null>) => {
     if (e.key === "Backspace" && !e.currentTarget.value && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
@@ -80,7 +79,7 @@ export default function OtpInput() {
         <input
           key={index}
           maxLength={1}
-          ref={(el) => (inputsRef.current[index] = el)}
+          ref={(el) => {inputsRef.current[index] = el}}
           onChange={(e) => handleChange(index, e.target.value)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           className="w-[11.5%] h-[82%] border border-gray-300 text-gray-300 rounded-[23%] text-center text-[50%] sm:text-[70%] md:text-[90%]  xl:text-[150%] font-semibold outline-none focus:border-blue-500"

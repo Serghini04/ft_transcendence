@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { Relationship } from "../models/relationship";
-import { User, UserStatus } from "../models/user";
+import { User } from "../models/user";
 import { Message } from "../models/message";
 
 
@@ -19,7 +19,11 @@ export class ChatRepository {
           u.username AS contact_username,
           u.status AS contact_status,
           u.avatar_url AS contact_avatar_url,
-          CASE WHEN relationships.type = 'blocked' THEN 1 ELSE 0 END AS is_blocked,
+          CASE 
+            WHEN relationships.type = 'blocked' AND relationships.blocked_by_user_id = ? THEN 'blocked_by_me'
+            WHEN relationships.type = 'blocked' AND relationships.blocked_by_user_id != ? THEN 'blocked_by_them'
+            ELSE 'none'
+          END AS block_status,
           CASE 
             WHEN relationships.user1_id = ? THEN relationships.user1_unseen_messages
             ELSE relationships.user2_unseen_messages
@@ -30,17 +34,19 @@ export class ChatRepository {
                       WHEN relationships.user1_id = ? THEN relationships.user2_id
                       ELSE relationships.user1_id
                     END
-        WHERE relationships.user1_id = ? OR relationships.user2_id = ?;
+        WHERE
+          (relationships.user1_id = ? OR relationships.user2_id = ?)
+          AND relationships.type IN ('friend', 'blocked');
       `);
     
-      const rows = stmt.all(userId, userId, userId, userId, userId) as {
+      const rows = stmt.all(userId, userId, userId, userId, userId, userId, userId) as {
         id: number;
         contact_id: number;
         contact_full_name: string;
         contact_username: string;
         contact_status: string;
         contact_avatar_url: string;
-        is_blocked: boolean;
+        block_status: 'blocked_by_me' | 'blocked_by_them' | 'none';
         unseen_messages: number
       }[];
     
@@ -48,7 +54,7 @@ export class ChatRepository {
         new Relationship(
           row.id,
           new User(row.contact_id, row.contact_full_name, row.contact_username, row.contact_status, row.contact_avatar_url),
-          !!row.is_blocked,
+          row.block_status,
           row.unseen_messages
         ),
       );
@@ -135,4 +141,97 @@ export class ChatRepository {
       `);
       stmt.run(currentUserId, currentUserId, currentUserId, otherUserId, otherUserId, currentUserId);
     }
+
+  validateUserRelationship(senderId: number, receiverId: number): { 
+    canMessage: boolean; 
+    reason?: string;
+    senderName?: string;
+    receiverName?: string;
+  } {
+
+    const stmt = this.db.prepare(`
+      SELECT 
+        u1.id as sender_id,
+        u1.full_name as sender_name,
+        u2.id as receiver_id,
+        u2.full_name as receiver_name,
+        r.type as relationship_type
+      FROM users u1
+      LEFT JOIN users u2 ON u2.id = ?
+      LEFT JOIN relationships r ON 
+        (r.user1_id = u1.id AND r.user2_id = u2.id) OR 
+        (r.user1_id = u2.id AND r.user2_id = u1.id)
+      WHERE u1.id = ?
+    `);
+
+    const result = stmt.get(receiverId, senderId) as {
+      sender_id: number | null;
+      sender_name: string;
+      receiver_id: number | null;
+      receiver_name: string;
+      relationship_type: string | null;
+    } | undefined;
+
+    if (!result || !result.sender_id)
+      return { canMessage: false, reason: "Sender does not exist" };
+
+    if (!result.receiver_id)
+      return { canMessage: false, reason: "Receiver does not exist" };
+
+    if (!result.relationship_type)
+      return { canMessage: false, reason: "You are not friends" };
+
+    if (result.relationship_type !== "friend") {
+      return { 
+        canMessage: false, 
+        reason: result.relationship_type === "blocked" 
+          ? "Cannot send message: user is blocked" 
+          : "You are not friends" 
+      };
+    }
+
+    return { 
+      canMessage: true,
+      senderName: result.sender_name,
+      receiverName: result.receiver_name,
+    };
+  }
+
+  blockUser(blockerId: number, blockedId: number): { success: boolean; message: string } {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE relationships 
+        SET type = 'blocked', blocked_by_user_id = ?
+        WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+      `);
+      const result = stmt.run(blockerId, blockerId, blockedId, blockedId, blockerId);
+      
+      if (result.changes > 0) {
+        return { success: true, message: 'User blocked successfully' };
+      }
+      return { success: false, message: 'Relationship not found' };
+    } catch (error) {
+      return { success: false, message: 'Failed to block user' };
+    }
+  }
+
+  unblockUser(unblockerId: number, blockedId: number): { success: boolean; message: string } {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE relationships 
+        SET type = 'friend', blocked_by_user_id = NULL
+        WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+        AND blocked_by_user_id = ?
+      `);
+      const result = stmt.run(unblockerId, blockedId, blockedId, unblockerId, unblockerId);
+      
+      if (result.changes > 0) {
+        return { success: true, message: 'User unblocked successfully' };
+      }
+      return { success: false, message: 'Cannot unblock: you did not block this user' };
+    } catch (error) {
+      return { success: false, message: 'Failed to unblock user' };
+    }
+  }
+
 }

@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 
 export default async function chatRoutes(fastify: FastifyInstance) {
     fastify.get("/contacts", chatController.getAllContacts);
+    
     fastify.get("/conversation/:id", {
         schema: {
             params: Type.Object({
@@ -19,4 +20,20 @@ export default async function chatRoutes(fastify: FastifyInstance) {
             })
         }
     }, chatController.markMessagesAsSeen);
+
+    fastify.post("/block/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.blockUser);
+
+    fastify.post("/unblock/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.unblockUser);
 }

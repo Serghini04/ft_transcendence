@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef} from "react";
 import { UseimageDataUrlStore, UsephotosFileStore } from "../../zustand/useStore";
 
 export default function UserProfile(props: {profilePhoto: string}) {
