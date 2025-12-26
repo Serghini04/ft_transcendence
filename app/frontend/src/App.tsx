@@ -36,7 +36,6 @@ export default function App() {
             <Route path="/home" element={<Home />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings/*" element={<Settings />} />
-               <Route path="challenge" element={<Online />} />
               
             <Route path="/game" element={<Game menuOpen={menuOpen} />}>
               <Route index element={<GameMenu />} />
@@ -45,6 +44,7 @@ export default function App() {
               <Route path="ai" element={<Ai />} />
               <Route path="local" element={<Local />} />
               <Route path="online" element={<Online />} />
+              <Route path="challenge" element={<Online />} />
             </Route>
             <Route path="/SecondGame" element={<GameSelection />} />
             <Route path="/tictac" element={<TicTac />} />
