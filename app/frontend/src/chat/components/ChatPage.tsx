@@ -7,10 +7,31 @@ import InputBar from "./InputBar";
 import { useChatStore } from "../store/useChatStore";
 import HistoryPanel from "./HistoryPanel";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import isValidToken from "../../globalUtils/isValidToken";
+import { useNavigate } from "react-router-dom";
+
 
 export default function ChatPage() {
   const { userId } = UseTokenStore();
   const { connectSocket, disconnectSocket } = useChatStore();
+  const navigate = useNavigate();
+  const { token, setToken } = UseTokenStore();
+
+  useEffect(() => {
+    async function check() {
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+        navigate("/auth");
+      }
+      
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
+    }
+
+    check();
+  }, [token, navigate]);
 
   useEffect(() => {
     if (userId)

@@ -242,3 +242,72 @@ logs-container:
 	@read -p "Enter container name: " container; \
 	docker-compose logs -f $$container
 
+# ============================================================================
+# Vault Commands
+# ============================================================================
+
+vault-setup:
+	@echo "🔐 Setting up HashiCorp Vault..."
+	@bash scripts/setup-vault.sh
+
+vault-status:
+	@echo "📊 Vault Status:"
+	@bash scripts/vault-helper.sh status
+
+vault-unseal:
+	@echo "🔓 Unsealing Vault..."
+	@bash scripts/vault-helper.sh unseal
+
+vault-seal:
+	@echo "🔒 Sealing Vault..."
+	@bash scripts/vault-helper.sh seal
+
+vault-secrets:
+	@echo "🔑 Listing all secrets..."
+	@bash scripts/vault-helper.sh secrets
+
+vault-token:
+	@echo "🎫 Root Token:"
+	@bash scripts/vault-helper.sh token
+
+vault-logs:
+	@echo "📝 Vault Audit Logs (Ctrl+C to exit):"
+	@bash scripts/vault-helper.sh logs
+
+vault-backup:
+	@echo "💾 Creating Vault backup..."
+	@bash scripts/vault-helper.sh backup
+
+vault-ui:
+	@echo "🌐 Opening Vault UI..."
+	@bash scripts/vault-helper.sh ui
+
+vault-creds:
+	@echo "🔐 Available service credentials:"
+	@docker exec vault ls /vault/data/approle-creds/ 2>/dev/null | sed 's/.json//' || echo "No credentials found"
+	@echo ""
+	@echo "To view credentials: make vault-creds-service SERVICE=api-gateway"
+
+vault-creds-service:
+	@bash scripts/vault-helper.sh creds $(SERVICE)
+
+vault-help:
+	@echo "🔐 Vault Commands:"
+	@echo "  make vault-setup         - Complete Vault setup (first time)"
+	@echo "  make vault-status        - Show Vault status"
+	@echo "  make vault-unseal        - Unseal Vault after restart"
+	@echo "  make vault-seal          - Seal Vault"
+	@echo "  make vault-secrets       - List all secrets"
+	@echo "  make vault-token         - Show root token"
+	@echo "  make vault-logs          - View audit logs"
+	@echo "  make vault-backup        - Backup Vault data"
+	@echo "  make vault-ui            - Open Vault UI"
+	@echo "  make vault-creds         - List service credentials"
+	@echo "  make vault-creds-service SERVICE=<name> - Get specific service creds"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make vault-setup"
+	@echo "  make vault-creds-service SERVICE=api-gateway"
+	@echo "  ./scripts/vault-helper.sh get secret/jwt/main"
+
+

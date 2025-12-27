@@ -4,6 +4,7 @@ import { io as ClientIO } from "socket.io-client";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
 import { parse as parseCookie } from "cookie";
 import { generateJwtAccessToken } from "../middleware/auth.middleware";
+import { secrets } from "../server";
 
 export function setupSocketGateway(app: FastifyInstance) {
   const io = new Server(app.server, {
@@ -29,7 +30,7 @@ export function setupSocketGateway(app: FastifyInstance) {
       if (!accessToken) return next(new Error("NO_TOKEN"));
 
       try {
-        const decoded = jwt.verify(accessToken, process.env.JWT_SECRET!);
+        const decoded = jwt.verify(accessToken, secrets.JWT_SECRET!);
         socket.data.user = decoded;
         return next();
       } catch (err) {
@@ -39,7 +40,7 @@ export function setupSocketGateway(app: FastifyInstance) {
           try {
             const decodedRefresh = jwt.verify(
               refreshToken,
-              process.env.JWT_REFRESH!
+              secrets.JWT_REFRESH!
             ) as any;
 
             const newAccessToken = generateJwtAccessToken({

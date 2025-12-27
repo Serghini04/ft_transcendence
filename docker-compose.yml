@@ -81,8 +81,8 @@ services:
       dockerfile: Dockerfile
     image: chat-service
     container_name: chat-service
-    # ports:
-    #   - "3003:3003"
+    ports:
+      - "3003:3003"
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:
@@ -467,6 +467,38 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  vault:
+    build:
+      context: ./infra/vault
+      dockerfile: Dockerfile
+    image: vault
+    container_name: vault
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_API_ADDR=http://vault:8200
+      - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    volumes:
+      - vault-data:/vault/data
+      - vault-logs:/vault/logs
+      - ./infra/vault/scripts:/vault/scripts:ro
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   ft_Transc:
     driver: bridge
@@ -477,3 +509,6 @@ volumes:
   grafana-data:
   elasticsearch-data:
   tictac-data:
+  vault-data:
+  vault-logs:
+  vault-config:

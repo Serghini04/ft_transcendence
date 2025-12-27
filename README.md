@@ -14,6 +14,16 @@ A full-stack web application with enterprise-grade security using **OWASP ModSec
 - ✅ **Security Headers** - X-Frame-Options, CSP, HSTS ready
 - ✅ **Real-time Logging** - Comprehensive audit logs
 
+### Secrets Management (HashiCorp Vault)
+- ✅ **Centralized Secret Storage** - All secrets in one secure place
+- ✅ **AppRole Authentication** - Service-to-service authentication
+- ✅ **Dynamic Secrets** - Auto-generated, time-limited credentials
+- ✅ **Encryption as a Service** - Transit engine for data encryption
+- ✅ **Audit Logging** - Complete audit trail of all access
+- ✅ **Policy-Based Access** - Fine-grained permissions
+- ✅ **Automatic Token Renewal** - No manual intervention needed
+- ✅ **TLS Encryption** - All communication encrypted
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -163,25 +173,48 @@ curl "http://localhost/?q=<script>alert(1)</script>" # Should block (403)
 │       └── services/
 │           ├── chat/               # Chat service
 │           ├── notification/       # Notification service
-│           └── userAuth/           # Authentication service
+│           ├── userAuth/           # Authentication service
+│           └── shared/             # Shared libraries
+│               ├── vault-client.js # Vault integration
+│               └── example-vault-usage.js
 ├── infra/
+│   ├── vault/                      # 🔐 HashiCorp Vault
+│   │   ├── Dockerfile              # Vault container
+│   │   ├── config.hcl              # Vault configuration
+│   │   ├── policies/               # Access policies
+│   │   └── scripts/                # Setup scripts
 │   ├── kafka/                      # Kafka broker
 │   ├── zookeeper/                  # Zookeeper
+│   ├── nginx/                      # Nginx configs
 │   └── monitoring/                 # Prometheus, Grafana, ELK
 ├── security/
-│   ├── waf/                        # WAF configurations (alternative)
+│   ├── waf/                        # WAF configurations
 │   ├── certificates/               # SSL/TLS certs
 │   └── policies/                   # Security policies
 ├── docs/
-│   ├── FRONTEND-MODSECURITY-SUMMARY.md  # ModSecurity guide
-│   ├── waf-implementation-guide.md      # Alternative WAF setup
-│   └── architecture.md                   # System architecture
-├── scripts/
-│   ├── setup-modsec-frontend.sh    # Quick setup
-│   ├── test-frontend-modsec.sh     # Security tests
-│   └── waf-manager.sh              # WAF management
+│   ├── FRONTEND-MODSECURITY-SUMMARY.md      # ModSecurity guide
+│   ├── vault-integration.md                 # 🔐 Vault full docs
+│   ├── vault-quickstart.md                  # 🔐 Quick implementation
+│   ├── VAULT-IMPLEMENTATION-SUMMARY.md      # 🔐 Complete package
+│   ├── security-checklist.md                # Security tracking
+│   WAF/ModSecurity
+- **🚀 Quick Start**: `app/frontend/MODSECURITY-README.md`
+- **📖 Full Summary**: `docs/FRONTEND-MODSECURITY-SUMMARY.md`
+- **Separate WAF**: `docs/waf-implementation-guide.md`
+
+### Vault (Secrets Management) 🔐
+- **🚀 Quick Start**: `infra/vault/README.md` (5 min read)
+- **📖 Implementation Guide**: `docs/vault-quickstart.md` (15 min read)
+- **📚 Full Documentation**: `docs/vault-integration.md` (30 min read)
+- **✅ Complete Package**: `docs/VAULT-IMPLEMENTATION-SUMMARY.md`
+- **🔒 Security Checklist**: `docs/security-checklist.md`
+
+### Architecture
+- **🏛️ System Architecture**: `docs/architecture.md`
+- **📊 Services**: `docs/servicesgement
 ├── logs/
 │   └── modsec/                     # ModSecurity audit logs
+├── Makefile                        # All commands
 └── docker-compose.yml              # Main compose file
 ```
 
@@ -406,12 +439,15 @@ frontend:
 - ✅ Security headers
 - ✅ Audit logging
 
+### In Progress
+- 🔄 Service integration with Vault
+- 🔄 Network segmentation
+
 ### Planned
-- ⏳ HashiCorp Vault (secrets management)
-- ⏳ Rate limiting
-- ⏳ Game service
-- ⏳ Leaderboard
-- ⏳ Advanced monitoring
+- ⏳ Vault auto-unseal (cloud KMS)
+- ⏳ High Availability setup
+- ⏳ Advanced rate limiting
+- ⏳ Additional game services
 - ⏳ CI/CD pipeline
 
 ## 📈 Next Steps
@@ -423,9 +459,7 @@ frontend:
 5. **Vault Integration**: Implement HashiCorp Vault (next major module)
 
 ---
-
-## Quick Commands
-
+### WAF/ModSecurity
 ```bash
 # Setup
 ./scripts/setup-modsec-frontend.sh
@@ -436,13 +470,52 @@ frontend:
 # View logs
 docker-compose logs -f frontend
 tail -f logs/modsec/audit.log
+```
+
+### Vault (Secrets Management)
+```bash
+# Complete setup (first time)
+bash scripts/setup-vault.sh
+
+# Check status
+make vault-status
+
+# View secrets
+make vault-secrets
+
+# Get service credentials
+make vault-creds-service SERVICE=api-gateway
+
+# Unseal after restart
+make vault-unseal
+
+# Backup
+make vault-backup
+
+# Open UI
+make vault-ui
+
+# Test integration
+bash scripts/test-vault-integration.sh
+```
+
+### General
+```bash
+# Start all services
+docker-compose up -d
 
 # Restart
-docker-compose restart frontend
+docker-compose restart
 
 # Stop all
 docker-compose down
 
+# View logs
+docker-compose logs -f
+
+# Rebuild specific service
+docker-compose build --no-cache <service-name>
+docker-compose up -d <service-name>
 # Clean rebuild
 docker-compose build --no-cache frontend
 docker-compose up -d frontend

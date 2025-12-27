@@ -1,6 +1,7 @@
 import { fastify, UserPayload, type FastifyReply, type FastifyRequest } from "fastify";
 import jwt, { TokenExpiredError, type JwtPayload } from "jsonwebtoken";
 import dotenv from "dotenv";
+import { secrets } from "../server";
 // import cookie from "@fastify/cookie";
 import "fastify";
 // import cors from "@fastify/cors";
@@ -9,10 +10,10 @@ import "fastify";
 dotenv.config();
 
 export function generateJwtAccessToken({id, name, email}: {id: number; name:string; email: string}){
-    if (!process.env.JWT_SECRET) {
+    if (!secrets?.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined");
     }
-    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "15m" }) // ✅ Changed from 15s to 15m
+    const token = jwt.sign({ id: id, name: name, email: email }, secrets.JWT_SECRET, { expiresIn: "15m" }) // ✅ Changed from 15s to 15m
     return token;
 }
 
@@ -37,7 +38,7 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
 
   try {
     
-    const decoded = jwt.verify(accessToken, process.env.JWT_SECRET!) as UserPayload;
+    const decoded = jwt.verify(accessToken, secrets.JWT_SECRET!) as UserPayload;
     req.user = decoded;
     return; // Access allowed
   } catch (err) {
@@ -51,7 +52,7 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
       try {
         const decodedRefresh = jwt.verify(
           refreshToken,
-          process.env.JWT_REFRESH!
+          secrets.JWT_REFRESH!
         ) as UserPayload;
 
         const newAccessToken = generateJwtAccessToken({
