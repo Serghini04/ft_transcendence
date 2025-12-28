@@ -64,12 +64,12 @@ async function initializeApp() {
     app.log.warn('⚠️  Falling back to environment variables');
     
     // Fallback to environment variables
-    secrets = {
-      JWT_SECRET: process.env.JWT_SECRET || '',
-      JWT_REFRESH: process.env.JWT_REFRESH || '',
-      COOKIE_SECRET: process.env.COOKIE_SECRET || 'super-secret',
-      INTERNAL_SECRET_KEY: process.env.INTERNAL_SECRET_KEY || '',
-    };
+    // secrets = {
+    //   JWT_SECRET: process.env.JWT_SECRET || '',
+    //   JWT_REFRESH: process.env.JWT_REFRESH || '',
+    //   COOKIE_SECRET: process.env.COOKIE_SECRET || 'super-secret',
+    //   INTERNAL_SECRET_KEY: process.env.INTERNAL_SECRET_KEY || '',
+    // };
 
     app.register(cors, {
       origin: (origin, cb) => {
