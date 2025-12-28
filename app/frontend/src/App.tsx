@@ -45,6 +45,7 @@ export default function App() {
               <Route path="ai" element={<Ai />} />
               <Route path="local" element={<Local />} />
               <Route path="online" element={<Online />} />
+              <Route path="challenge" element={<Online />} />
             </Route>
             <Route path="/SecondGame" element={<GameSelection />} />
             <Route path="/tictac" element={<TicTac />} />

@@ -125,6 +125,10 @@ services:
     container_name: game-service
     ports:
       - "3005:3005"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
     networks:
       - ft_Transc
     restart: unless-stopped
