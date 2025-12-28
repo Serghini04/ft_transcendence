@@ -1,6 +1,7 @@
 import { useGoogleLogin } from "@react-oauth/google";
 import {UseErrorStore, UseTokenStore, UseUserStore} from "../../zustand/useStore";
 import { useNavigate } from "react-router-dom";
+import googleIcone from "../../../assets/images/google.png";
 
 export default function GoogleButton(props :any) {
 	const {setErrorMsg} = UseErrorStore();
@@ -46,7 +47,7 @@ export default function GoogleButton(props :any) {
 	return (
 		<>
 			<button onClick={() => login()} className=" flex justify-center items-center gap-[0.7vw]  font-medium w-[15vw] h-[2.5vw] rounded-full bg-[#DDDDDD] hover:bg-[rgba(221,221,221,85%)] text-[0.7vw] text-[#333333]">
-				<img src="frontend/public/enemy.jpeg" alt="google icon" className="h-[8vw] w-[1vw]" />
+				<img src={googleIcone} alt="google icon" className="h-[1.1vw] w-[1vw]" />
 					{props.text}
 			</button>
 		</>
