@@ -137,7 +137,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-        
+    volumes:
+      - ./app/backend/services/game/src/db:/app/src/db
+
   notification-service:
     build:
       context: ./app/backend/services/notification
@@ -159,6 +161,29 @@ services:
         max-size: "10m"
         max-file: "3"
 
+
+  leaderboard-service:
+      build:
+        context: ./app/backend/services/leaderboard
+        dockerfile: dockerfile
+      image: leaderboard-service
+      container_name: leaderboard-service
+      ports:
+        - "3016:3016"
+      environment:
+        - KAFKA_BROKER=kafka:9092
+      depends_on:
+        - kafka
+      volumes:
+        - ./app/backend/services/leaderboard/src/db:/app/src/db
+      networks:
+        - ft_Transc
+      restart: unless-stopped
+      logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "3"
 
   prometheus:
     build:

@@ -44,12 +44,12 @@ db.pragma("foreign_keys = ON");
 db.pragma("journal_mode = WAL");
 
 // Drop old tables with incorrect structure (remove this after first run)
-try {
-  db.prepare(`DROP TABLE IF EXISTS games`).run();
-  console.log("🗑️  Dropped old games table");
-} catch (error) {
-  console.log("⚠️  Could not drop games table:", error);
-}
+// try {
+//   db.prepare(`DROP TABLE IF EXISTS games`).run();
+//   console.log("🗑️  Dropped old games table");
+// } catch (error) {
+//   console.log("⚠️  Could not drop games table:", error);
+// }
 
 // Create tables if they don't exist
 const createTables = (db: Database.Database) => {
@@ -98,44 +98,6 @@ createTables(db);
 console.log("✅ Database tables initialized");
 
 
-// export default fp(async function gameDBPlugin(app: FastifyInstance) {
-  
-
-//   // Init database
-
-//   db.pragma("foreign_keys = ON");
-//   db.pragma("journal_mode = WAL");
-
-//   app.log.info(`🎮 SQLite database connected: gameDB`);
-
-//   createTables(db);
-
-//   // -------------------------------------
-//   // Expose methods through Fastify
-//   // -------------------------------------
-//   app.decorate("db", {
-  //     saveGameResult: (gameData: GameData) => saveGameResult(db, gameData),
-  //     getUserGames: (userId: string, limit = 10) =>
-  //       getUserGames(db, userId, limit),
-  
-  //     getUserStats: (userId: string) => getUserStats(db, userId),
-  //     getRecentGames: (limit = 10) => getRecentGames(db, limit),
-  
-  //     upsertUser: (user: UserProfile) => upsertUser(db, user),
-  //     updateUserLevel: (userId: string, level: number) =>
-  //       updateUserLevel(db, userId),
-  
-  //     getLeaderboard: (limit = 10) => getLeaderboard(db, limit),
-  //   });
-  // });
-  
-  // -------------------------
-  // Table creation (moved above)
-  // -------------------------
-
-// -------------------------
-// Game operations
-// -------------------------
 export const saveGameResult = (db: Database.Database, gameData: GameData) => {
   const stmt = db.prepare(`
     INSERT INTO games (
@@ -158,7 +120,7 @@ export const saveGameResult = (db: Database.Database, gameData: GameData) => {
       gameData.winnerId,
       gameData.score1,
       gameData.score2,
-      gameData.createdAt || Date.now()
+      gameData.createdAt
   ).lastInsertRowid;
 };
 
