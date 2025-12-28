@@ -3,6 +3,8 @@ import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
 import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseUserStore} from "../../zustand/useStore";
+import bgPhoto from "../../../assets/images/profileBG.png"
+import profilePhoto from "../../../assets/images/breakingbad1.jpg"
 
 export default function SignuoSettings()
 {
@@ -29,7 +31,7 @@ export default function SignuoSettings()
 		const res = await fetch("http://localhost:8080/api/v1/auth/signup", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name, email, password, cpassword, photoURL: "/public/breakingbad1.jpg", bgPhotoURL: "/public/profileBG.png" }),
+			body: JSON.stringify({ name, email, password, cpassword, photoURL: profilePhoto, bgPhotoURL: bgPhoto }),
 			credentials: "include"
 		});
 

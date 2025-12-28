@@ -453,7 +453,7 @@ services:
     image: user_auth
     container_name: user_auth
     volumes:
-      - ./backend/services/userauth/db:/app/db
+      - ./data/uploads:/app/uploads
     ports:
       - "3004:3004"
     environment:

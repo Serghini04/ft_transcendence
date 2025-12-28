@@ -17,6 +17,7 @@ export default function PhotosSide(props: params) {
   const { BgImageDataUrl, setBgImageDataUrl } = UseimageDataUrlStore();
   const { setBgImageFile } = UsephotosFileStore();
   useEffect(() => {
+    console.log("--------------> : ", props.user.bgPhotoURL);
     if (props.user.bgPhotoURL) {
       setBgImageDataUrl(props.user.bgPhotoURL);
     }
