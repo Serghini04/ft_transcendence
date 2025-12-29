@@ -1,7 +1,7 @@
 import fastify from "fastify";
 import db from "./db.js";
 import bcrypt from "bcrypt";
-import { Console, error, profile } from "console";
+import { Console, error, profile, timeStamp } from "console";
 import {OAuth2Client } from "google-auth-library";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { request } from "http";
@@ -452,8 +452,23 @@ app.post("/api/v1/auth/setting/getUserData", async (request, reply) => {
   }
 });
 
-const uploadDir = path.join("../../../", "frontend/public/uploads");
-// if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+const uploadDir = path.resolve("/app/uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+function safeDelete(fileUrl?: string | null) {
+  if (!fileUrl) return;
+
+  const filePath = path.join("/app", fileUrl);
+
+  fs.unlink(filePath, err => {
+    if (err && err.code !== "ENOENT") {
+      console.error("Failed to delete old file:", err);
+    }
+  });
+}
 
 app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
   const parts = req.parts();
@@ -475,21 +490,31 @@ app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
       const filePart = part as MultipartFile;
       const ext = path.extname(filePart.filename);
       let filename = "";
+      let field = "";
 
+      const timestamp = Date.now();
       if (part.fieldname === "photo") {
-        filename = `user-${userId}-photo${ext}`;
-        photoURL = `public/uploads/${filename}`;
+        field = "photoURL";
+        filename = `user-${userId}-photo${timestamp}${ext}`;
+        photoURL = `uploads/${filename}`;
       }
 
       if (part.fieldname === "bgPhoto") {
-        filename = `user-${userId}-bg${ext}`;
-        bgPhotoURL = `public/uploads/${filename}`;
+        field = "bgPhotoURL";
+        filename = `user-${userId}-bg${timestamp}${ext}`;
+        bgPhotoURL = `uploads/${filename}`;
       }
 
       if (!filename) continue;
 
+      const old = await db
+        .prepare(`SELECT ${field} FROM users WHERE id = ?`)
+        .get(userId)?.[field];
+
       const savePath = path.join(uploadDir, filename);
       await pipeline(filePart.file, fs.createWriteStream(savePath));
+
+      safeDelete(old);
     }
   }
 

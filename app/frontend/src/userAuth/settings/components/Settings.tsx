@@ -36,8 +36,8 @@ export default function Settings() {
     setUserInfo({
       name: data.user.name,
       email: data.user.email,
-      photoURL: data.user.photoURL || profilePhoto,
-      bgPhotoURL: data.user.bgPhotoURL || bgPhoto,
+      photoURL: data.user.photoURL,
+      bgPhotoURL: data.user.bgPhotoURL,
       profileVisibility: Boolean(data.user.profileVisibility),
       showNotifications: Boolean(data.user.showNotifications),
       bio: data.user.bio
@@ -65,7 +65,7 @@ fetchUserData();
       shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_0_#27445E]
       overflow-y-auto
       overflow-x-hidden
-      scrollbar-none
+      hide-scrollbar
     "
   >
     <div className="flex-shrink-0">

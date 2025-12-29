@@ -125,10 +125,6 @@ services:
     container_name: game-service
     ports:
       - "3005:3005"
-    environment:
-      - KAFKA_BROKER=kafka:9092
-    depends_on:
-      - kafka
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -367,6 +363,8 @@ services:
     build:
       context: .
       dockerfile: ./infra/nginx/Dockerfile.frontend
+    volumes:
+      - uploads:/usr/share/nginx/html/uploads
     image: frontend
     container_name: frontend
     ports:
@@ -450,10 +448,10 @@ services:
     build:
       context: ./app/backend/services/userAuth
       dockerfile: Dockerfile
+    volumes:
+      - uploads:/app/uploads
     image: user_auth
     container_name: user_auth
-    volumes:
-      - ./data/uploads:/app/uploads
     ports:
       - "3004:3004"
     environment:
@@ -483,3 +481,4 @@ volumes:
   grafana-data:
   elasticsearch-data:
   tictac-data:
+  uploads:

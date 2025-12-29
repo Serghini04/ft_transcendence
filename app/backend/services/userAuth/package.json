@@ -15,7 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
-    "@fastify/cors": "^11.1.0",
+    "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^9.3.0",
     "@fastify/static": "^7.0.4",
     "@react-oauth/google": "^0.12.2",

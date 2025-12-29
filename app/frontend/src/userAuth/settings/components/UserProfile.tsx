@@ -8,7 +8,7 @@ export default function UserProfile(props: {profilePhoto: string}) {
 
   useEffect(() => {
       if (props.profilePhoto) {
-        setProfileImageDataUrl(props.profilePhoto);
+        setProfileImageDataUrl(`https://localhost/${props.profilePhoto}`);
       }
     }, [props.profilePhoto]);
   const handleProfileClick = (e: React.MouseEvent) => {
