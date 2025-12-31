@@ -221,7 +221,60 @@ logs-consumer:
 	docker-compose logs -f kafka-consumer
 
 logs-elk:
+	@echo "📋 Showing ELK Stack logs..."
 	docker-compose logs -f elasticsearch logstash kibana filebeat
+
+elk-start:
+	@echo "🚀 Starting ELK Stack for Log Management..."
+	@./infra/log-management/quickstart.sh
+
+elk-setup:
+	@echo "⚙️  Setting up ELK Stack (ILM policies, indices, templates)..."
+	@./infra/log-management/setup-elk.sh
+
+elk-test:
+	@echo "🧪 Testing ELK Stack with sample logs..."
+	@./infra/log-management/test-elk.sh
+
+elk-verify:
+	@echo "🔍 Verifying ELK Stack installation..."
+	@./infra/log-management/verify-elk.sh
+
+elk-status:
+	@echo "📊 ELK Stack Status:"
+	@echo "\n🔍 Elasticsearch:"
+	@curl -s http://localhost:9200/_cluster/health?pretty 2>/dev/null || echo "  ❌ Not responding"
+	@echo "\n📈 Logstash:"
+	@curl -s http://localhost:9600/?pretty 2>/dev/null | grep -o '"status":"[^"]*"' || echo "  ❌ Not responding"
+	@echo "\n📊 Kibana:"
+	@curl -s http://localhost:5601/api/status 2>/dev/null | grep -o '"level":"[^"]*"' || echo "  ❌ Not responding"
+	@echo "\n📚 Indices:"
+	@curl -s "http://localhost:9200/_cat/indices?v" 2>/dev/null | head -10
+
+elk-indices:
+	@echo "📚 Elasticsearch Indices:"
+	@curl -s "http://localhost:9200/_cat/indices?v&s=index"
+
+elk-search:
+	@echo "🔍 Searching recent logs..."
+	@curl -s -X GET "http://localhost:9200/logs-*/_search?pretty&size=10" \
+		-H 'Content-Type: application/json' \
+		-d '{"query":{"match_all":{}},"sort":[{"@timestamp":"desc"}]}'
+
+elk-errors:
+	@echo "❌ Searching error logs..."
+	@curl -s -X GET "http://localhost:9200/errors-*/_search?pretty&size=10" \
+		-H 'Content-Type: application/json' \
+		-d '{"query":{"match_all":{}},"sort":[{"@timestamp":"desc"}]}'
+
+elk-clean:
+	@echo "🧹 Cleaning old ELK indices..."
+	@curl -X DELETE "http://localhost:9200/logs-*?pretty" 2>/dev/null || echo "No log indices to delete"
+	@curl -X DELETE "http://localhost:9200/errors-*?pretty" 2>/dev/null || echo "No error indices to delete"
+
+elk-restart:
+	@echo "🔄 Restarting ELK Stack..."
+	@docker-compose restart elasticsearch logstash kibana filebeat
 
 logs-monitoring:
 	docker-compose logs -f prometheus grafana alertmanager node-exporter loki promtail

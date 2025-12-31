@@ -105,9 +105,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key-change-in-production}
-      - JWT_REFRESH=${JWT_REFRESH:-your-jwt-refresh-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-your-cookie-secret-key}
+      - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
+      - VAULT_TOKEN=${VAULT_TOKEN:-dev-root-token}
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -266,59 +265,47 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ============================================
+  # ELK Stack for Log Management
+  # ============================================
   elasticsearch:
     build:
-      context: ./infra/monitoring/elasticsearch
+      context: ./infra/log-management/elasticsearch
       dockerfile: Dockerfile
     image: elasticsearch
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     ports:
       - "9200:9200"
-      - "9300:9300"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     networks:
       - ft_Transc
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   logstash:
     build:
-      context: ./infra/monitoring/logstash
+      context: ./infra/log-management/logstash
       dockerfile: Dockerfile
     image: logstash
     container_name: logstash
     ports:
-      - "5000:5000"
-      - "9600:9600"
+      - "5044:5044"
     volumes:
-      - ./infra/monitoring/logstash/logstash.conf/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./infra/log-management/logstash/pipeline:/usr/share/logstash/pipeline:ro
     environment:
-      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
-      - "xpack.monitoring.enabled=true"
-      - "xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200"
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     depends_on:
       - elasticsearch
     networks:
       - ft_Transc
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   kibana:
     build:
-      context: ./infra/monitoring/kibana
+      context: ./infra/log-management/kibana
       dockerfile: Dockerfile
     image: kibana
     container_name: kibana
@@ -326,38 +313,32 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD:-changeme}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD:-changeme}
     depends_on:
       - elasticsearch
     networks:
       - ft_Transc
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   filebeat:
     build:
-      context: ./infra/monitoring/filebeat
+      context: ./infra/log-management/filebeat
       dockerfile: Dockerfile
     image: filebeat
     container_name: filebeat
-    user: root
     volumes:
-      - ./infra/monitoring/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    environment:
+      - LOGSTASH_HOSTS=logstash:5044
     depends_on:
       - elasticsearch
       - logstash
     networks:
       - ft_Transc
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   frontend:
     build:
