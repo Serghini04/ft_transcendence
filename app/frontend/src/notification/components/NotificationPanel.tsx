@@ -2,13 +2,20 @@ import { useNotificationStore, type Notification } from "../store/useNotificatio
 import { formatDistanceToNow } from "date-fns";
 import { X, CheckCheck, Bell } from "lucide-react";
 import { createPortal } from "react-dom";
+import { useEffect } from "react";
 
 interface NotificationPanelProps {
   onClose: () => void;
 }
 
 export function NotificationPanel({ onClose }: NotificationPanelProps) {
-  const { notifications, markAsRead, markAllAsRead, unseenNotifications } = useNotificationStore();
+  const { notifications, markAllAsRead, unseenNotifications } = useNotificationStore();
+
+  useEffect(() => {
+    if (unseenNotifications > 0) {
+      markAllAsRead();
+    }
+  }, []);
 
   return createPortal(
     <>
@@ -32,19 +39,9 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {unseenNotifications > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-xs text-[#0C7368] hover:text-[#0A5B52] transition-colors font-medium"
-              >
-                Clear all
-              </button>
-            )}
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
-              <X size={18} />
-            </button>
-          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+            <X size={18} />
+          </button>
         </div>
 
         {/* Notifications List */}
@@ -60,7 +57,6 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
-                  onMarkAsRead={markAsRead}
                 />
               ))}
             </div>
@@ -74,18 +70,16 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
 interface NotificationItemProps {
   notification: Notification;
-  onMarkAsRead: (id: number) => void;
 }
 
-function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
+function NotificationItem({ notification }: NotificationItemProps) {
   const isUnread = !notification.read;
 
   return (
     <div
-      className={`p-3 hover:bg-[#0C7368]/10 transition-all duration-200 cursor-pointer border-b border-gray-800/50 ${
+      className={`p-3 transition-all duration-200 border-b border-gray-800/50 ${
         isUnread ? "bg-[#0C7368]/5" : ""
       }`}
-      onClick={() => isUnread && onMarkAsRead(notification.id)}
     >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">

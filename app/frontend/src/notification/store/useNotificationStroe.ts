@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
 import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
-import { toast } from "react-toastify";
+import { toastManager } from "../utils/toastManager";
 
 export type Notification = {
   id: number;
@@ -101,49 +101,26 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     socket.on("notification:new", (notification: Notification) => {
       get().addNotification(notification);
 
-      const getToastConfig = (type: string) => {
+      // Map notification type to toast type
+      const getNotificationType = (type: string): "message" | "friend_request" | "game" | "default" => {
         switch (type) {
           case "message":
-            return {
-              icon: "💬",
-              background: "linear-gradient(to right, #0C7368, #0A5B52)",
-            };
+            return "message";
           case "friend_request":
-            return {
-              icon: "👥",
-              background: "linear-gradient(to right, #00912E, #007A26)",
-            };
+            return "friend_request";
           case "game":
-            return {
-              icon: "🎮",
-              background: "linear-gradient(to right, #112434, #0d2234)",
-            };
+            return "game";
           default:
-            return {
-              icon: "🔔",
-              background: "linear-gradient(to right, #1A2D42, #112434)",
-            };
+            return "default";
         }
       };
 
-      const config = getToastConfig(notification.type);
-
-      toast(`${config.icon} ${notification.title}\n${notification.message}`, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        style: {
-          background: config.background,
-          color: "white",
-          fontWeight: "500",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          borderRadius: "0.5rem",
-          ["--toastify-color-progress-light" as string]: "rgba(255, 255, 255, 0.2)",
-        },
+      toastManager.show({
+        id: `notification-${notification.id}`,
+        title: notification.title,
+        message: notification.message,
+        type: getNotificationType(notification.type),
+        autoHideDuration: 5000,
       });
     });
 

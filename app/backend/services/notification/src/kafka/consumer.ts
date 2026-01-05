@@ -4,9 +4,9 @@ import { Server } from "socket.io";
 import Database from "better-sqlite3";
 import { userSockets } from "../plugins/socket";
 
-const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
-const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "notification-service";
-const KAFKA_GROUP_ID = process.env.KAFKA_GROUP_ID || "notification-service-group";
+const KAFKA_BROKER = "kafka:9092";
+const KAFKA_CLIENT_ID = "notification-service";
+const KAFKA_GROUP_ID = "notification-service-group";
 
 export interface NotificationEvent {
   userId: number;
