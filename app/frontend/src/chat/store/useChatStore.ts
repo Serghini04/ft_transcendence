@@ -362,12 +362,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
         get().addMessage(optimisticMessage);
 
-        console.log("Sending message:", {
-            id: messageId,
-            to: receiverId,
-            message: text
-        });
-
         socket.emit("message:send", {
             id: messageId,
             to: receiverId,

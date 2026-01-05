@@ -37,9 +37,6 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
 
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
-# Copy http-level configuration (rate limiting zones)
-COPY --chown=nginx:nginx infra/nginx/http-config.conf /etc/nginx/conf.d/00-http-config.conf
-
 COPY --chown=nginx:nginx infra/nginx/nginx.conf /etc/nginx/templates/conf.d/default.conf.template
 
 COPY --chown=nginx:nginx security/waf/custom-rules.conf /etc/modsecurity.d/custom-rules/custom-rules.conf
