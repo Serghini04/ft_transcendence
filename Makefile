@@ -1,13 +1,35 @@
 MESSAGES = ./scripts/messages.sh
 
+# Core services for development
+CORE_SERVICES = zookeeper kafka api-gateway game-service chat-service notification-service tictac-game user_auth frontend
+
+# Monitoring/DevOps services (bonus)
+MONITORING_SERVICES = prometheus alertmanager node-exporter grafana elasticsearch logstash kibana filebeat
+
 help:
 	@bash -c 'source $(MESSAGES) && show_help'
 
 
 up:
+	@echo "🚀 Starting CORE services only (faster for development)..."
+	@echo "Services: zookeeper, kafka, api-gateway, game-service, chat-service, notification-service, tictac-game, user_auth, frontend"
+	@docker-compose up -d $(CORE_SERVICES)
+	@echo "✅ Core services started!"
+	@echo "💡 Use 'make up-all' to start ALL services including monitoring stack"
+
+up-all:
 	@bash -c 'source $(MESSAGES) && msg_up_start'
+	@echo "🚀 Starting ALL services (core + monitoring)..."
 	@docker-compose up -d
 	@bash -c 'source $(MESSAGES) && msg_up_complete'
+
+up-bonus:
+	@echo "📊 Starting MONITORING services (Prometheus, Grafana, ELK Stack)..."
+	@docker-compose up -d $(MONITORING_SERVICES)
+	@echo "✅ Monitoring services started!"
+	@echo "🔗 Grafana: http://localhost:3000 (user: hidriouc / pass: hidriouc)"
+	@echo "🔗 Prometheus: http://localhost:9090"
+	@echo "🔗 Kibana: http://localhost:5601"
 
 
 down:
@@ -18,17 +40,27 @@ down:
 
 restart:
 	@bash -c 'source $(MESSAGES) && msg_restart_start'
+	@docker-compose restart $(CORE_SERVICES)
+	@bash -c 'source $(MESSAGES) && msg_restart_complete'
+
+restart-all:
+	@bash -c 'source $(MESSAGES) && msg_restart_start'
 	@docker-compose restart
 	@bash -c 'source $(MESSAGES) && msg_restart_complete'
 
 build:
+	@bash -c 'source $(MESSAGES) && msg_build_start'
+	@docker-compose build $(CORE_SERVICES)
+	@bash -c 'source $(MESSAGES) && msg_build_complete'
+
+build-all:
 	@bash -c 'source $(MESSAGES) && msg_build_start'
 	@docker-compose build
 	@bash -c 'source $(MESSAGES) && msg_build_complete'
 
 build-clean:
 	@bash -c 'source $(MESSAGES) && msg_build_start'
-	@docker-compose build --no-cache
+	@docker-compose build --no-cache $(CORE_SERVICES)
 	@bash -c 'source $(MESSAGES) && msg_build_complete'
 
 
@@ -40,12 +72,84 @@ clean:
 
 logs:
 	@bash -c 'source $(MESSAGES) && msg_logs'
+	@docker-compose logs -f $(CORE_SERVICES)
+
+logs-all:
+	@bash -c 'source $(MESSAGES) && msg_logs'
 	@docker-compose logs -f
+
+# Individual service logs
+logs-game:
+	@echo "📋 Game Service logs:"
+	@docker-compose logs -f game-service
+
+logs-chat:
+	@echo "📋 Chat Service logs:"
+	@docker-compose logs -f chat-service
+
+logs-notification:
+	@echo "📋 Notification Service logs:"
+	@docker-compose logs -f notification-service
+
+logs-auth:
+	@echo "📋 User Auth Service logs:"
+	@docker-compose logs -f user_auth
+
+logs-tictac:
+	@echo "📋 TicTac Game Service logs:"
+	@docker-compose logs -f tictac-game
+
+logs-kafka:
+	@echo "📋 Kafka logs:"
+	@docker-compose logs -f kafka zookeeper
+
+logs-api:
+	@echo "📋 API Gateway logs:"
+	@docker-compose logs -f api-gateway
 
 
 ps:
 	@bash -c 'source $(MESSAGES) && msg_ps'
 	@docker-compose ps
+
+status:
+	@echo "🔍 Checking Core Services Status..."
+	@echo ""
+	@docker-compose ps $(CORE_SERVICES)
+	@echo ""
+	@echo "🔗 Service URLs:"
+	@echo "   Frontend:        http://localhost or https://localhost"
+	@echo "   API Gateway:     http://localhost:8080"
+	@echo "   Game Service:    http://localhost:3005"
+	@echo "   Chat Service:    http://localhost:3003"
+	@echo "   Auth Service:    http://localhost:3004"
+	@echo "   Notification:    http://localhost:3006"
+	@echo "   TicTac Game:     http://localhost:3030"
+	@echo ""
+
+status-all:
+	@echo "🔍 Checking ALL Services Status..."
+	@docker-compose ps
+
+health:
+	@echo "🏥 Health Check - Core Services"
+	@echo "================================"
+	@echo ""
+	@echo "📡 API Gateway (8080):"
+	@curl -sf http://localhost:8080/health 2>/dev/null && echo "✅ Healthy" || echo "❌ Not responding"
+	@echo ""
+	@echo "🎮 Game Service (3005):"
+	@curl -sf http://localhost:3005/health 2>/dev/null && echo "✅ Healthy" || echo "❌ Not responding"
+	@echo ""
+	@echo "💬 Chat Service (3003):"
+	@curl -sf http://localhost:3003/health 2>/dev/null && echo "✅ Healthy" || echo "❌ Not responding"
+	@echo ""
+	@echo "🔐 Auth Service (3004):"
+	@curl -sf http://localhost:3004/health 2>/dev/null && echo "✅ Healthy" || echo "❌ Not responding"
+	@echo ""
+	@echo "🎯 TicTac Game (3030):"
+	@curl -sf http://localhost:3030/health 2>/dev/null && echo "✅ Healthy" || echo "❌ Not responding"
+	@echo ""
 
 
 test-producer:
@@ -167,22 +271,25 @@ delete-all: stop-all
 	@bash -c 'source $(MESSAGES) && msg_delete_all_complete'
 
 
-fclean: stop-all
+fclean:
 	@bash -c 'source $(MESSAGES) && msg_fclean_start'
-	@docker-compose down -v --remove-orphans
+	@echo "🛑 Stopping all Docker containers..."
+	@docker stop $$(docker ps -aq) 2>/dev/null || true
+	@echo "🗑️  Removing all Docker containers..."
+	@docker rm -f $$(docker ps -aq) 2>/dev/null || true
+	@echo "📦 Running docker-compose down..."
+	@docker-compose down -v --remove-orphans 2>/dev/null || true
 	@bash -c 'source $(MESSAGES) && msg_fclean_volumes'
-	@if [ -n "$$(docker volume ls -q -f name=trancsendence)" ]; then \
-		docker volume ls -q -f name=trancsendence | xargs -r docker volume rm 2>/dev/null || true; \
-		bash -c 'source $(MESSAGES) && msg_fclean_volumes_done'; \
-	else \
-		bash -c 'source $(MESSAGES) && msg_fclean_volumes_none'; \
-	fi
+	@echo "🗑️  Removing project volumes..."
+	@docker volume rm $$(docker volume ls -q -f name=transcendence) 2>/dev/null || true
 	@bash -c 'source $(MESSAGES) && msg_fclean_images'
-	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|loki|promtail|kafka-producer|kafka-consumer|kafka-ui):" | xargs -r docker rmi -f 2>/dev/null || true
+	@echo "🗑️  Removing project images..."
+	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|api-gateway|game-service|chat-service|notification-service|user_auth|tictac-game|frontend):" | xargs -r docker rmi -f 2>/dev/null || true
 	@bash -c 'source $(MESSAGES) && msg_fclean_networks'
-	@docker network ls -q -f name=ft_transc | xargs -r docker network rm 2>/dev/null || true
+	@docker network rm $$(docker network ls -q -f name=ft_transc) 2>/dev/null || true
 	@bash -c 'source $(MESSAGES) && msg_fclean_cache'
 	@docker builder prune -f
+	@echo "✅ Full clean completed!"
 	@bash -c 'source $(MESSAGES) && msg_fclean_complete'
 
 

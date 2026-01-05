@@ -1,118 +1,196 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import TournamentBracket from './TournamentBracket';
-
-interface Tournament {
-  id: string;
-  name: string;
-  currentPlayers: number;
-  maxPlayers: number;
-  visibility: 'public' | 'private';
-  host: string;
-}
+import { UseUserStore } from '../../../userAuth/zustand/useStore';
+import * as tournamentAPI from './api';
 
 export default function Tournament() {
+  const { user } = UseUserStore();
+  
   const [tournamentName, setTournamentName] = useState('');
   const [numberOfPlayers, setNumberOfPlayers] = useState('8');
-  const [visibility, setVisibility] = useState('Public');
+  const [visibility, setVisibility] = useState('public');
   const [showBracket, setShowBracket] = useState(false);
-  const [createdTournament, setCreatedTournament] = useState<{
-    name: string;
-    maxPlayers: number;
-  } | null>(null);
-  
-  // Mock data for available tournaments
-  const [tournaments, setTournaments] = useState<Tournament[]>([
-    {
-      id: '1',
-      name: 'Heisenberg Cup',
-      currentPlayers: 2,
-      maxPlayers: 8,
-      visibility: 'public',
-      host: 'skarim'
-    },
-    {
-      id: '2',
-      name: 'Crystal Clash',
-      currentPlayers: 2,
-      maxPlayers: 4,
-      visibility: 'private',
-      host: 'w.white'
-    },
-    {
-      id: '3',
-      name: 'The Lab Games',
-      currentPlayers: 9,
-      maxPlayers: 16,
-      visibility: 'public',
-      host: 'j.j.Pinkman'
-    },
-    {
-      id: '4',
-      name: 'Heisenberg Cup',
-      currentPlayers: 2,
-      maxPlayers: 8,
-      visibility: 'public',
-      host: 'skarim'
-    },
-    {
-      id: '5',
-      name: 'Blue Sky Challenge',
-      currentPlayers: 5,
-      maxPlayers: 8,
-      visibility: 'public',
-      host: 'j.p.wynne'
-    },
-    {
-      id: '6',
-      name: 'Los Pollos Tournament',
-      currentPlayers: 3,
-      maxPlayers: 16,
-      visibility: 'private',
-      host: 'g.fring'
-    },
-    // {
-    //   id: '7',
-    //   name: 'Better Call Saul Cup',
-    //   currentPlayers: 7,
-    //   maxPlayers: 8,
-    //   visibility: 'public',
-    //   host: 's.goodman'
-    // },
-    // {
-    //   id: '8',
-    //   name: 'Magnets Arena',
-    //   currentPlayers: 1,
-    //   maxPlayers: 4,
-    //   visibility: 'public',
-    //   host: 'j.j.Pinkman'
-    // }
-  ]);
+  const [createdTournament, setCreatedTournament] = useState<tournamentAPI.Tournament | null>(null);
+  const [tournaments, setTournaments] = useState<tournamentAPI.Tournament[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [justCreatedTournament, setJustCreatedTournament] = useState(false);
 
-  const handleCreateTournament = () => {
-    // Handle tournament creation logic here
-    console.log('Creating tournament:', {
-      name: tournamentName,
-      players: numberOfPlayers,
-      visibility: visibility
-    });
-    
-    // Set created tournament and show bracket
-    setCreatedTournament({
-      name: tournamentName || 'Tournament ' + Date.now(),
-      maxPlayers: parseInt(numberOfPlayers)
-    });
-    setShowBracket(true);
+  // Wrap fetchTournaments in useCallback to prevent unnecessary re-renders
+  const fetchTournaments = useCallback(async (showLoadingSpinner = true) => {
+    try {
+      console.log('🔄 Fetching tournaments...', { showLoadingSpinner, timestamp: new Date().toISOString() });
+      if (showLoadingSpinner) {
+        setLoading(true);
+      }
+      const response = await tournamentAPI.getTournaments();
+      console.log('✅ Tournaments fetched:', response.tournaments.length, 'tournaments');
+      setTournaments(response.tournaments);
+      setError(null);
+    } catch (err) {
+      console.error('❌ Error fetching tournaments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch tournaments');
+    } finally {
+      if (showLoadingSpinner) {
+        setLoading(false);
+      }
+    }
+  }, []); // Empty deps - this function doesn't depend on any props/state
+
+  // Fetch tournaments on component mount and set up polling
+  useEffect(() => {
+    console.log('🚀 Tournament polling started, showBracket:', showBracket);
+    fetchTournaments(true); // Show loading on first fetch
+
+    // Poll for tournament updates every 3 seconds (always - to detect deleted tournaments)
+    const pollInterval = setInterval(() => {
+      console.log('⏰ Poll tick, showBracket:', showBracket);
+      fetchTournaments(false); // Always fetch, but never show loading spinner
+    }, 3000);
+
+    // Cleanup interval on unmount
+    return () => {
+      console.log('🛑 Tournament polling stopped');
+      clearInterval(pollInterval);
+    };
+  }, [showBracket, fetchTournaments]); // Include fetchTournaments in deps
+
+  // Detect if the current tournament was deleted by another user
+  useEffect(() => {
+    if (showBracket && createdTournament && !justCreatedTournament) {
+      // Check if the current tournament still exists in the tournament list
+      const tournamentExists = tournaments.some(t => t.id === createdTournament.id);
+      
+      if (!tournamentExists && tournaments.length >= 0) {
+        // Tournament was deleted - notify user and return to list
+        console.log('🚨 Tournament was deleted by creator');
+        setError('This tournament has been cancelled by the creator');
+        setShowBracket(false);
+        setCreatedTournament(null);
+        
+        // Clear error after 5 seconds
+        setTimeout(() => setError(null), 5000);
+      }
+    }
+  }, [tournaments, showBracket, createdTournament, justCreatedTournament]);
+
+  // Reset the justCreatedTournament flag after a short delay
+  useEffect(() => {
+    if (justCreatedTournament) {
+      const timer = setTimeout(() => {
+        console.log('⏰ Resetting justCreatedTournament flag');
+        setJustCreatedTournament(false);
+      }, 1000); // Wait 1 second before resetting
+      
+      return () => clearTimeout(timer);
+    }
+  }, [justCreatedTournament]);
+
+  const handleCreateTournament = async () => {
+    console.log('🏆 Creating tournament:', tournamentName, numberOfPlayers, visibility);
+    if (!tournamentName.trim()) {
+      setError('Please enter a tournament name');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await tournamentAPI.createTournament(
+        tournamentName.trim(),
+        parseInt(numberOfPlayers),
+        visibility as 'public' | 'private',
+        user.id.toString(),
+        user.name || 'Player'
+      );
+
+      setCreatedTournament(response.tournament);
+      setShowBracket(true);
+      
+      // Set flag BEFORE fetch to prevent false deletion detection
+      setJustCreatedTournament(true);
+      
+      // Refresh tournament list
+      await fetchTournaments();
+      
+      // Reset form
+      setTournamentName('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create tournament');
+      console.error('Error creating tournament:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleJoinTournament = (tournamentId: string) => {
-    // Handle join tournament logic here
-    console.log('Joining tournament:', tournamentId);
+  const handleJoinTournament = async (tournamentId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await tournamentAPI.joinTournament(
+        tournamentId,
+        user.id.toString(),
+        user.name || 'Player'
+      );
+
+      // Find the tournament the user just joined
+      const joinedTournament = tournaments.find(t => t.id === tournamentId);
+      
+      if (joinedTournament) {
+        // Set the tournament and show the bracket
+        setCreatedTournament(joinedTournament);
+        setShowBracket(true);
+      }
+      
+      // Refresh tournament list
+      await fetchTournaments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join tournament');
+      console.error('Error joining tournament:', err);
+    } finally {
+      setLoading(false);
+    }
   };
   
-  const handleCancelTournament = () => {
-    setShowBracket(false);
-    setCreatedTournament(null);
-    setTournamentName('');
+  const handleCancelTournament = async () => {
+    if (!createdTournament) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Check if the current user is the creator
+      const isCreator = createdTournament.creator_id === user.id.toString();
+
+      if (isCreator) {
+        // If creator, delete the entire tournament
+        await tournamentAPI.deleteTournament(
+          createdTournament.id,
+          user.id.toString()
+        );
+      } else {
+        // If participant, just leave the tournament
+        await tournamentAPI.leaveTournament(
+          createdTournament.id,
+          user.id.toString()
+        );
+      }
+
+      // Reset state and return to tournament list
+      setShowBracket(false);
+      setCreatedTournament(null);
+      setTournamentName('');
+      
+      // Refresh tournament list
+      await fetchTournaments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel tournament');
+      console.error('Error canceling tournament:', err);
+    } finally {
+      setLoading(false);
+    }
   };
   
   const handleEditSettings = () => {
@@ -124,7 +202,8 @@ export default function Tournament() {
     return (
       <TournamentBracket
         tournamentName={createdTournament.name}
-        maxPlayers={createdTournament.maxPlayers}
+        maxPlayers={createdTournament.max_players}
+        tournamentId={createdTournament.id}
         onCancel={handleCancelTournament}
         onEditSettings={handleEditSettings}
       />
@@ -153,6 +232,9 @@ export default function Tournament() {
                   placeholder="Heisenberg Cup"
                   className="w-full px-4 py-3 bg-slate-700/40 border border-slate-600/40 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                 />
+                {error && error === 'Please enter a tournament name' && (
+                  <p className="mt-1 text-xs text-red-400">Please enter a tournament name</p>
+                )}
               </div>
 
               {/* Number of Players */}
@@ -188,8 +270,8 @@ export default function Tournament() {
                     onChange={(e) => setVisibility(e.target.value)}
                     className="w-full px-4 py-3 bg-gradient-to-r from-slate-700/60 to-slate-700/40 border border-cyan-500/30 rounded-lg text-white appearance-none focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 focus:from-slate-700/80 focus:to-slate-700/60 cursor-pointer transition-all hover:border-cyan-500/50"
                   >
-                    <option value="Public">Public</option>
-                    <option value="Private">Private</option>
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
                     <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,40 +293,67 @@ export default function Tournament() {
 
           {/* Join Tournament Section */}
           <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl border border-slate-600/30 p-4 sm:p-6 md:p-8">
-            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6">Join Tournament</h2>
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">Join Tournament</h2>
+              {/* <div className="flex items-center gap-2 text-xs text-slate-400">
+                <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+                <span>Auto-updating</span>
+              </div> */}
+            </div>
             
-            <div className="tournament-scroll space-y-3 sm:space-y-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-1">
-              {tournaments.map((tournament) => (
-                <div
-                  key={tournament.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-slate-700/30 rounded-xl border border-slate-600/30 hover:border-slate-500/50 transition-colors gap-3 sm:gap-4"
-                >
-                  <div className="flex-1">
-                    <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{tournament.name}</h3>
-                    <p className="text-xs sm:text-sm text-slate-400">Hosted by {tournament.host}</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-                    <div className="text-center px-2 sm:px-0">
-                      <p className="text-white font-medium text-xs sm:text-sm whitespace-nowrap">
-                        {tournament.currentPlayers} / {tournament.maxPlayers} players
-                      </p>
+            {error && error !== 'Please enter a tournament name' && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                {error}
+              </div>
+            )}
+            
+            {loading ? (
+              <div className="flex justify-center items-center h-40">
+                <div className="text-slate-400">Loading tournaments...</div>
+              </div>
+            ) : tournaments.length === 0 ? (
+              <div className="flex justify-center items-center h-40">
+                <div className="text-slate-400">No tournaments available</div>
+              </div>
+            ) : (
+              <div className="tournament-scroll space-y-3 sm:space-y-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-1">
+                {tournaments.map((tournament) => (
+                  <div
+                    key={tournament.id}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-slate-700/30 rounded-xl border border-slate-600/30 hover:border-slate-500/50 transition-colors gap-3 sm:gap-4"
+                  >
+                    <div className="flex-1">
+                      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{tournament.name}</h3>
+                      <p className="text-xs sm:text-sm text-slate-400">Hosted by User {tournament.creator_id}</p>
                     </div>
                     
-                    <span className="px-2 sm:px-3 py-1 text-xs font-medium text-slate-300 bg-slate-600/40 rounded-full">
-                      {tournament.visibility}
-                    </span>
-                    
-                    <button
-                      onClick={() => handleJoinTournament(tournament.id)}
-                      className="px-4 sm:px-5 py-1.5 sm:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-colors"
-                    >
-                      Join
-                    </button>
+                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
+                      <div className="text-center px-2 sm:px-0">
+                        <p className="text-white font-medium text-xs sm:text-sm whitespace-nowrap">
+                          {tournament.current_players} / {tournament.max_players} players
+                        </p>
+                      </div>
+                      
+                      <span className="px-2 sm:px-3 py-1 text-xs font-medium text-slate-300 bg-slate-600/40 rounded-full capitalize">
+                        {tournament.visibility}
+                      </span>
+                      
+                      <button
+                        onClick={() => handleJoinTournament(tournament.id)}
+                        disabled={loading || tournament.current_players >= tournament.max_players}
+                        className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                          tournament.current_players >= tournament.max_players
+                            ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                            : 'bg-teal-600 hover:bg-teal-700 text-white'
+                        }`}
+                      >
+                        {tournament.current_players >= tournament.max_players ? 'Full' : 'Join'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

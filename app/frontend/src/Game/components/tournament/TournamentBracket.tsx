@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import * as tournamentAPI from './api';
+import { UseUserStore } from '../../../userAuth/zustand/useStore';
+import { useNavigate } from 'react-router-dom';
 
 interface Player {
   id: string;
@@ -17,6 +20,7 @@ interface Match {
 interface TournamentBracketProps {
   tournamentName: string;
   maxPlayers: number;
+  tournamentId: string;
   onCancel: () => void;
   onEditSettings: () => void;
 }
@@ -24,36 +28,86 @@ interface TournamentBracketProps {
 export default function TournamentBracket({ 
   tournamentName, 
   maxPlayers,
+  tournamentId,
   onCancel,
   onEditSettings 
 }: TournamentBracketProps) {
-  const [players, setPlayers] = useState<Player[]>([
-    { id: '1', name: 'you' },
-    { id: '2', name: 'player2' },
-    { id: '3', name: 'player3' },
-    { id: '4', name: 'player4' },
-    { id: '5', name: 'player5' },
-    // { id: '6', name: 'player6' },
-    // { id: '7', name: 'player7' },
-    // { id: '8', name: 'player8' }
-  ]);
+  const { user } = UseUserStore();
+  const navigate = useNavigate();
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [tournamentStatus, setTournamentStatus] = useState<string>('waiting');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Round 1 winners (semifinals qualifiers)
+  // Fetch tournament bracket data
+  useEffect(() => {
+    const fetchBracketData = async () => {
+      try {
+        setLoading(true);
+        const response = await tournamentAPI.getTournamentBracket(tournamentId);
+        
+        // Convert participants to players
+        const participantPlayers: Player[] = response.data.participants.map(p => ({
+          id: p.user_id,
+          name: p.username
+        }));
+        
+        setPlayers(participantPlayers);
+        setMatches(response.data.matches || []);
+        setTournamentStatus(response.data.tournament.status);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load bracket');
+        console.error('Error fetching bracket:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBracketData();
+    
+    // Poll for updates every 3 seconds
+    const interval = setInterval(fetchBracketData, 3000);
+    
+    return () => clearInterval(interval);
+  }, [tournamentId]);
+
+  // When tournament starts, find user's first match and navigate to it
+  useEffect(() => {
+    if (tournamentStatus === 'in_progress' && matches.length > 0) {
+      // Find user's match in round 1
+      const userMatch = matches.find(match => 
+        match.round === 1 && 
+        (match.player1_id === user.id.toString() || match.player2_id === user.id.toString()) &&
+        !match.winner_id // Match not completed yet
+      );
+
+      if (userMatch) {
+        console.log('🎮 Tournament started! Your first match:', userMatch);
+        // TODO: Navigate to match/game screen
+        // For now, just log it
+        // navigate(`/game/tournament/${tournamentId}/match/${userMatch.id}`);
+      }
+    }
+  }, [tournamentStatus, matches, user.id, tournamentId, navigate]);
+
+  // Round 1 winners (semifinals qualifiers) - will be updated when matches are played
   const round1Winners = {
-    // leftMatch1: players[1], // player2 beat you
-    // leftMatch2: players[3], // player4 beat player3
-    // rightMatch1: players[4], // player5 beat player6
-    // rightMatch2: players[7], // player8 beat player7
+    leftMatch1: undefined,
+    leftMatch2: undefined,
+    rightMatch1: undefined,
+    rightMatch2: undefined,
   };
 
-  // Round 2 winners (finalists)
+  // Round 2 winners (finalists) - will be updated when matches are played
   const round2Winners = {
-    // leftFinal: players[3], // player4 beat player2
-    // rightFinal: players[4], // player5 beat player8
+    leftFinal: undefined,
+    rightFinal: undefined,
   };
 
-  // Tournament winner
-  const tournamentWinner =  undefined //players[4]; // player5 won the tournament
+  // Tournament winner - will be updated when tournament is complete
+  const tournamentWinner = undefined;
 
   // Calculate number of rounds based on max players
   const numberOfRounds = Math.log2(maxPlayers);
@@ -149,6 +203,30 @@ export default function TournamentBracket({
   const leftPlayers = players.slice(0, playersPerSide);
   const rightPlayers = players.slice(playersPerSide);
 
+  if (loading) {
+    return (
+      <div className="tournament-page relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] flex items-center justify-center">
+        <div className="text-slate-400 text-xl">Loading bracket...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="tournament-page relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-xl mb-4">{error}</div>
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="tournament-page relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] overflow-y-auto px-4 sm:px-6 md:px-10 pt-8 sm:pt-12 pb-20">
       <div className="w-full max-w-7xl mx-auto">
@@ -158,9 +236,27 @@ export default function TournamentBracket({
             {tournamentName || 'Tournament Bracket'}
           </h1>
           <p className="text-slate-400 text-sm">
-            {maxPlayers} Players Tournament
+            {maxPlayers} Players Tournament • {players.length} / {maxPlayers} Joined
           </p>
         </div>
+
+        {/* Waiting for players message */}
+        {players.length < maxPlayers && (
+          <div className="text-center mb-6">
+            <div className="inline-block px-6 py-3 bg-teal-500/20 border border-teal-500/50 rounded-lg text-teal-200">
+              Waiting for {maxPlayers - players.length} more player{maxPlayers - players.length !== 1 ? 's' : ''} to join...
+            </div>
+          </div>
+        )}
+
+        {/* Tournament starting message */}
+        {tournamentStatus === 'in_progress' && (
+          <div className="text-center mb-6">
+            <div className="inline-block px-6 py-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-200">
+              🎮 Tournament has started! Preparing your match...
+            </div>
+          </div>
+        )}
 
         {/* Bracket Container */}
         <div className={`p-6 sm:p-8 mb-6 overflow-x-auto ${maxPlayers === 4 ? 'mt-16' : ''}`}>

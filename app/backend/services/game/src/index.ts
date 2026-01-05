@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import {db} from "./plugins/game.db";
 import gameSocket from "./plugins/game.socket";
 import { kafkaProducerService } from "./kafka/producer";
+import tournamentRoutes from "./routes/tournament.routes";
 
 const app = Fastify({
   logger: {
@@ -37,6 +38,9 @@ app.decorate("db", db);
 
 // Attach socket.io
 app.register(gameSocket);
+
+// Register tournament routes
+app.register(tournamentRoutes);
 
 // Challenge endpoint
 app.post("/api/v1/game/challenge", async (request, reply) => {
@@ -138,21 +142,6 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
 
 app.get("/api/v1/game/user/:userId", async (request, reply) => {
   const { userId } = request.params as { userId: string };
-  
-
-  // Clear tables
-  // db.exec("DELETE FROM users;");
-  // db.exec("DELETE FROM games;");
-
-  // Insert test users
-  // const insertUser = db.prepare(`
-  //   INSERT INTO users (id, name, avatar, level) VALUES (?, ?, ?, 0)
-  // `);
-
-  // insertUser.run("1", "skarim", "/src/assets/images/profiles/skarim.png");
-  // insertUser.run("2", "meserghi", "/src/assets/images/profiles/meserghi.png");
-  // insertUser.run("3", "souaouri", "/src/assets/images/profiles/souaouri.png");
-  // insertUser.run("4", "hidriouc", "/src/assets/images/profiles/hidriouc.png");
 
   const row = db.prepare("SELECT id, name, avatar FROM users WHERE id = ?").get(userId) as { id: string; name: string; avatar: string } | undefined;
 
@@ -229,6 +218,23 @@ app.get("/api/v1/game/history/:userId/:opponentId", async (request, reply) => {
 
 const start = async () => {
   try {
+    // Seed test users if they don't exist (will be replaced by Kafka consumer in production)
+    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    if (userCount.count === 0) {
+      console.log("🌱 Seeding test users...");
+      const insertUser = db.prepare(`
+        INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, 0)
+      `);
+
+      insertUser.run("1", "skarim", "/src/assets/images/profiles/skarim.png");
+      insertUser.run("2", "meserghi", "/src/assets/images/profiles/meserghi.png");
+      insertUser.run("3", "souaouri", "/src/assets/images/profiles/souaouri.png");
+      insertUser.run("4", "hidriouc", "/src/assets/images/profiles/hidriouc.png");
+      console.log("✅ Test users seeded successfully");
+    } else {
+      console.log(`ℹ️  Users table already has ${userCount.count} users`);
+    }
+
     await kafkaProducerService.connect();
     app.log.info("Kafka producer connected successfully");
     

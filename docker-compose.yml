@@ -17,6 +17,12 @@ services:
       - "9998:9998"  # JMX port
     networks:
       - ft_Transc
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -45,7 +51,14 @@ services:
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_OPTS: "-javaagent:/usr/share/jmx_prometheus_javaagent.jar=7071:/etc/jmx-exporter/config.yml"
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ft_Transc
     logging:
@@ -86,7 +99,8 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -128,7 +142,8 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -149,7 +164,8 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -285,6 +301,12 @@ services:
       - "9300:9300"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -310,7 +332,8 @@ services:
       - "xpack.monitoring.enabled=true"
       - "xpack.monitoring.elasticsearch.hosts=http://elasticsearch:9200"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -331,7 +354,8 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -352,8 +376,10 @@ services:
       - ./infra/monitoring/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
-      - elasticsearch
-      - logstash
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_started
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -453,7 +479,7 @@ services:
     image: user_auth
     container_name: user_auth
     volumes:
-      - ./backend/services/userauth/db:/app/db
+      - user-auth-data:/app/db
     ports:
       - "3004:3004"
     environment:
@@ -464,8 +490,10 @@ services:
     networks:
       - ft_Transc
     depends_on:
-      - kafka
-      - zookeeper
+      kafka:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -483,3 +511,4 @@ volumes:
   grafana-data:
   elasticsearch-data:
   tictac-data:
+  user-auth-data:
