@@ -16,6 +16,7 @@ import path from "path";
 import fs from "fs";
 import multipart, { MultipartFile } from "@fastify/multipart"
 import { pipeline } from "stream/promises";
+import { UserEvent, kafkaProducerService } from "./kafka/producer.js";
 
 
 interface User {
@@ -317,6 +318,17 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
 
       const isProd = process.env.NODE_ENV === "production";
 
+      const message : UserEvent = {
+        userId: String(row.id),
+        name: row.name,
+        email: row.email,
+        photoURL: row.photoURL || "",
+        bgPhotoURL: row.bgPhotoURL || "",
+        bio: row.bio || "",
+        profileVisibility: row.profileVisibility || true,
+        showNotifications: row.showNotifications || true
+      }
+      kafkaProducerService.publishUserCreated(message);
       // console.log("Generated JWT Token:", AccessToken);
       reply.setCookie("refreshToken", RefreshToken, {
         httpOnly: true,
@@ -544,6 +556,18 @@ app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
       const hashedPassword = await bcrypt.hash(newpassword, 10);
       db.prepare("UPDATE users SET password = ? WHERE id = ?").run(hashedPassword, id);
     }
+    const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User;
+    const message : UserEvent = {
+      userId: String(row.id),
+      name: row.name,
+      email: row.email,
+      photoURL: row.photoURL || "",
+      bgPhotoURL: row.bgPhotoURL || "",
+      bio: row.bio || "",
+      profileVisibility: row.profileVisibility || true,
+      showNotifications: row.showNotifications || true
+    }
+    kafkaProducerService.publishUserUpdated(message);
     reply.status(201).send({ 
       message: "User data updated successfully",
       code: "USER_DATA_UPDATED_SUCCESS" });
@@ -656,3 +680,5 @@ app.listen({ port: 3004, host: '0.0.0.0' }, (err, address) => {
   }
   console.log(`Server running at ${address}`);
 });
+
+
