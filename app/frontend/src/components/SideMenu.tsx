@@ -5,25 +5,14 @@ import {
   Grid3x3,
   Settings,
   LogOut,
-  User,
-  Users,
+ 
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom"
 
-// Creative combined icon for TicTac (Local + Online)
 function TicTacCombinedIcon({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
     <div className={`relative ${className}`} style={{ width: size, height: size }}>
-      {/* Grid background */}
       <Grid3x3 size={size} className="absolute inset-0" />
-      {/* Local player indicator (left) */}
-      <div className="absolute -bottom-1 -left-1 bg-blue-500 rounded-full p-0.5 border border-[#0d2234]">
-        <User size={size * 0.3} className="text-white" />
-      </div>
-      {/* Online players indicator (right) */}
-      <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border border-[#0d2234] animate-pulse">
-        <Users size={size * 0.3} className="text-white" />
-      </div>
     </div>
   );
 }
@@ -89,7 +78,6 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
             color="#12C0AD"
             to="/SecondGame"
             active={location.pathname.startsWith("/SecondGame") || location.pathname.startsWith("/tictac")}
-            label="TicTacToe • Local & Online"
             onClick={onClose}
           />
           <NavItem

@@ -21,6 +21,7 @@ const app = fastify();
 await app.register(cookie, {
   secret: process.env.COOKIE_SECRET,
 });
+
 await app.register(cors, {
   origin: true,
   credentials: true,
@@ -40,6 +41,8 @@ db.prepare(`
   )
 `).run();
 
+
+
 app.get("/", async () => {
   return { message: "SQLite DB connected" };
 });
@@ -52,6 +55,8 @@ const client = new OAuth2Client("917057465162-k81haa2us30sg6ddker0bu9gk4qigb9r.a
 app.post("/api/v1/auth/googleSignup", async (request, reply) => {
   try{
     const {accessToken} = request.body as {accessToken: string};
+
+  
     
     if (!accessToken) {
       return reply.status(400).send({ error: "Missing Google access token" });

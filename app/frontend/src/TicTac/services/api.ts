@@ -1,8 +1,8 @@
 // Use relative URL to go through nginx proxy (HTTPS)
 const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_TICTAC_API_URL) {
-    return import.meta.env.VITE_TICTAC_API_URL;
-  }
+  // if (import.meta.env.VITE_TICTAC_API_URL) {
+  //   return import.meta.env.VITE_TICTAC_API_URL;
+  // }
   // Default to relative URL which uses nginx proxy
   return '/api';
 };
@@ -53,31 +53,19 @@ export interface GameHistory {
 }
 
 export class TicTacAPI {
-  // User endpoints
-  static async createOrGetUser(username: string): Promise<User> {
-    console.log('[API] Creating user at:', `${API_BASE_URL}/users`);
+  
+
+  static async CheckUserExists(username: string): Promise<{ exists: boolean; user?: User }> {
+
+    const url = `${API_BASE_URL}/users/exists/${encodeURIComponent(username)}`;
+    const response = await fetch(url, { method: 'GET', credentials: 'include' });
     
-    try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-        mode: 'cors',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create/get user: ${response.status} - ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log('[API] User created:', data.user);
-      return data.user;
-    } catch (error) {
-      console.error('[API] Fetch error:', error);
-      throw error;
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to check user: ${response.status} - ${text}`);
     }
+
+    return await response.json();
   }
 
   static async getUserStats(userId: string): Promise<UserStats> {
@@ -107,7 +95,7 @@ export class TicTacAPI {
     return data.leaderboard;
   }
 
-  // Game endpoints
+  
   static async getGame(gameId: string): Promise<GameState> {
     const response = await fetch(`${API_BASE_URL}/games/${gameId}`);
     
@@ -156,14 +144,14 @@ export class TicTacAPI {
       
       if (!response) return null;
       
-      // 404 is expected when no active game exists - not an error
+     
       if (response.status === 404) return null;
       if (!response.ok) return null;
       
       const data = await response.json();
       return data.game;
     } catch (error) {
-      // Silently return null - no active game is normal
+    
       return null;
     }
   }

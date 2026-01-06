@@ -9,14 +9,16 @@ import { userRoutes } from './routes/user.routes.js';
 import { gameRoutes } from './routes/game.routes.js';
 import { matchmakingRoutes } from './routes/matchmaking.routes.js';
 import { WebSocketHandler } from './services/websocket.service.js';
+import { KafkaConsumerService } from './kafka/consumer.js';
 
-// Load environment variables
+
 config();
 
 const PORT = parseInt(process.env.PORT || '3030');
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Create Fastify instance
+const kafkaConsumer = new KafkaConsumerService();
+
 const fastify = Fastify({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -31,7 +33,6 @@ async function start() {
     
     runMigrations();
 
-    
     await fastify.register(helmet, {
       contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false
     });
@@ -49,7 +50,6 @@ async function start() {
     
     await fastify.register(websocket);
 
-    // Health check
     fastify.get('/health', async () => {
       return { 
         status: 'ok', 
@@ -63,13 +63,15 @@ async function start() {
     await fastify.register(gameRoutes, { prefix: '/api' });
     await fastify.register(matchmakingRoutes, { prefix: '/api' });
 
-    // Setup WebSocket
     WebSocketHandler.setup(fastify);
 
-    // WebSocket stats endpoint
     fastify.get('/api/ws/stats', async () => {
       return WebSocketHandler.getStats();
     });
+
+  
+    await kafkaConsumer.connect();
+    fastify.log.info('Kafka consumer connected');
 
     
     await fastify.listen({ port: PORT, host: HOST });
@@ -88,7 +90,8 @@ async function start() {
 const signals = ['SIGINT', 'SIGTERM'];
 signals.forEach(signal => {
   process.on(signal, async () => {
-    fastify.log.info(`Received ${signal}, closing server...`);
+    fastify.log.info(`Received ${signal}, closing server`);
+    await kafkaConsumer.disconnect();
     await fastify.close();
     process.exit(0);
   });

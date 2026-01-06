@@ -34,6 +34,16 @@ export class UserModel {
     stmt.run(newRating, id);
   }
 
+  static updateUsername(id: string, username: string): void {
+    const stmt = db.prepare('UPDATE users SET username = ? WHERE id = ?');
+    stmt.run(username, id);
+  }
+
+  static deleteById(id: string): void {
+    const stmt = db.prepare('DELETE FROM users WHERE id = ?');
+    stmt.run(id);
+  }
+  
   static getStats(userId: string): UserStats | null {
     const user = this.findById(userId);
     if (!user) return null;

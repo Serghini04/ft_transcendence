@@ -17,7 +17,6 @@ export class WebSocketHandler {
 
   static setup(fastify: FastifyInstance) {
     fastify.get('/ws', { websocket: true }, (socket, request) => {
-      // fastify.log.info('WebSocket connection established');
 
       socket.on('message', async (data: Buffer) => {
         try {
@@ -87,7 +86,7 @@ export class WebSocketHandler {
     }
 
     this.gameConnections.get(gameId)!.add(userId);
-    this.userToGameMap.set(userId, gameId); // Track user's active game
+    this.userToGameMap.set(userId, gameId);
     socket.send(JSON.stringify({ type: 'joined_game', gameId }));
   }
 
@@ -104,23 +103,19 @@ export class WebSocketHandler {
       return;
     }
 
-    // Broadcast move to all players in the game
     this.broadcastToGame(gameId, {
       type: 'game_update',
       game: result.game
     });
 
-    // If game is finished, notify players
     if (result.game?.status === 'finished') {
       this.broadcastToGame(gameId, {
         type: 'game_finished',
         game: result.game
       });
 
-      // Clean up game connections and tracking
       this.gameConnections.delete(gameId);
-      
-      // Remove game tracking for both players
+    
       this.userToGameMap.delete(result.game.player1Id);
       this.userToGameMap.delete(result.game.player2Id);
     }
@@ -129,7 +124,6 @@ export class WebSocketHandler {
   private static async handleJoinMatchmaking(socket: WebSocket, data: { userId: string; username: string }) {
     const { userId, username } = data;
 
-    // Use userId as socketId for simplicity
     const result = MatchmakingService.addToQueue(userId, username, userId);
 
     if (!result.success) {
@@ -141,21 +135,17 @@ export class WebSocketHandler {
     }
 
     if (result.match) {
-      // Match found immediately
       const { game, opponent } = result.match;
 
-      // Automatically add both players to the game connections
       if (!this.gameConnections.has(game.id)) {
         this.gameConnections.set(game.id, new Set());
       }
       this.gameConnections.get(game.id)!.add(userId);
       this.gameConnections.get(game.id)!.add(opponent.userId);
-      
-      // Track both users' active games
+
       this.userToGameMap.set(userId, game.id);
       this.userToGameMap.set(opponent.userId, game.id);
 
-      // Notify both players
       this.sendToUser(userId, {
         type: 'match_found',
         game,
@@ -198,17 +188,14 @@ export class WebSocketHandler {
       return;
     }
 
-    // Broadcast to game
     this.broadcastToGame(gameId, {
       type: 'game_finished',
       game: result.game,
       reason: 'forfeit'
     });
 
-    // Clean up
     this.gameConnections.delete(gameId);
-    
-    // Remove game tracking for both players
+
     if (result.game) {
       this.userToGameMap.delete(result.game.player1Id);
       this.userToGameMap.delete(result.game.player2Id);
@@ -226,32 +213,26 @@ export class WebSocketHandler {
 
   private static sendToUser(userId: string, message: any) {
     const socket = this.connections.get(userId);
-    if (socket && socket.readyState === 1) { // OPEN
+    if (socket && socket.readyState === 1) {
       socket.send(JSON.stringify(message));
     }
   }
 
   private static handleDisconnect(socket: WebSocket) {
-    // Find and remove connection
     for (const [userId, conn] of this.connections.entries()) {
       if (conn === socket) {
         this.connections.delete(userId);
         
-        // Remove from matchmaking if in queue
         MatchmakingService.removeFromQueue(userId);
         
-        // Check if user has an active game
         const activeGameId = this.userToGameMap.get(userId);
         if (activeGameId) {
-          // Get the game to find the opponent
           const game = GameModel.findById(activeGameId);
           
           if (game && game.status === 'active') {
-            // Forfeit the game
             const forfeitResult = GameService.forfeitGame(activeGameId, userId);
             
             if (forfeitResult.success && forfeitResult.game) {
-              // Notify the opponent that the game was closed due to disconnection
               const opponentId = forfeitResult.game.player1Id === userId 
                 ? forfeitResult.game.player2Id 
                 : forfeitResult.game.player1Id;
@@ -263,7 +244,6 @@ export class WebSocketHandler {
                 message: 'Your opponent has left the game'
               });
               
-              // Also send game_finished for compatibility
               this.broadcastToGame(activeGameId, {
                 type: 'game_finished',
                 game: forfeitResult.game,
@@ -271,7 +251,6 @@ export class WebSocketHandler {
               });
             }
             
-            // Clean up game tracking
             this.userToGameMap.delete(userId);
             if (game) {
               const opponentId = game.player1Id === userId ? game.player2Id : game.player1Id;
@@ -279,11 +258,9 @@ export class WebSocketHandler {
             }
           }
           
-          // Clean up game connections
           this.gameConnections.delete(activeGameId);
         }
         
-        // Remove from game connections (in case not handled above)
         for (const [gameId, players] of this.gameConnections.entries()) {
           players.delete(userId);
           if (players.size === 0) {
