@@ -18,7 +18,12 @@ type Contact = {
   blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
-export default function ContactsList({ closeSidebar }: any) {
+interface ContactsListProps {
+  closeSidebar: () => void;
+  menuOpen: boolean;
+}
+
+export default function ContactsList({ closeSidebar, menuOpen }: ContactsListProps) {
   const { contacts, selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, fetchContacts } = useChatStore();
   const { token} = UseTokenStore();
   const navigate = useNavigate();

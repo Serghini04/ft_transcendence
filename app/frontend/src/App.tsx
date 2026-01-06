@@ -34,7 +34,7 @@ export default function App() {
           <Route element={<MainLayout menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}>
             <Route path="/" element={<Home />} />
             <Route path="/home" element={<Home />} />
-            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/chat" element={<ChatPage menuOpen={menuOpen} />} />
             <Route path="/settings/*" element={<Settings />} />
             <Route path="/game" element={<Game menuOpen={menuOpen} />}>
               <Route index element={<GameMenu />} />
