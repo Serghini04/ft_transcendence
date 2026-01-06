@@ -2,9 +2,9 @@
 {
 
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" }
-  ],
+  // "references": [
+  //   { "path": "./tsconfig.app.json" }
+  // ],
   "compilerOptions": {
 
     "target": "ES2020",
