@@ -4,6 +4,14 @@ import { Type } from "@sinclair/typebox";
 
 export default async function chatRoutes(fastify: FastifyInstance) {
     fastify.get("/contacts", chatController.getAllContacts);
+
+    fastify.get("/search", {
+        schema: {
+            querystring: Type.Object({
+                q: Type.String({ minLength: 1 })
+            })
+        }
+    }, chatController.searchUsers);
     
     fastify.get("/conversation/:id", {
         schema: {

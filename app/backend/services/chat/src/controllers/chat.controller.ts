@@ -11,6 +11,19 @@ async function getAllContacts(req: FastifyRequest, res: FastifyReply) {
     return res.code(200).send(contacts);
 }
 
+async function searchUsers(req: FastifyRequest, res: FastifyReply) {
+    const { q } = req.query as { q: string };
+    
+    if (!q || q.trim().length === 0) {
+        return res.code(400).send({ error: "Search query is required" });
+    }
+    
+    const userRepo = new userRepository(req.server.db);
+    const users = userRepo.searchUsers(q.trim());
+    
+    return res.code(200).send(users);
+}
+
 async function getConversationBetweenUsers(req: FastifyRequest, res: FastifyReply) {
     const chatRepo = new ChatRepository(req.server.db);
     const {id} = req.params as {id:number}
@@ -95,6 +108,7 @@ async function unblockUser(req: FastifyRequest, res: FastifyReply) {
 
 export const chatController = {
     getAllContacts,
+    searchUsers,
     getConversationBetweenUsers,
     markMessagesAsSeen,
     blockUser,
