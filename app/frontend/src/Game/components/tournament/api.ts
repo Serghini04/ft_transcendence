@@ -22,6 +22,7 @@ export interface TournamentParticipant {
   username: string;
   joined_at: number;
   seed?: number;
+  avatar?: string;
 }
 
 export interface TournamentMatch {
@@ -41,7 +42,6 @@ export interface TournamentMatch {
 export interface CreateTournamentRequest {
   name: string;
   maxPlayers: number;
-  visibility: 'public' | 'private';
   creatorId: string;
   creatorUsername: string;
 }
@@ -67,7 +67,6 @@ const getAuthHeaders = () => {
 export const createTournament = async (
   name: string,
   maxPlayers: number,
-  visibility: 'public' | 'private',
   creatorId: string,
   creatorUsername: string
 ): Promise<{ success: boolean; tournament: Tournament }> => {
@@ -77,7 +76,6 @@ export const createTournament = async (
     body: JSON.stringify({
       name,
       maxPlayers,
-      visibility,
       creatorId,
       creatorUsername,
     }),

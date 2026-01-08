@@ -8,7 +8,6 @@ export default function Tournament() {
   
   const [tournamentName, setTournamentName] = useState('');
   const [numberOfPlayers, setNumberOfPlayers] = useState('8');
-  const [visibility, setVisibility] = useState('public');
   const [showBracket, setShowBracket] = useState(false);
   const [createdTournament, setCreatedTournament] = useState<tournamentAPI.Tournament | null>(null);
   const [tournaments, setTournaments] = useState<tournamentAPI.Tournament[]>([]);
@@ -87,7 +86,7 @@ export default function Tournament() {
   }, [justCreatedTournament]);
 
   const handleCreateTournament = async () => {
-    console.log('🏆 Creating tournament:', tournamentName, numberOfPlayers, visibility);
+    console.log('🏆 Creating tournament:', tournamentName, numberOfPlayers);
     if (!tournamentName.trim()) {
       setError('Please enter a tournament name');
       return;
@@ -100,7 +99,6 @@ export default function Tournament() {
       const response = await tournamentAPI.createTournament(
         tournamentName.trim(),
         parseInt(numberOfPlayers),
-        visibility as 'public' | 'private',
         user.id.toString(),
         user.name || 'Player'
       );
@@ -192,10 +190,6 @@ export default function Tournament() {
       setLoading(false);
     }
   };
-  
-  const handleEditSettings = () => {
-    setShowBracket(false);
-  };
 
   // If bracket view is active, show the bracket
   if (showBracket && createdTournament) {
@@ -205,7 +199,6 @@ export default function Tournament() {
         maxPlayers={createdTournament.max_players}
         tournamentId={createdTournament.id}
         onCancel={handleCancelTournament}
-        onEditSettings={handleEditSettings}
       />
     );
   }
@@ -253,28 +246,6 @@ export default function Tournament() {
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
                     <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Visibility */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Visibility
-                </label>
-                <div className="relative">
-                  <select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value)}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-slate-700/60 to-slate-700/40 border border-cyan-500/30 rounded-lg text-white appearance-none focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 focus:from-slate-700/80 focus:to-slate-700/60 cursor-pointer transition-all hover:border-cyan-500/50"
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
-                    <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
@@ -333,10 +304,6 @@ export default function Tournament() {
                           {tournament.current_players} / {tournament.max_players} players
                         </p>
                       </div>
-                      
-                      <span className="px-2 sm:px-3 py-1 text-xs font-medium text-slate-300 bg-slate-600/40 rounded-full capitalize">
-                        {tournament.visibility}
-                      </span>
                       
                       <button
                         onClick={() => handleJoinTournament(tournament.id)}

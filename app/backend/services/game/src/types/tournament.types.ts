@@ -18,6 +18,7 @@ export interface TournamentParticipant {
   username: string;
   joined_at: number;
   seed?: number; // Player position in bracket
+  avatar?: string; // User avatar URL
 }
 
 export interface TournamentMatch {
@@ -37,7 +38,6 @@ export interface TournamentMatch {
 export interface CreateTournamentRequest {
   name: string;
   maxPlayers: number;
-  visibility: 'public' | 'private';
   creatorId: string;
   creatorUsername: string;
 }

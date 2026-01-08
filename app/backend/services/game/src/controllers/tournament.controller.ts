@@ -16,19 +16,15 @@ export const createTournament = async (
   request: FastifyRequest<{ Body: CreateTournamentRequest }>,
   reply: FastifyReply
 ) => {
-  const { name, maxPlayers, visibility, creatorId, creatorUsername } = request.body;
+  const { name, maxPlayers, creatorId, creatorUsername } = request.body;
 
   // Validate inputs
-  if (!name || !maxPlayers || !visibility || !creatorId || !creatorUsername) {
+  if (!name || !maxPlayers || !creatorId || !creatorUsername) {
     return reply.status(400).send({ error: 'Missing required fields' });
   }
 
   if (![4, 8].includes(maxPlayers)) {
     return reply.status(400).send({ error: 'Max players must be 4 or 8' });
-  }
-
-  if (!['public', 'private'].includes(visibility)) {
-    return reply.status(400).send({ error: 'Visibility must be public or private' });
   }
 
   try {
@@ -48,7 +44,7 @@ export const createTournament = async (
       creatorId,
       maxPlayers,
       1, // Creator is the first participant
-      visibility,
+      'public', // All tournaments are public
       'waiting',
       createdAt
     );
@@ -91,7 +87,7 @@ export const getTournaments = async (
   try {
     const tournaments = db.prepare(`
       SELECT * FROM tournaments 
-      WHERE status = 'waiting'
+      WHERE status IN ('waiting', 'in_progress')
       ORDER BY created_at DESC
     `).all() as Tournament[];
 
@@ -128,6 +124,75 @@ export const getTournamentById = async (
   } catch (error) {
     request.log.error('Error fetching tournament:', error);
     return reply.status(500).send({ error: 'Failed to fetch tournament' });
+  }
+};
+
+/**
+ * Start a tournament - create matches and update status
+ */
+const startTournament = (tournamentId: string) => {
+  try {
+    const startedAt = Date.now();
+
+    // Update tournament status
+    db.prepare(`
+      UPDATE tournaments 
+      SET status = 'in_progress', started_at = ? 
+      WHERE id = ?
+    `).run(startedAt, tournamentId);
+
+    // Get all participants
+    const participants = db.prepare(`
+      SELECT * FROM tournament_participants 
+      WHERE tournament_id = ? 
+      ORDER BY seed ASC
+    `).all(tournamentId) as TournamentParticipant[];
+
+    const maxPlayers = participants.length;
+    const totalRounds = Math.log2(maxPlayers);
+
+    // Create Round 1 matches
+    const insertMatch = db.prepare(`
+      INSERT INTO tournament_matches (
+        tournament_id, round, position, player1_id, player2_id, scheduled_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    // Pair players for first round
+    for (let i = 0; i < maxPlayers / 2; i++) {
+      const player1 = participants[i * 2];
+      const player2 = participants[i * 2 + 1];
+
+      insertMatch.run(
+        tournamentId,
+        1, // Round 1
+        i + 1, // Match position
+        player1.user_id,
+        player2.user_id,
+        startedAt
+      );
+    }
+
+    // Create placeholder matches for subsequent rounds
+    let matchesInPreviousRound = maxPlayers / 2;
+    for (let round = 2; round <= totalRounds; round++) {
+      const matchesInThisRound = matchesInPreviousRound / 2;
+      for (let position = 1; position <= matchesInThisRound; position++) {
+        insertMatch.run(
+          tournamentId,
+          round,
+          position,
+          null, // TBD from previous round
+          null, // TBD from previous round
+          null
+        );
+      }
+      matchesInPreviousRound = matchesInThisRound;
+    }
+
+    console.log(`🏆 Tournament ${tournamentId} started with ${maxPlayers} players`);
+  } catch (error) {
+    console.error('Error starting tournament:', error);
   }
 };
 
@@ -197,6 +262,16 @@ export const joinTournament = async (
 
     // Return updated tournament
     const updatedTournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament;
+
+    // Check if tournament is now full and start it
+    if (updatedTournament.current_players >= updatedTournament.max_players) {
+      // Tournament is full - start it!
+      console.log(`🚀 Tournament ${tournamentId} is full! Starting...`);
+      startTournament(tournamentId);
+      console.log(`✅ Tournament ${tournamentId} start complete`);
+    } else {
+      console.log(`⏳ Tournament ${tournamentId} waiting: ${updatedTournament.current_players}/${updatedTournament.max_players} players`);
+    }
 
     return reply.send({
       success: true,
@@ -301,10 +376,19 @@ export const getTournamentBracket = async (
       return reply.status(404).send({ error: 'Tournament not found' });
     }
 
+    // Join tournament_participants with users table to get avatars
     const participants = db.prepare(`
-      SELECT * FROM tournament_participants 
-      WHERE tournament_id = ? 
-      ORDER BY seed ASC
+      SELECT 
+        tp.tournament_id,
+        tp.user_id,
+        tp.username,
+        tp.joined_at,
+        tp.seed,
+        u.avatar
+      FROM tournament_participants tp
+      LEFT JOIN users u ON tp.user_id = u.id
+      WHERE tp.tournament_id = ? 
+      ORDER BY tp.seed ASC
     `).all(tournamentId) as TournamentParticipant[];
 
     const matches = db.prepare(`

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 interface Player {
   id: string;
   name: string;
+  avatar?: string;
 }
 
 interface Match {
@@ -22,21 +23,22 @@ interface TournamentBracketProps {
   maxPlayers: number;
   tournamentId: string;
   onCancel: () => void;
-  onEditSettings: () => void;
 }
 
 export default function TournamentBracket({ 
   tournamentName, 
   maxPlayers,
   tournamentId,
-  onCancel,
-  onEditSettings 
+  onCancel
 }: TournamentBracketProps) {
   const { user } = UseUserStore();
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
   const [tournamentStatus, setTournamentStatus] = useState<string>('waiting');
+  const [creatorId, setCreatorId] = useState<string>('');
+  const [userMatch, setUserMatch] = useState<any | null>(null);
+  const [opponent, setOpponent] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,12 +52,21 @@ export default function TournamentBracket({
         // Convert participants to players
         const participantPlayers: Player[] = response.data.participants.map(p => ({
           id: p.user_id,
-          name: p.username
+          name: p.username,
+          avatar: p.avatar
         }));
         
         setPlayers(participantPlayers);
         setMatches(response.data.matches || []);
         setTournamentStatus(response.data.tournament.status);
+        setCreatorId(response.data.tournament.creator_id);
+        
+        console.log('📊 Tournament data:', {
+          status: response.data.tournament.status,
+          players: participantPlayers.length,
+          matches: response.data.matches?.length || 0
+        });
+        
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load bracket');
@@ -73,24 +84,51 @@ export default function TournamentBracket({
     return () => clearInterval(interval);
   }, [tournamentId]);
 
-  // When tournament starts, find user's first match and navigate to it
+  // When tournament starts, find user's first match and opponent
   useEffect(() => {
-    if (tournamentStatus === 'in_progress' && matches.length > 0) {
+    console.log('🔍 Checking for match:', {
+      tournamentStatus,
+      matchesLength: matches.length,
+      playersLength: players.length,
+      userId: user.id.toString()
+    });
+
+    if (tournamentStatus === 'in_progress' && matches.length > 0 && players.length > 0) {
+      console.log('📋 All matches:', matches);
+      
       // Find user's match in round 1
-      const userMatch = matches.find(match => 
+      const currentMatch = matches.find(match => 
         match.round === 1 && 
         (match.player1_id === user.id.toString() || match.player2_id === user.id.toString()) &&
         !match.winner_id // Match not completed yet
       );
 
-      if (userMatch) {
-        console.log('🎮 Tournament started! Your first match:', userMatch);
-        // TODO: Navigate to match/game screen
-        // For now, just log it
-        // navigate(`/game/tournament/${tournamentId}/match/${userMatch.id}`);
+      console.log('🎯 Found user match:', currentMatch);
+
+      if (currentMatch) {
+        setUserMatch(currentMatch);
+        
+        // Find opponent
+        const opponentId = currentMatch.player1_id === user.id.toString() 
+          ? currentMatch.player2_id 
+          : currentMatch.player1_id;
+        
+        console.log('👤 Looking for opponent ID:', opponentId);
+        console.log('👥 All players:', players);
+        
+        const opponentPlayer = players.find(p => p.id === opponentId);
+        console.log('🎮 Found opponent:', opponentPlayer);
+        
+        if (opponentPlayer) {
+          setOpponent(opponentPlayer);
+        }
+        
+        console.log('🎮 Tournament started! Your match:', currentMatch);
+      } else {
+        console.log('❌ No match found for user');
       }
     }
-  }, [tournamentStatus, matches, user.id, tournamentId, navigate]);
+  }, [tournamentStatus, matches, players, user.id]);
 
   // Round 1 winners (semifinals qualifiers) - will be updated when matches are played
   const round1Winners = {
@@ -310,19 +348,64 @@ export default function TournamentBracket({
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        {/* Your Match Card - Fixed bottom right position */}
+        {tournamentStatus === 'in_progress' && userMatch && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <div className="bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-600/40 p-4 shadow-2xl w-80">
+              <h3 className="text-base font-semibold text-white mb-3">Your opponent</h3>
+              
+              {opponent ? (
+                /* Opponent is known - Show match card */
+                <div className="bg-slate-700/40 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center overflow-hidden">
+                      {opponent.avatar ? (
+                        <img src={opponent.avatar} alt={opponent.name} className="w-full h-full object-cover" onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }} />
+                      ) : null}
+                      <span className={`text-sm text-white font-medium ${opponent.avatar ? 'hidden' : ''}`}>
+                        {opponent.name?.substring(0, 2).toUpperCase() || 'OP'}
+                      </span>
+                    </div>
+                    <span className="text-white font-medium">{opponent.name}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      console.log('Starting match:', userMatch);
+                      // TODO: Navigate to game with tournament context
+                      // navigate(`/game/tournament/${tournamentId}/match/${userMatch.id}`);
+                    }}
+                    className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-full font-medium transition-colors flex items-center gap-2"
+                  >
+                    ▶
+                  </button>
+                </div>
+              ) : (
+                /* Opponent unknown - Show loading state */
+                <div className="bg-slate-700/40 rounded-xl p-4 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 border-4 border-slate-600 border-t-teal-500 rounded-full animate-spin"></div>
+                    <p className="text-slate-300 text-sm">Waiting for your component.....</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Action Button */}
+        <div className="flex justify-center items-center">
           <button
             onClick={onCancel}
-            className="px-8 py-3 bg-red-600/80 hover:bg-red-600 text-white rounded-full font-medium transition-colors text-sm sm:text-base"
+            className={`px-8 py-3 border text-white rounded-full font-medium transition-all text-sm sm:text-base ${
+              creatorId === user.id.toString()
+                ? 'bg-rose-600/20 hover:bg-rose-600/30 border-rose-500/50 hover:border-rose-500/70'
+                : 'bg-slate-700/80 hover:bg-slate-600 border-slate-500/50 hover:border-slate-400/50'
+            }`}
           >
-            Cancel Tournament
-          </button>
-          <button
-            onClick={onEditSettings}
-            className="px-8 py-3 bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 text-white rounded-full font-medium transition-colors text-sm sm:text-base"
-          >
-            Edit Tournament Settings
+            {creatorId === user.id.toString() ? 'Cancel Tournament' : 'Leave Tournament'}
           </button>
         </div>
       </div>
