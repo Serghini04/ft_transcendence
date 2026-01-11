@@ -39,7 +39,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = GameService.makeMove(gameId, playerId, position);
+      const result = await GameService.makeMove(gameId, playerId, position);
 
       if (!result.success) {
         return reply.code(400).send({ error: result.error });
@@ -64,7 +64,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = GameService.forfeitGame(gameId, playerId);
+      const result = await GameService.forfeitGame(gameId, playerId);
 
       if (!result.success) {
         return reply.code(400).send({ error: result.error });

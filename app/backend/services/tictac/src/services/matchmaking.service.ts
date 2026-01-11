@@ -13,8 +13,11 @@ export class MatchmakingService {
     match?: { game: GameState; opponent: MatchmakingPlayer };
   } {
     
+    // If already in queue, update their position (refresh join time)
     if (this.queue.has(userId)) {
-      return { success: false, message: 'Already in matchmaking queue' };
+      const existingPlayer = this.queue.get(userId)!;
+      existingPlayer.joinedAt = Date.now();
+      return { success: true, message: 'Refreshed matchmaking queue position' };
     }
 
     

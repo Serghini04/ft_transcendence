@@ -195,7 +195,6 @@ const isPlayersTurn = isOnline ? currentGame?.currentTurn === playerSymbol : tru
 
   // Matchmaking Screen (Online Mode Only)
   if (isOnline && !currentGame) {
-    console.log(`is side bar open : ${isSidebarOpen}`)
     return (
     <div
       className={`

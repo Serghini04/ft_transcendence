@@ -10,6 +10,7 @@ import { gameRoutes } from './routes/game.routes.js';
 import { matchmakingRoutes } from './routes/matchmaking.routes.js';
 import { WebSocketHandler } from './services/websocket.service.js';
 import { KafkaConsumerService } from './kafka/consumer.js';
+import { getKafkaProducer } from './kafka/producer.js';
 
 
 config();
@@ -18,6 +19,7 @@ const PORT = parseInt(process.env.PORT || '3030');
 const HOST = process.env.HOST || '0.0.0.0';
 
 const kafkaConsumer = new KafkaConsumerService();
+const kafkaProducer = getKafkaProducer();
 
 const fastify = Fastify({
   logger: {
@@ -73,6 +75,10 @@ async function start() {
     await kafkaConsumer.connect();
     fastify.log.info('Kafka consumer connected');
 
+    // Connect Kafka producer
+    await kafkaProducer.connect();
+    fastify.log.info('Kafka producer connected');
+
     
     await fastify.listen({ port: PORT, host: HOST });
     
@@ -92,6 +98,7 @@ signals.forEach(signal => {
   process.on(signal, async () => {
     fastify.log.info(`Received ${signal}, closing server`);
     await kafkaConsumer.disconnect();
+    await kafkaProducer.disconnect();
     await fastify.close();
     process.exit(0);
   });

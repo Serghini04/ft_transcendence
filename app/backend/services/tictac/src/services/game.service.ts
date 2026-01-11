@@ -3,6 +3,8 @@ import { GameModel } from '../models/game.model.js';
 import { GameHistoryModel } from '../models/history.model.js';
 import { UserModel } from '../models/user.model.js';
 import { nanoid } from 'nanoid';
+import { getKafkaProducer } from '../kafka/producer.js';
+import type { GameFinishedEvent } from '../kafka/producer.js';
 
 export class GameService {
   private static moveHistory: Map<string, Move[]> = new Map();
@@ -14,11 +16,11 @@ export class GameService {
     return game;
   }
 
-  static makeMove(gameId: string, playerId: string, position: number): {
+  static async makeMove(gameId: string, playerId: string, position: number): Promise<{
     success: boolean;
     game?: GameState;
     error?: string;
-  } {
+  }> {
     if (position < 0 || position > 8) {
       return { success: false, error: 'Invalid position' };
     }
@@ -70,6 +72,10 @@ export class GameService {
       this.updateRatings(game);
       
       const duration = game.finishedAt - game.startedAt;
+      
+      // Publish to Kafka BEFORE saving to database
+      await this.publishGameFinished(game, moves.length, duration, 'win');
+      
       GameHistoryModel.create(game, moves.length, duration);
       
       this.moveHistory.delete(gameId);
@@ -80,6 +86,10 @@ export class GameService {
       game.finishedAt = Date.now();
       
       const duration = game.finishedAt - game.startedAt;
+      
+      // Publish to Kafka BEFORE saving to database
+      await this.publishGameFinished(game, moves.length, duration, 'draw');
+      
       GameHistoryModel.create(game, moves.length, duration);
       
       this.moveHistory.delete(gameId);
@@ -153,11 +163,40 @@ export class GameService {
     return this.moveHistory.get(gameId) || [];
   }
 
-  static forfeitGame(gameId: string, playerId: string): {
+  private static async publishGameFinished(
+    game: GameState,
+    moves: number,
+    duration: number,
+    reason: 'win' | 'draw' | 'forfeit' | 'disconnect'
+  ): Promise<void> {
+    try {
+      const kafkaProducer = getKafkaProducer();
+      
+      const event: GameFinishedEvent = {
+        gameId: game.id,
+        player1Id: game.player1Id,
+        player2Id: game.player2Id,
+        winnerId: game.winner,
+        winnerSymbol: game.winnerSymbol,
+        isDraw: game.winner === null && game.winnerSymbol === null,
+        moves,
+        duration,
+        reason,
+        finishedAt: game.finishedAt || Date.now(),
+      };
+
+      await kafkaProducer.publishGameFinished(event);
+    } catch (error) {
+      console.error('Failed to publish game finished event:', error);
+      // Don't throw - we don't want to break game flow if Kafka is down
+    }
+  }
+
+  static async forfeitGame(gameId: string, playerId: string): Promise<{
     success: boolean;
     game?: GameState;
     error?: string;
-  } {
+  }> {
     const game = GameModel.findById(gameId);
     if (!game) {
       return { success: false, error: 'Game not found' };
@@ -183,6 +222,10 @@ export class GameService {
 
     const moves = this.moveHistory.get(gameId) || [];
     const duration = game.finishedAt - game.startedAt;
+    
+    // Publish to Kafka BEFORE saving to database
+    await this.publishGameFinished(game, moves.length, duration, 'forfeit');
+    
     GameHistoryModel.create(game, moves.length, duration);
 
     this.moveHistory.delete(gameId);

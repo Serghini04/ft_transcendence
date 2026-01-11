@@ -3,6 +3,7 @@ import type { WebSocket } from 'ws';
 import { GameService } from '../services/game.service.js';
 import { MatchmakingService } from '../services/matchmaking.service.js';
 import { GameModel } from '../models/game.model.js';
+import { UserModel } from '../models/user.model.js';
 
 interface GameConnection {
   userId: string;
@@ -93,7 +94,7 @@ export class WebSocketHandler {
   private static async handleMove(socket: WebSocket, data: { gameId: string; playerId: string; position: number }, fastify: FastifyInstance) {
     const { gameId, playerId, position } = data;
 
-    const result = GameService.makeMove(gameId, playerId, position);
+    const result = await GameService.makeMove(gameId, playerId, position);
 
     if (!result.success) {
       socket.send(JSON.stringify({
@@ -152,10 +153,15 @@ export class WebSocketHandler {
         opponent
       });
 
+      const currentPlayer = { 
+        userId, 
+        username, 
+        rating: UserModel.findById(userId)?.rating || 1000 
+      };
       this.sendToUser(opponent.userId, {
         type: 'match_found',
         game,
-        opponent: { userId, username, rating: 1000 }
+        opponent: currentPlayer
       });
     } else {
       socket.send(JSON.stringify({
@@ -178,7 +184,7 @@ export class WebSocketHandler {
   private static async handleForfeit(socket: WebSocket, data: { gameId: string; playerId: string }, fastify: FastifyInstance) {
     const { gameId, playerId } = data;
 
-    const result = GameService.forfeitGame(gameId, playerId);
+    const result = await GameService.forfeitGame(gameId, playerId);
 
     if (!result.success) {
       socket.send(JSON.stringify({
@@ -218,7 +224,7 @@ export class WebSocketHandler {
     }
   }
 
-  private static handleDisconnect(socket: WebSocket) {
+  private static async handleDisconnect(socket: WebSocket) {
     for (const [userId, conn] of this.connections.entries()) {
       if (conn === socket) {
         this.connections.delete(userId);
@@ -230,7 +236,7 @@ export class WebSocketHandler {
           const game = GameModel.findById(activeGameId);
           
           if (game && game.status === 'active') {
-            const forfeitResult = GameService.forfeitGame(activeGameId, userId);
+            const forfeitResult = await GameService.forfeitGame(activeGameId, userId);
             
             if (forfeitResult.success && forfeitResult.game) {
               const opponentId = forfeitResult.game.player1Id === userId 

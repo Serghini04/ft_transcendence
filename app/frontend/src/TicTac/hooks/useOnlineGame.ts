@@ -54,7 +54,9 @@ export function useOnlineGame(user: User | null) {
 
     const handleError = (message: WSMessage) => {
       const errorMsg = message.error || message.message || 'An error occurred';
-      if (errorMsg.includes('Already in matchmaking queue')) {
+      // Don't treat queue refresh/already-in-queue as an error
+      if (errorMsg.includes('Already in matchmaking queue') || 
+          errorMsg.includes('Refreshed matchmaking queue position')) {
         return;
       }
       
@@ -99,7 +101,7 @@ export function useOnlineGame(user: User | null) {
   }, [user]);
 
   const findMatch = () => {
-    if (!user || !isConnected || isSearching) return;
+    if (!user || !isConnected) return;
     
     setError(null);
     setIsSearching(true);
