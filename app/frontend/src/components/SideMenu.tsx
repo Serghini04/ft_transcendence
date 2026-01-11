@@ -68,7 +68,7 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
             icon={<Home size={32} />}
             color="#12C0AD"
             to="/"
-            active={location.pathname === "/"}
+            active={location.pathname === "/" || location.pathname === "/home"} //by skarim && souaouri
           />
           <NavItem
             icon={<MessageCircle size={32} />}

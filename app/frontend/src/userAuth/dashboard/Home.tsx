@@ -1,6 +1,6 @@
 import { useEffect} from "react";
 import isValidToken from "../../globalUtils/isValidToken";
-import { UseTokenStore } from "../LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../zustand/useStore";
 import { useNavigate } from "react-router-dom";
 
 export default function Home() {

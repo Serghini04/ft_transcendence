@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { User, UserStatus } from "../models/user";
+import { User } from "../models/user";
 
 export class userRepository {
     constructor(private db: Database.Database) {
@@ -10,9 +10,9 @@ export class userRepository {
             SELECT
                 id,
                 full_name AS fullName,
-                username AS username,
-                status,
-                avatar_url AS avatarUrl
+                avatar_url AS avatarUrl,
+                bg_photo_url AS bgPhotoUrl,
+                bio
             FROM users
             WHERE id = ?;
         `);
@@ -20,14 +20,14 @@ export class userRepository {
         const row = stmt.get(userId) as {
             id: number;
             fullName: string;
-            username: string;
-            status: UserStatus;
             avatarUrl: string;
+            bgPhotoUrl: string;
+            bio: string;
         } | undefined;
     
         if (!row)
             return null;
-        return new User(row.id, row.fullName, row.username, row.status, row.avatarUrl);
+        return new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio);
     }
 
     searchUsers(searchQuery: string, limit: number = 20): User[] {
@@ -35,25 +35,25 @@ export class userRepository {
             SELECT
                 id,
                 full_name AS fullName,
-                username AS username,
-                status,
-                avatar_url AS avatarUrl
+                avatar_url AS avatarUrl,
+                bg_photo_url AS bgPhotoUrl,
+                bio
             FROM users
-            WHERE username LIKE ? OR full_name LIKE ?
+            WHERE full_name LIKE ?
             LIMIT ?;
         `);
     
         const searchPattern = `%${searchQuery}%`;
-        const rows = stmt.all(searchPattern, searchPattern, limit) as {
+        const rows = stmt.all(searchPattern, limit) as {
             id: number;
             fullName: string;
-            username: string;
-            status: UserStatus;
             avatarUrl: string;
+            bgPhotoUrl: string;
+            bio: string;
         }[];
     
         return rows.map(row => 
-            new User(row.id, row.fullName, row.username, row.status, row.avatarUrl)
+            new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio)
         );
     }
     

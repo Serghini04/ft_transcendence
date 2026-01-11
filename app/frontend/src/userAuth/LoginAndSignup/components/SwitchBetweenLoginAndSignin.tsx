@@ -3,15 +3,25 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import LoginArea from "./LoginArea";
 import SignupArea from "./SignupArea";
-import {UseErrorStore} from "../zustand/useStore";
+import {UseErrorStore, UseShowOtpInputStore} from "../../zustand/useStore";
+import OtpInput from "./Otpinput";
 
 export default function SwitchBetweenLoginAndSignin()
 {
 	const [isSignup, setIsSignup] = useState(false);
 	const {setErrorMsg} = UseErrorStore();
+	const { otpFlag } = UseShowOtpInputStore();
 	return (
 <>
 			<div className="flex flex-col items-center justify-center w-full">
+			{otpFlag && (
+				<div className="flex flex-col items-center justify-center">
+					<h1 className="text-white text-[1vw] mb-[1vw]">Enter your 6-digit code</h1>
+					<OtpInput />
+				</div>
+			)}
+			{!otpFlag && (
+				<> 
 				<div className="relative flex justify-center items-center rounded-full h-[3vw] w-[12.7vw] bg-[rgba(10,17,25,90%)]">
 					<motion.div
 						{...({ transition: { type: "spring", stiffness: 180, damping: 25 } } as any)}
@@ -49,7 +59,8 @@ export default function SwitchBetweenLoginAndSignin()
 						</motion.div>
 					)}
 				</AnimatePresence>
-   
+				</>
+				)}
 			</div>
 		</>
 	)

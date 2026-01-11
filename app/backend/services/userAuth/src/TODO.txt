@@ -1,3 +1,7 @@
 
 /   responsive
 /   realoding
+ // past pasword with control v
+ // think about a better way for handling forgetting password 
+
+ //Profile visibility

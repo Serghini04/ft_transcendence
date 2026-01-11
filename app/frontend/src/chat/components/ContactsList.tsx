@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { toast } from "react-toastify";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 import { useNavigate } from "react-router-dom";
 import verifyToken from "../../globalUtils/verifyToken";
 
@@ -10,9 +10,9 @@ type Contact = {
   user: {
     id: number;
     fullName: string;
-    username: string;
-    status: string;
     avatarUrl: string;
+    bgPhotoUrl: string;
+    bio: string;
   };
   unseenMessages: number;
   blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';

@@ -91,7 +91,7 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
             </div>
             <div className="text-center">
               <h2 className="text-xl font-semibold">{selectedContact?.user.fullName}</h2>
-              <h3 className="text-gray-400 text-sm">{selectedContact?.user.username}</h3>
+              <h3 className="text-gray-400 text-sm">{selectedContact?.user.bio || 'No bio available'}</h3>
             </div>
           </div>
 

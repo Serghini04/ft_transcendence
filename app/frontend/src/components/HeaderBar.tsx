@@ -10,9 +10,9 @@ import { useNavigate } from "react-router-dom";
 type SearchUser = {
   id: number;
   fullName: string;
-  username: string;
-  status: string;
   avatarUrl: string;
+  bgPhotoUrl: string;
+  bio: string;
 };
 
 export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }) {
@@ -22,6 +22,7 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
 
   const connectSocket = useNotificationStore((s) => s.connectSocket);
   const disconnectSocket = useNotificationStore((s) => s.disconnectSocket);
+  const onlineUsers = useNotificationStore((s) => s.onlineUsers);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
@@ -150,13 +151,12 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
                         )}
                         <span
                           className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-[rgba(15,26,36,0.98)] ${
-                            user.status === "online" ? "bg-emerald-500" : "bg-gray-500"
+                            onlineUsers.has(user.id) ? "bg-emerald-500" : "bg-gray-500"
                           }`}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-white truncate">{user.fullName}</p>
-                        <p className="text-sm text-gray-400 truncate">@{user.username}</p>
                       </div>
                     </div>
                   ))}

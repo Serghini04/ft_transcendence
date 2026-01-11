@@ -16,9 +16,9 @@ export class ChatRepository {
             ELSE relationships.user1_id
           END AS contact_id,
           u.full_name AS contact_full_name,
-          u.username AS contact_username,
-          u.status AS contact_status,
           u.avatar_url AS contact_avatar_url,
+          u.bg_photo_url AS contact_bg_photo_url,
+          u.bio AS contact_bio,
           CASE 
             WHEN relationships.type = 'blocked' AND relationships.blocked_by_user_id = ? THEN 'blocked_by_me'
             WHEN relationships.type = 'blocked' AND relationships.blocked_by_user_id != ? THEN 'blocked_by_them'
@@ -43,9 +43,9 @@ export class ChatRepository {
         id: number;
         contact_id: number;
         contact_full_name: string;
-        contact_username: string;
-        contact_status: string;
         contact_avatar_url: string;
+        contact_bg_photo_url: string;
+        contact_bio: string;
         block_status: 'blocked_by_me' | 'blocked_by_them' | 'none';
         unseen_messages: number
       }[];
@@ -53,7 +53,7 @@ export class ChatRepository {
       return rows.map(row =>
         new Relationship(
           row.id,
-          new User(row.contact_id, row.contact_full_name, row.contact_username, row.contact_status, row.contact_avatar_url),
+          new User(row.contact_id, row.contact_full_name, row.contact_avatar_url, row.contact_bg_photo_url, row.contact_bio),
           row.block_status,
           row.unseen_messages
         ),

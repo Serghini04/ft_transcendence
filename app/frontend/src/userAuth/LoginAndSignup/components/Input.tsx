@@ -18,7 +18,7 @@ export default function Input(props: InputProps)
 				<div className="absolute left-[1vw]">
 					{childrenArray[0]}
 				</div>
-				<button className="absolute right-5" onClick={() => setIspasswordhide(!ispasswordhide)} type="button">
+				<button className="absolute right-[8%]" onClick={() => setIspasswordhide(!ispasswordhide)} type="button">
 					{ispasswordhide ? childrenArray[2] : childrenArray[1]}
 				</button> 
 			</div>

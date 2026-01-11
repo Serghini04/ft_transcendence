@@ -38,11 +38,6 @@ clean:
 	@bash -c 'source $(MESSAGES) && msg_clean_complete'
 
 
-logs:
-	@bash -c 'source $(MESSAGES) && msg_logs'
-	@docker-compose logs -f
-
-
 ps:
 	@bash -c 'source $(MESSAGES) && msg_ps'
 	@docker-compose ps

@@ -95,9 +95,9 @@ async function initializeApp() {
 
 
 app.addHook("preHandler", authMiddleware);
+app.register(userAuthService);
 app.register(tictacService); // Register first to handle /api/* (non-v1) routes
 app.register(chatService);
-app.register(userAuthService);
 app.register(gameService);
 app.register(NotificationService);
 

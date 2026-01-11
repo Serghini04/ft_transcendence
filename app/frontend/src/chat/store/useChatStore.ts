@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import { io, Socket } from "socket.io-client";
-import { UseTokenStore } from '../../userAuth/LoginAndSignup/zustand/useStore';
+import { UseTokenStore } from '../../userAuth/zustand/useStore';
 import { showToast } from '../hooks/useChatToast';
 
 type ContactUser = {
     id: number;
     fullName: string;
-    username: string;
-    status: string;
     avatarUrl: string;
+    bgPhotoUrl: string;
+    bio: string;
 };
 
 type Contact = {
