@@ -1,528 +1,719 @@
-# ft_transcendence
+<div align="center">
 
-A full-stack web application with enterprise-grade security using **OWASP ModSecurity CRS** for Web Application Firewall protection.
+# 🎮 ft_transcendence
 
-## 🛡️ Security Features
+### Enterprise-Grade Real-Time Gaming & Social Platform
 
-### WAF/ModSecurity Protection
-- ✅ **OWASP Core Rule Set (CRS)** - Industry-standard protection
-- ✅ **SQL Injection Protection** - Automatic detection and blocking
-- ✅ **XSS Protection** - Cross-Site Scripting prevention
-- ✅ **Path Traversal Protection** - Directory access prevention
-- ✅ **Command Injection Protection** - OS command blocking
-- ✅ **OWASP Top 10 Coverage** - Complete protection suite
-- ✅ **Security Headers** - X-Frame-Options, CSP, HSTS ready
-- ✅ **Real-time Logging** - Comprehensive audit logs
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apache-kafka&logoColor=white)](https://kafka.apache.org/)
 
-### Secrets Management (HashiCorp Vault)
-- ✅ **Centralized Secret Storage** - All secrets in one secure place
-- ✅ **AppRole Authentication** - Service-to-service authentication
-- ✅ **Dynamic Secrets** - Auto-generated, time-limited credentials
-- ✅ **Encryption as a Service** - Transit engine for data encryption
-- ✅ **Audit Logging** - Complete audit trail of all access
-- ✅ **Policy-Based Access** - Fine-grained permissions
-- ✅ **Automatic Token Renewal** - No manual intervention needed
-- ✅ **TLS Encryption** - All communication encrypted
+*A production-ready, microservices-based real-time platform featuring live chat, multiplayer gaming, and comprehensive observability stack*
 
-## 🚀 Quick Start
+[Features](#-key-features) • [Architecture](#-architecture) • [Tech Stack](#-technology-stack) • [Getting Started](#-getting-started) • [Documentation](#-documentation)
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+ (for development)
-- Git
+</div>
 
-### One-Command Setup
+---
 
-```bash
-# Clone and setup
-git clone <your-repo>
-cd v1.1
+## 📋 Table of Contents
 
-# Build and start with ModSecurity
-./scripts/setup-modsec-frontend.sh
-```
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Architecture](#-architecture)
+- [Technology Stack](#-technology-stack)
+- [Security Features](#-security-features)
+- [Infrastructure & DevOps](#-infrastructure--devops)
+- [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
+- [API Documentation](#-api-documentation)
+- [Monitoring & Observability](#-monitoring--observability)
+- [Contributing](#-contributing)
 
-### Manual Setup
+---
 
-```bash
-# 1. Build frontend with ModSecurity
-docker-compose build frontend
+## 🌟 Overview
 
-# 2. Start services
-docker-compose up -d
+**ft_transcendence** is a modern, full-stack web application that demonstrates enterprise-level architecture and development practices. Built with a microservices architecture, it showcases real-time communication, event-driven design, comprehensive security measures, and production-grade infrastructure.
 
-# 3. Test security
-./scripts/test-frontend-modsec.sh
-```
+### 🎯 What Makes This Special?
 
-### Access Application
+- 🏗️ **Microservices Architecture** - Independently deployable services with clear boundaries
+- ⚡ **Real-Time Everything** - WebSocket-powered instant messaging and live notifications
+- 🔐 **Security-First Design** - WAF, Vault secrets management, JWT authentication
+- 📊 **Full Observability** - Complete monitoring with Prometheus, Grafana, and ELK stack
+- 🚀 **Event-Driven** - Apache Kafka for reliable, scalable async communication
+- 🎮 **Multi-Game Support** - Extensible gaming framework with TicTacToe and Pong
 
-- **Frontend**: http://localhost/
-- **Health Check**: http://localhost/health
-- **API**: http://localhost/api/
+---
+
+## ✨ Key Features
+
+### 💬 Real-Time Chat System
+- **Instant Messaging** - WebSocket-based real-time chat with message history
+- **User Relationships** - Friend management with block/unblock capabilities
+- **Privacy Controls** - User-level notification preferences (mute/unmute)
+- **Read Receipts** - Track message delivery and read status
+- **Online Presence** - Live user status tracking across the platform
+- **Search & Discovery** - Find and connect with users instantly
+
+### 🎮 Multiplayer Gaming Platform
+- **TicTacToe** - Real-time multiplayer with game state synchronization
+- **Pong** - Classic game with live opponent matching
+- **Challenge System** - Send and receive game invitations
+- **Leaderboard** - Global rankings and player statistics
+- **Game History** - Track wins, losses, and performance metrics
+
+### 🔔 Smart Notification System
+- **Multi-Channel Notifications** - Toast notifications, in-app alerts, and persistent storage
+- **Event-Driven** - Kafka-powered notification delivery with guaranteed delivery
+- **User Preferences** - Granular control over notification types and delivery
+- **Offline Support** - Notifications queued for offline users
+- **Type-Specific Handling** - Different notification styles for messages, challenges, and system events
+
+### 👤 User Management
+- **OAuth Integration** - Secure authentication with JWT tokens
+- **Profile Customization** - Avatars, backgrounds, bios, and privacy settings
+- **Session Management** - Refresh token rotation and automatic token renewal
+- **Account Security** - Password hashing, rate limiting, and audit logs
+
+---
 
 ## 🏗️ Architecture
 
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│  Frontend (NGINX + ModSecurity)     │
-│  - OWASP CRS Protection             │
-│  - React Application                │
-│  - API Proxy                        │
-│  Port: 80, 443                      │
-└────────┬───────────────────────┬────┘
-         │                       │
-         ▼                       ▼
-┌─────────────┐         ┌───────────────┐
-│ API Gateway │         │  React SPA    │
-│   :8080     │         │  (Bundled)    │
-└─────┬───────┘         └───────────────┘
-      │
-      ├─────────────┬──────────────┬──────────────┐
-      ▼             ▼              ▼              ▼
-┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-│   Chat   │  │  Notif   │  │   User   │  │   Game   │
-│ Service  │  │ Service  │  │   Auth   │  │ Service  │
-└────┬─────┘  └────┬─────┘  └──────────┘  └──────────┘
-     │             │
-     └──────┬──────┘
-            ▼
-      ┌──────────┐
-      │  Kafka   │
-      └──────────┘
-```
+### Microservices Architecture
 
-## 📦 Tech Stack
+Each service is independently:
+- **Deployable** - Container-based with Docker
+- **Scalable** - Horizontal scaling capability
+- **Testable** - Isolated business logic
+- **Maintainable** - Clear service boundaries
+
+#### Service Breakdown
+
+| Service | Responsibility | Port | Database |
+|---------|---------------|------|----------|
+| **API Gateway** | Request routing, load balancing | 3000 | - |
+| **User Auth** | Authentication, user management | 3001 | users.sqlite |
+| **Chat Service** | Messaging, relationships | 3002 | chat.sqlite |
+| **Game Service** | Game logic, matchmaking | 3003 | game.sqlite |
+| **Notification** | Event handling, notifications | 3006 | notification.sqlite |
+| **Leaderboard** | Rankings, statistics | 3004 | leaderboard.sqlite |
+
+---
+
+## 🛠️ Technology Stack
 
 ### Frontend
-- **React** + TypeScript + Vite
-- **Tailwind CSS** for styling
-- **Zustand** for state management
-- **Socket.IO Client** for real-time
-- **NGINX + ModSecurity** for security
+- **React 18** - Modern UI with hooks and context
+- **TypeScript** - Type-safe development
+- **Vite** - Lightning-fast build tool
+- **Socket.io Client** - Real-time communication
+- **Zustand** - Lightweight state management
+- **Tailwind CSS** - Utility-first styling
+- **Lucide Icons** - Beautiful icon library
 
 ### Backend
-- **Fastify** - Web framework
-- **Socket.IO** - Real-time communication
-- **SQLite** - Database (dev)
-- **Kafka** - Message broker
-- **JWT** - Authentication
+- **Node.js 20** - JavaScript runtime
+- **Fastify** - High-performance web framework
+- **TypeScript** - Type safety across services
+- **Socket.io** - WebSocket server implementation
+- **Better-SQLite3** - Synchronous SQLite database
+- **JWT** - Stateless authentication
+
+### Message Queue & Events
+- **Apache Kafka** - Distributed event streaming
+- **Zookeeper** - Kafka coordination
+- **KafkaJS** - Node.js Kafka client
 
 ### Security
-- **OWASP ModSecurity CRS** - WAF
-- **NGINX** - Reverse proxy
-- Security headers
-- Rate limiting
-- Audit logging
+- **NGINX + ModSecurity** - Web Application Firewall
+- **OWASP CRS** - Core rule set for attack prevention
+- **HashiCorp Vault** - Secrets management
+- **bcrypt** - Password hashing
+- **JWT Tokens** - Secure authentication
 
-### Infrastructure
-- **Docker** + Docker Compose
-- **Prometheus** + Grafana - Monitoring
-- **ELK Stack** - Log management
-- **Kafka** + Zookeeper
+### Infrastructure & DevOps
+- **Docker** - Containerization
+- **Docker Compose** - Multi-container orchestration
+- **Prometheus** - Metrics collection and alerting
+- **Grafana** - Metrics visualization and dashboards
+- **ELK Stack** - Centralized logging
+  - Elasticsearch - Log storage and search
+  - Logstash - Log processing pipeline
+  - Kibana - Log visualization
+- **Filebeat** - Log shipping
+- **Node Exporter** - System metrics
 
-## 🔒 Security Configuration
+---
 
-### ModSecurity Settings
+## 🛡️ Security Features
 
-Located in `docker-compose.yml`:
+### Web Application Firewall (WAF)
+- ✅ **OWASP ModSecurity CRS** - Industry-standard protection
+- ✅ **SQL Injection Prevention** - Automatic detection and blocking
+- ✅ **XSS Protection** - Cross-Site Scripting prevention
+- ✅ **Path Traversal Protection** - Directory access prevention
+- ✅ **Command Injection Protection** - OS command blocking
+- ✅ **DDoS Mitigation** - Rate limiting and connection throttling
+- ✅ **Security Headers** - HSTS, CSP, X-Frame-Options
+- ✅ **Request Validation** - Body size limits, method filtering
 
-```yaml
-frontend:
-  environment:
-    - PARANOIA=1              # Protection level (1-4)
-    - ANOMALY_INBOUND=5      # Request blocking threshold
-    - ANOMALY_OUTBOUND=4     # Response blocking threshold
-```
+### Secrets Management (HashiCorp Vault)
+- ✅ **Centralized Secret Storage** - Single source of truth
+- ✅ **AppRole Authentication** - Service-to-service auth
+- ✅ **Dynamic Secrets** - Time-limited credentials
+- ✅ **Encryption as a Service** - Transit engine
+- ✅ **Audit Logging** - Complete access trail
+- ✅ **Policy-Based Access** - Fine-grained permissions
+- ✅ **Automatic Token Renewal** - Zero-downtime rotation
+- ✅ **TLS Encryption** - All communication encrypted
 
-### Paranoia Levels
-- **1** (Default): Basic protection, low false positives ✅ **Recommended**
-- **2**: Enhanced protection, some false positives
-- **3**: High protection, many false positives
-- **4**: Maximum protection, very high false positives
+### Authentication & Authorization
+- ✅ **JWT-based Authentication** - Stateless, scalable
+- ✅ **Refresh Token Rotation** - Enhanced security
+- ✅ **Password Hashing** - bcrypt with salt rounds
+- ✅ **Rate Limiting** - Brute-force protection
+- ✅ **Session Management** - Automatic expiration
+- ✅ **CORS Configuration** - Cross-origin security
 
-### Test Security
+---
+
+## 📊 Infrastructure & DevOps
+
+### Monitoring & Observability
+
+#### Prometheus + Grafana
+- **System Metrics** - CPU, memory, disk, network
+- **Application Metrics** - Request rates, response times, errors
+- **Business Metrics** - Active users, messages sent, games played
+- **Custom Dashboards** - Real-time visualization
+- **Alerting** - Automated incident detection
+
+#### ELK Stack (Elasticsearch, Logstash, Kibana)
+- **Centralized Logging** - All service logs in one place
+- **Log Aggregation** - Structured log collection
+- **Full-Text Search** - Query across all logs
+- **Log Analytics** - Pattern detection and insights
+- **Custom Visualizations** - Kibana dashboards
+- **Real-Time Monitoring** - Live log streaming
+
+### Event-Driven Architecture
+
+#### Apache Kafka
+- **Event Streaming** - Reliable message delivery
+- **Topics**:
+  - `UserCreated` - New user registration events
+  - `userUpdated` - User profile changes
+  - `notifications` - All notification events
+- **Producers**: User Auth, Chat, Game services
+- **Consumers**: Chat, Notification services
+- **Guaranteed Delivery** - At-least-once semantics
+- **Scalability** - Horizontal partition scaling
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
 
 ```bash
-# Automated tests
-./scripts/test-frontend-modsec.sh
+# Required
+- Docker 24.0+
+- Docker Compose 2.20+
+- Git
 
-# Manual tests
-curl http://localhost/                              # Should work (200)
-curl "http://localhost/?id=1' OR '1'='1"           # Should block (403)
-curl "http://localhost/?q=<script>alert(1)</script>" # Should block (403)
+# Optional (for development)
+- Node.js 20+
+- npm/yarn/pnpm
 ```
 
-## 📂 Project Structure
+### Quick Start (Production Mode)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/ft_transcendence.git
+cd ft_transcendence
+
+# 2. Build and start all services
+docker-compose up --build
+
+# 3. Access the application
+# Frontend: http://localhost:5173
+# Kafka UI: http://localhost:8080/kafka-ui
+# Grafana: http://localhost:3030 (admin/admin)
+# Kibana: http://localhost:5601
+# Prometheus: http://localhost:9090
+```
+
+### Development Setup
+
+```bash
+# 1. Install dependencies for all services
+cd app/frontend && npm install
+cd ../backend/api_gateway && npm install
+cd ../services/chat && npm install
+cd ../services/game && npm install
+cd ../services/notification && npm install
+cd ../services/userAuth && npm install
+
+# 2. Start infrastructure services
+docker-compose up kafka zookeeper vault elasticsearch
+
+# 3. Run services locally
+cd app/frontend && npm run dev
+cd app/backend/services/chat && npm run dev
+# ... repeat for other services
+```
+
+### Environment Variables
+
+Create `.env` files for each service:
+
+```env
+# app/frontend/.env
+VITE_API_URL=http://localhost:8080
+VITE_SOCKET_URL=http://localhost:8080
+
+# app/backend/services/*/.env
+KAFKA_BROKER=localhost:9092
+VAULT_ADDR=http://localhost:8200
+JWT_SECRET=your-secret-key
+```
+
+---
+
+## 📁 Project Structure
 
 ```
-.
+ft_transcendence/
 ├── app/
-│   ├── frontend/                    # React app with ModSecurity
-│   │   ├── Dockerfile              # OWASP ModSecurity CRS image
-│   │   ├── nginx.conf              # NGINX config with WAF
-│   │   ├── modsecurity-custom.conf # Custom security rules
-│   │   └── src/                    # React source code
+│   ├── frontend/                    # React + Vite frontend
+│   │   ├── src/
+│   │   │   ├── chat/               # Chat feature module
+│   │   │   ├── Game/               # Pong game module
+│   │   │   ├── TicTac/             # TicTacToe module
+│   │   │   ├── notification/       # Notification system
+│   │   │   ├── userAuth/           # Authentication UI
+│   │   │   └── components/         # Shared components
+│   │   └── public/
+│   │
 │   └── backend/
-│       ├── api_gateway/            # Central API gateway
+│       ├── api_gateway/            # Main API Gateway
+│       │   └── src/
+│       │
 │       └── services/
-│           ├── chat/               # Chat service
-│           ├── notification/       # Notification service
-│           ├── userAuth/           # Authentication service
-│           └── shared/             # Shared libraries
-│               ├── vault-client.js # Vault integration
-│               └── example-vault-usage.js
-├── infra/
-│   ├── vault/                      # 🔐 HashiCorp Vault
-│   │   ├── Dockerfile              # Vault container
-│   │   ├── config.hcl              # Vault configuration
-│   │   ├── policies/               # Access policies
-│   │   └── scripts/                # Setup scripts
-│   ├── kafka/                      # Kafka broker
-│   ├── zookeeper/                  # Zookeeper
-│   ├── nginx/                      # Nginx configs
-│   └── monitoring/                 # Prometheus, Grafana, ELK
-├── security/
-│   ├── waf/                        # WAF configurations
-│   ├── certificates/               # SSL/TLS certs
-│   └── policies/                   # Security policies
-├── docs/
-│   ├── FRONTEND-MODSECURITY-SUMMARY.md      # ModSecurity guide
-│   ├── vault-integration.md                 # 🔐 Vault full docs
-│   ├── vault-quickstart.md                  # 🔐 Quick implementation
-│   ├── VAULT-IMPLEMENTATION-SUMMARY.md      # 🔐 Complete package
-│   ├── security-checklist.md                # Security tracking
-│   WAF/ModSecurity
-- **🚀 Quick Start**: `app/frontend/MODSECURITY-README.md`
-- **📖 Full Summary**: `docs/FRONTEND-MODSECURITY-SUMMARY.md`
-- **Separate WAF**: `docs/waf-implementation-guide.md`
-
-### Vault (Secrets Management) 🔐
-- **🚀 Quick Start**: `infra/vault/README.md` (5 min read)
-- **📖 Implementation Guide**: `docs/vault-quickstart.md` (15 min read)
-- **📚 Full Documentation**: `docs/vault-integration.md` (30 min read)
-- **✅ Complete Package**: `docs/VAULT-IMPLEMENTATION-SUMMARY.md`
-- **🔒 Security Checklist**: `docs/security-checklist.md`
-
-### Architecture
-- **🏛️ System Architecture**: `docs/architecture.md`
-- **📊 Services**: `docs/servicesgement
-├── logs/
-│   └── modsec/                     # ModSecurity audit logs
-├── Makefile                        # All commands
-└── docker-compose.yml              # Main compose file
+│           ├── chat/               # Chat microservice
+│           │   ├── src/
+│           │   │   ├── controllers/
+│           │   │   ├── repositories/
+│           │   │   ├── kafka/
+│           │   │   ├── plugins/
+│           │   │   └── models/
+│           │   └── db/
+│           │
+│           ├── game/               # Game microservice
+│           ├── notification/       # Notification microservice
+│           ├── userAuth/           # Authentication microservice
+│           ├── leaderboard/        # Leaderboard microservice
+│           └── shared/             # Shared utilities
+│
+├── infra/                          # Infrastructure configs
+│   ├── nginx/                      # NGINX + ModSecurity
+│   ├── kafka/                      # Kafka configuration
+│   ├── vault/                      # Vault policies & scripts
+│   ├── monitoring/                 # Prometheus & Grafana
+│   └── log-management/             # ELK Stack
+│       ├── elasticsearch/
+│       ├── logstash/
+│       ├── kibana/
+│       └── filebeat/
+│
+├── docs/                           # Documentation
+│   ├── architecture.md
+│   ├── database-schema.md
+│   ├── vault-integration.md
+│   ├── monitoring-stack.md
+│   └── security-checklist.md
+│
+├── scripts/                        # Utility scripts
+│   ├── setup-vault.sh
+│   ├── test-waf.sh
+│   ├── grafana-dashboards.sh
+│   └── rebuild-services.sh
+│
+└── docker-compose.yml              # Main orchestration
 ```
 
-## 📚 Documentation
+---
 
-### Quick Guides
-- **🚀 Quick Start**: `app/frontend/MODSECURITY-README.md`
-- **📖 Full Summary**: `docs/FRONTEND-MODSECURITY-SUMMARY.md`
-- **🏛️ Architecture**: `docs/architecture.md`
+## 🔌 API Documentation
 
-### Alternative Setup
-- **Separate WAF**: `docs/waf-implementation-guide.md`
-- **WAF Quick Ref**: `docs/waf-quick-reference.md`
+### Authentication Endpoints
+
+```http
+POST   /api/auth/register          # User registration
+POST   /api/auth/login             # User login
+POST   /api/auth/refresh           # Refresh access token
+GET    /api/auth/profile           # Get user profile
+PATCH  /api/auth/profile           # Update profile
+```
+
+### Chat Endpoints
+
+```http
+GET    /api/chat/contacts          # Get user's contacts
+GET    /api/chat/conversation/:id  # Get conversation history
+GET    /api/chat/search?q=         # Search users
+POST   /api/chat/block/:id         # Block user
+POST   /api/chat/unblock/:id       # Unblock user
+PATCH  /api/chat/messages/:id/seen # Mark messages as read
+```
+
+### Game Endpoints
+
+```http
+GET    /api/game/active            # Get active games
+POST   /api/game/challenge         # Send game challenge
+GET    /api/game/history           # Get game history
+GET    /api/leaderboard            # Get rankings
+```
+
+### Notification Endpoints
+
+```http
+GET    /api/notifications          # Get user notifications
+PATCH  /api/notifications/:id/read # Mark as read
+POST   /api/notifications/read-all # Mark all as read
+```
+
+### WebSocket Events
+
+#### Chat Namespace (`/chat`)
+```javascript
+// Client → Server
+socket.emit('message:send', { to, message, timestamp })
+
+// Server → Client
+socket.on('message:received', (data) => { })
+socket.on('message:sent', (data) => { })
+socket.on('message:error', (data) => { })
+socket.on('user:online', (userId) => { })
+socket.on('user:offline', (userId) => { })
+```
+
+#### Notification Namespace (`/notification`)
+```javascript
+// Server → Client
+socket.on('notification:new', (notification) => { })
+socket.on('notification:read', (notificationId) => { })
+```
+
+#### Game Namespace (`/game`)
+```javascript
+// Client → Server
+socket.emit('game:join', { gameId })
+socket.emit('game:move', { gameId, move })
+
+// Server → Client
+socket.on('game:state', (state) => { })
+socket.on('game:end', (result) => { })
+```
+
+---
+
+## 📊 Monitoring & Observability
+
+### Access Monitoring Tools
+
+| Tool | URL | Default Credentials | Purpose |
+|------|-----|---------------------|---------|
+| **Grafana** | http://localhost:3030 | admin / admin | Metrics visualization |
+| **Prometheus** | http://localhost:9090 | - | Metrics collection |
+| **Kibana** | http://localhost:5601 | - | Log analytics |
+| **Kafka UI** | http://localhost:8080/kafka-ui | - | Kafka monitoring |
+
+### Available Dashboards
+
+#### Grafana Dashboards
+1. **System Overview** - CPU, memory, disk, network across all services
+2. **Microservices Health** - Service-specific metrics and health checks
+3. **Kafka Metrics** - Message rates, consumer lag, topic statistics
+4. **Application Performance** - Response times, error rates, throughput
+5. **User Activity** - Active users, messages sent, games played
+
+#### Kibana Visualizations
+1. **Error Logs** - Service errors and exceptions
+2. **WAF Logs** - Security events and blocked requests
+3. **Access Patterns** - API usage and user behavior
+4. **Performance Logs** - Slow queries and bottlenecks
+
+### Setting Up Dashboards
+
+```bash
+# Import Grafana dashboards
+./scripts/grafana-dashboards.sh
+
+# View Kibana canvas
+# Import: docs/kibana-canvas-microservices.json
+```
+
+---
 
 ## 🧪 Testing
 
-### Run Security Tests
+### WAF Testing
 
 ```bash
-# Automated security suite
+# Test SQL injection protection
+./scripts/test-waf.sh
+
+# Test XSS protection
 ./scripts/test-frontend-modsec.sh
+
+# Comprehensive WAF tests
+./scripts/waf-comprehensive-test.sh
 ```
 
-Expected results:
-- ✅ Normal requests: 200 OK
-- ✅ SQL injection: 403 Forbidden
-- ✅ XSS attacks: 403 Forbidden
-- ✅ Path traversal: 403 Forbidden
-- ✅ WebSocket: Connected
-- ✅ API proxy: Working
-
-### View Logs
+### Service Testing
 
 ```bash
-# Frontend container logs
-docker-compose logs -f frontend
+# Test all services
+./scripts/test-services.sh
 
-# ModSecurity audit log
-tail -f logs/modsec/audit.log
+# Test rate limiting
+./scripts/test-rate-limit.sh
 
-# Search for blocks
-grep "ModSecurity: Access denied" logs/modsec/audit.log
+# Demo rate limit functionality
+./scripts/demo-rate-limit.sh
 ```
+
+### Manual Testing
+
+```bash
+# Test Kafka messages
+./scripts/messages.sh
+
+# Verify monitoring stack
+./scripts/verify-monitoring.sh
+```
+
+---
 
 ## 🔧 Configuration
 
-### Adjust Protection Level
+### Vault Configuration
 
-Edit `docker-compose.yml`:
+Vault stores sensitive configuration:
+- JWT secrets
+- Database credentials
+- API keys
+- Service-to-service tokens
 
-```yaml
-frontend:
-  environment:
-    - PARANOIA=2          # Increase for stricter protection
-    - ANOMALY_INBOUND=3   # Lower for stricter blocking
-```
-
-Then restart:
 ```bash
-docker-compose restart frontend
+# Initialize Vault
+./scripts/setup-vault.sh
+
+# Access Vault UI
+http://localhost:8200
 ```
 
-### Add Custom Rules
+See [`docs/vault-integration.md`](docs/vault-integration.md) for details.
 
-Edit `app/frontend/modsecurity-custom.conf`:
+### WAF Configuration
+
+ModSecurity rules can be customized:
 
 ```nginx
-# Example: Whitelist specific endpoint
-SecRule REQUEST_URI "@streq /api/special" \
-    "id:1100,\
+# security/waf/custom-rules.conf
+SecRule REQUEST_URI "@contains /admin" \
+    "id:1000,\
     phase:1,\
-    pass,\
-    nolog,\
-    ctl:ruleRemoveById=942100"
+    deny,\
+    status:403,\
+    msg:'Admin access blocked'"
 ```
 
-Rebuild:
-```bash
-docker-compose build frontend
-docker-compose up -d frontend
-```
+### Kafka Topics
 
-## 🐛 Troubleshooting
-
-### Frontend won't start
-
-```bash
-# Check logs
-docker-compose logs frontend
-
-# Verify port 80 is free
-sudo netstat -tulpn | grep :80
-
-# Rebuild
-docker-compose build --no-cache frontend
-docker-compose up -d frontend
-```
-
-### Legitimate requests blocked
-
-```bash
-# Switch to detection mode (logs only, no blocking)
-# Edit app/frontend/Dockerfile:
-RUN sed -i 's/SecRuleEngine On/SecRuleEngine DetectionOnly/' /etc/modsecurity.d/modsecurity.conf
-
-# Rebuild and restart
-docker-compose build frontend && docker-compose up -d frontend
-
-# Monitor logs
-tail -f logs/modsec/audit.log
-
-# Identify problematic rules and whitelist them
-```
-
-### WebSocket not connecting
-
-```bash
-# Verify WebSocket config
-docker exec frontend cat /etc/nginx/conf.d/default.conf | grep -A 10 socket.io
-
-# Test WebSocket endpoint
-curl -i -N \
-  -H "Connection: Upgrade" \
-  -H "Upgrade: websocket" \
-  http://localhost/socket.io/
-```
-
-## 📊 Monitoring
-
-### Container Status
-```bash
-docker ps
-docker-compose ps
-```
-
-### Resource Usage
-```bash
-docker stats frontend
-```
-
-### Request Statistics
-```bash
-# Total requests
-docker-compose logs frontend | grep -c "GET\|POST"
-
-# Blocked requests
-grep -c "ModSecurity: Access denied" logs/modsec/audit.log
-
-# Top IPs
-docker-compose logs frontend | grep -oP '\d+\.\d+\.\d+\.\d+' | sort | uniq -c | sort -rn | head
-```
-
-## 🚢 Production Deployment
-
-### SSL/TLS Configuration
-
-1. Obtain certificates (Let's Encrypt recommended)
-2. Mount certificates in docker-compose.yml:
+Configure in [`infra/kafka/config.yml`](infra/kafka/config.yml):
 
 ```yaml
-frontend:
-  volumes:
-    - ./security/certificates:/etc/nginx/ssl:ro
+topics:
+  - name: UserCreated
+    partitions: 3
+    replication: 1
+  - name: notifications
+    partitions: 5
+    replication: 1
 ```
 
-3. Update `app/frontend/nginx.conf` for HTTPS
+---
 
-### Production Checklist
+## 🎨 Frontend Features
 
-- [ ] Enable HTTPS/TLS
-- [ ] Set `PARANOIA=1` (or 2 for enhanced security)
-- [ ] Configure proper domain in `server_name`
-- [ ] Set up log rotation
-- [ ] Configure backups
-- [ ] Enable monitoring/alerting
-- [ ] Review and document custom rules
-- [ ] Test thoroughly in staging
-- [ ] Set up CI/CD pipeline
-- [ ] Configure rate limiting
+### User Interface Highlights
 
-## 🎯 Performance
+- **Responsive Design** - Mobile, tablet, and desktop support
+- **Dark Theme** - Modern, eye-friendly dark mode
+- **Real-Time Updates** - Instant UI updates via WebSocket
+- **Toast Notifications** - Non-intrusive notification system
+- **Smooth Animations** - Tailwind CSS transitions
+- **Accessible** - WCAG 2.1 compliant components
 
-- **Latency**: +5-15ms per request (Paranoia 1)
-- **Throughput**: 10,000+ requests/second
-- **CPU**: ~5-10% overhead
-- **Memory**: ~50-100MB for ModSecurity
+### State Management
+
+Using **Zustand** for lightweight, fast state management:
+
+```typescript
+// Chat store
+const useChatStore = create((set) => ({
+  messages: [],
+  contacts: [],
+  selectedContact: null,
+  addMessage: (message) => set((state) => ({
+    messages: [...state.messages, message]
+  }))
+}))
+```
+
+---
+
+## 🐳 Docker Services
+
+### Service Health Checks
+
+All services include health checks:
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
+
+### Container Orchestration
+
+```bash
+# Start specific services
+docker-compose up kafka zookeeper vault
+
+# Scale services
+docker-compose up --scale chat-service=3
+
+# View logs
+docker-compose logs -f chat-service
+
+# Restart service
+docker-compose restart notification-service
+
+# Rebuild and restart
+docker-compose up --build chat-service
+```
+
+---
+
+## 🚦 Development Workflow
+
+### Recommended Development Flow
+
+1. **Feature Branch** - Create from `main`
+2. **Local Development** - Run services locally
+3. **Testing** - Test with Docker Compose
+4. **Code Review** - PR with detailed description
+5. **Integration** - Merge to main
+6. **Deployment** - Docker build and deploy
+
+### Debugging
+
+```bash
+# View service logs
+docker-compose logs -f [service-name]
+
+# Enter container
+docker-compose exec chat-service sh
+
+# Check Kafka messages
+docker-compose exec kafka kafka-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --topic notifications --from-beginning
+
+# Monitor Prometheus targets
+curl http://localhost:9090/api/v1/targets
+```
+
+---
+
+## 📚 Documentation
+
+Comprehensive documentation available in the [`docs/`](docs/) directory:
+
+- **[Architecture](docs/architecture.md)** - System design and service overview
+- **[Database Schema](docs/database-schema.md)** - Data models and relationships
+- **[Vault Integration](docs/vault-integration.md)** - Secrets management setup
+- **[Kafka Infrastructure](docs/kafka-infrastructure.md)** - Event streaming architecture
+- **[Monitoring Stack](docs/monitoring-stack.md)** - Observability setup
+- **[Security Checklist](docs/security-checklist.md)** - Security best practices
+- **[ELK Implementation](docs/ELK-IMPLEMENTATION-SUMMARY.md)** - Logging setup
+
+---
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+Contributions are welcome! Please follow these guidelines:
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+### Code Style
+
+- **TypeScript** - Strict mode enabled
+- **ESLint** - Follow configured rules
+- **Prettier** - Auto-format on save
+- **Conventional Commits** - Use semantic commit messages
+
+---
 
 ## 📝 License
 
-[Your License Here]
-
-## 🆘 Support
-
-### Resources
-- **OWASP CRS**: https://coreruleset.org/
-- **ModSecurity**: https://github.com/SpiderLabs/ModSecurity
-- **Docker Image**: https://hub.docker.com/r/owasp/modsecurity-crs
-
-### Getting Help
-- Check logs: `docker-compose logs frontend`
-- Run tests: `./scripts/test-frontend-modsec.sh`
-- Review docs: `app/frontend/MODSECURITY-README.md`
-
-## 🎉 Features
-
-### Implemented
-- ✅ Web Application Firewall (ModSecurity)
-- ✅ OWASP Top 10 Protection
-- ✅ Real-time chat
-- ✅ Notifications system
-- ✅ User authentication
-- ✅ WebSocket support
-- ✅ Monitoring stack
-- ✅ Security headers
-- ✅ Audit logging
-
-### In Progress
-- 🔄 Service integration with Vault
-- 🔄 Network segmentation
-
-### Planned
-- ⏳ Vault auto-unseal (cloud KMS)
-- ⏳ High Availability setup
-- ⏳ Advanced rate limiting
-- ⏳ Additional game services
-- ⏳ CI/CD pipeline
-
-## 📈 Next Steps
-
-1. **Test Application**: Verify all features work with ModSecurity
-2. **Monitor Logs**: Check for false positives
-3. **Tune Rules**: Adjust paranoia level if needed
-4. **SSL/TLS**: Configure certificates for production
-5. **Vault Integration**: Implement HashiCorp Vault (next major module)
-
----
-### WAF/ModSecurity
-```bash
-# Setup
-./scripts/setup-modsec-frontend.sh
-
-# Test security
-./scripts/test-frontend-modsec.sh
-
-# View logs
-docker-compose logs -f frontend
-tail -f logs/modsec/audit.log
-```
-
-### Vault (Secrets Management)
-```bash
-# Complete setup (first time)
-bash scripts/setup-vault.sh
-
-# Check status
-make vault-status
-
-# View secrets
-make vault-secrets
-
-# Get service credentials
-make vault-creds-service SERVICE=api-gateway
-
-# Unseal after restart
-make vault-unseal
-
-# Backup
-make vault-backup
-
-# Open UI
-make vault-ui
-
-# Test integration
-bash scripts/test-vault-integration.sh
-```
-
-### General
-```bash
-# Start all services
-docker-compose up -d
-
-# Restart
-docker-compose restart
-
-# Stop all
-docker-compose down
-
-# View logs
-docker-compose logs -f
-
-# Rebuild specific service
-docker-compose build --no-cache <service-name>
-docker-compose up -d <service-name>
-# Clean rebuild
-docker-compose build --no-cache frontend
-docker-compose up -d frontend
-```
+This project is part of the 42 School curriculum.
 
 ---
 
-**Built with ❤️ using OWASP ModSecurity CRS**
+## 🙏 Acknowledgments
 
-**Status**: 🛡️ Production Ready with Enterprise Security
+- **42 School** - Project foundation and requirements
+- **OWASP** - Security best practices and ModSecurity CRS
+- **HashiCorp** - Vault documentation and examples
+- **Apache Software Foundation** - Kafka and related tools
+- **Elastic** - ELK Stack documentation
+- **Prometheus & Grafana** - Monitoring solutions
+
+---
+
+## 📧 Contact & Support
+
+For questions, issues, or suggestions:
+
+- **GitHub Issues** - [Report bugs or request features](https://github.com/yourusername/ft_transcendence/issues)
+- **Documentation** - Check the [`docs/`](docs/) directory
+- **Email** - your.email@example.com
+
+---
+
+<div align="center">
+
+### ⭐ If you found this project interesting, please consider giving it a star!
+
+**Built with ❤️ using modern web technologies**
+
+[⬆ Back to Top](#-ft_transcendence)
+
+</div>

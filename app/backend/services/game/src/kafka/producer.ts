@@ -9,6 +9,7 @@ export interface NotificationEvent {
   message: string;
   type: string;
   timestamp: string;
+  showNotifications?: boolean;
 }
 
 export class KafkaProducerService {

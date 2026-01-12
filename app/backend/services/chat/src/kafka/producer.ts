@@ -9,6 +9,7 @@ export interface NotificationEvent {
   message: string;
   type: string;
   timestamp: string;
+  showNotifications?: boolean;
 }
 
 export class KafkaProducerService {
@@ -81,7 +82,9 @@ export class KafkaProducerService {
       console.error("❌ Failed to publish notification event:", error);
       throw error;
     }
-  }  async publishNewMessageNotification(recipientId: number, senderName: string, messagePreview: string, timestamp: Date | string): Promise<void> {
+  }
+  
+  async publishNewMessageNotification(recipientId: number, senderName: string, messagePreview: string, timestamp: Date | string, showNotifications: boolean = true): Promise<void> {
     const event: NotificationEvent = {
       userId: recipientId,
       title: `New message from ${senderName}`,
@@ -90,6 +93,7 @@ export class KafkaProducerService {
         : messagePreview,
       type: "message",
       timestamp: timestamp instanceof Date ? timestamp.toISOString() : timestamp,
+      showNotifications,
     };
 
     console.log(`Publishing notification event:`, event);

@@ -143,16 +143,11 @@ app.post("/api/v1/auth/googleSignup", async (request, reply) => {
     const isProd = process.env.NODE_ENV === "production";
 
     // console.log("Generated JWT Token:", AccessToken);
-    const isProd = process.env.NODE_ENV === "production";
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
       secure: isProd,                    // true only in prod
       sameSite: isProd ? "none" : "lax", // none only in prod
-<<<<<<< HEAD
-      path: "/",
-=======
       path: "/",          
->>>>>>> aa30084bc2e8dbbfcbb89b2a1e86fbf4759246eb
       maxAge: 60 * 60 * 24 * 7,
     })
     .status(201).send({
@@ -201,24 +196,14 @@ app.post("/api/v1/auth/googleLogin", async (request, reply) => {
     const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-<<<<<<< HEAD
-    console.log("Generated JWT Token:", AccessToken);
-    const isProd = process.env.NODE_ENV === "production";
-
-=======
     const isProd = process.env.NODE_ENV === "production";
 
     // console.log("Generated JWT Token:", AccessToken);
->>>>>>> aa30084bc2e8dbbfcbb89b2a1e86fbf4759246eb
     reply.setCookie("refreshToken", RefreshToken, {
       httpOnly: true,
       secure: isProd,                    // true only in prod
       sameSite: isProd ? "none" : "lax", // none only in prod
-<<<<<<< HEAD
-      path: "/",
-=======
       path: "/",          
->>>>>>> aa30084bc2e8dbbfcbb89b2a1e86fbf4759246eb
       maxAge: 60 * 60 * 24 * 7,
     })
     .status(201).send({
@@ -271,29 +256,12 @@ app.post("/api/v1/auth/login", async (request, reply) => {
     const otp = generateOTP();
     sendOTPEmail(row.email, otp);
 
-    //jwt token generation
-<<<<<<< HEAD
-    const getJwtParams = db.prepare("SELECT * FROM users WHERE name = ?").get(username) as User;
-    const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-    const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-    console.log("Generated JWT Token:", AccessToken);
-    const isProd = process.env.NODE_ENV === "production";
-    
-    reply.setCookie("refreshToken", RefreshToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    })
-    .status(201).send({ 
-=======
+3    //jwt token generation
     // const getJwtParams = db.prepare("SELECT * FROM users WHERE name = ?").get(username) as User;
     // const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     // const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     // console.log("Generated JWT Token:", AccessToken);
     reply.status(201).send({ 
->>>>>>> aa30084bc2e8dbbfcbb89b2a1e86fbf4759246eb
       message: "Login successful",
       user: userInfo,
       otp: otp,
@@ -424,30 +392,6 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
       }
       
       //jwt token generation
-<<<<<<< HEAD
-      const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
-      const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-      const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
-      const isProd = process.env.NODE_ENV === "production";
-      
-      reply.setCookie("refreshToken", RefreshToken, {
-        httpOnly: true,
-        secure: isProd,      
-        sameSite: isProd ? "none" : "lax",
-        path: "/",           
-        maxAge: 60 * 60 * 24 * 7, 
-      })
-      .status(201).send({
-        message: "User added successfully",
-        AccessToken: AccessToken,
-        user: userInfo,
-        code: "USER_ADDED_SUCCESS" });
-    } catch (err: any) {
-        console.error(err);
-        reply.status(500).send({ error: "Internal server error!" });
-    }
-  });
-=======
       // const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
       // const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
       // const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
@@ -463,7 +407,6 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
       reply.status(500).send({ error: "Internal server error!" });
   }
 });
->>>>>>> aa30084bc2e8dbbfcbb89b2a1e86fbf4759246eb
 
 app.post("/api/v1/auth/forgotPassword", async (request, reply) => {
   try {
@@ -738,4 +681,6 @@ app.listen({ port: 3004, host: '0.0.0.0' }, (err, address) => {
   console.log(`Server running at ${address}`);
 });
 
+app.log.error("Connected ...");
 
+kafkaProducerService.connect();

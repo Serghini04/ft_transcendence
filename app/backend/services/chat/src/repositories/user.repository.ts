@@ -12,7 +12,8 @@ export class userRepository {
                 full_name AS fullName,
                 avatar_url AS avatarUrl,
                 bg_photo_url AS bgPhotoUrl,
-                bio
+                bio,
+                showNotifications
             FROM users
             WHERE id = ?;
         `);
@@ -23,11 +24,12 @@ export class userRepository {
             avatarUrl: string;
             bgPhotoUrl: string;
             bio: string;
+            showNotifications: number;
         } | undefined;
     
         if (!row)
             return null;
-        return new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio);
+        return new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio, !!row.showNotifications);
     }
 
     searchUsers(searchQuery: string, limit: number = 20): User[] {
@@ -37,7 +39,8 @@ export class userRepository {
                 full_name AS fullName,
                 avatar_url AS avatarUrl,
                 bg_photo_url AS bgPhotoUrl,
-                bio
+                bio,
+                showNotifications
             FROM users
             WHERE full_name LIKE ?
             LIMIT ?;
@@ -50,10 +53,11 @@ export class userRepository {
             avatarUrl: string;
             bgPhotoUrl: string;
             bio: string;
+            showNotifications: number;
         }[];
     
         return rows.map(row => 
-            new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio)
+            new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio, !!row.showNotifications)
         );
     }
     

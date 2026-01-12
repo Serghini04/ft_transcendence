@@ -140,9 +140,13 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
             receiverUserId,
             validation.senderName ?? "Unknown User",
             messageData.message,
-            new Date(messageData.timestamp)
+            new Date(messageData.timestamp),
+            validation.receiverShowNotifications ?? true
           );
           fastify.log.info(`Kafka notification sent for message to user ${receiverUserId}`);
+          if (!validation.receiverShowNotifications) {
+            fastify.log.info(`User ${receiverUserId} has notifications muted, toast will not be shown`);
+          }
         } catch (kafkaError) {
           fastify.log.error(`Failed to publish Kafka notification: ${kafkaError}`);
           // Don't fail the message send if Kafka fails

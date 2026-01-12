@@ -19,6 +19,7 @@ export class ChatRepository {
           u.avatar_url AS contact_avatar_url,
           u.bg_photo_url AS contact_bg_photo_url,
           u.bio AS contact_bio,
+          u.showNotifications AS contact_show_notifications,
           CASE 
             WHEN relationships.type = 'blocked' AND relationships.blocked_by_user_id = ? THEN 'blocked_by_me'
             WHEN relationships.type = 'blocked' AND relationships.blocked_by_user_id != ? THEN 'blocked_by_them'
@@ -46,6 +47,7 @@ export class ChatRepository {
         contact_avatar_url: string;
         contact_bg_photo_url: string;
         contact_bio: string;
+        contact_show_notifications: number;
         block_status: 'blocked_by_me' | 'blocked_by_them' | 'none';
         unseen_messages: number
       }[];
@@ -53,7 +55,7 @@ export class ChatRepository {
       return rows.map(row =>
         new Relationship(
           row.id,
-          new User(row.contact_id, row.contact_full_name, row.contact_avatar_url, row.contact_bg_photo_url, row.contact_bio),
+          new User(row.contact_id, row.contact_full_name, row.contact_avatar_url, row.contact_bg_photo_url, row.contact_bio, !!row.contact_show_notifications),
           row.block_status,
           row.unseen_messages
         ),
@@ -147,6 +149,7 @@ export class ChatRepository {
     reason?: string;
     senderName?: string;
     receiverName?: string;
+    receiverShowNotifications?: boolean;
   } {
 
     const stmt = this.db.prepare(`
@@ -155,6 +158,7 @@ export class ChatRepository {
         u1.full_name as sender_name,
         u2.id as receiver_id,
         u2.full_name as receiver_name,
+        u2.showNotifications as receiver_show_notifications,
         r.type as relationship_type
       FROM users u1
       LEFT JOIN users u2 ON u2.id = ?
@@ -169,6 +173,7 @@ export class ChatRepository {
       sender_name: string;
       receiver_id: number | null;
       receiver_name: string;
+      receiver_show_notifications: number;
       relationship_type: string | null;
     } | undefined;
 
@@ -194,6 +199,7 @@ export class ChatRepository {
       canMessage: true,
       senderName: result.sender_name,
       receiverName: result.receiver_name,
+      receiverShowNotifications: !!result.receiver_show_notifications,
     };
   }
 

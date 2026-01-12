@@ -8,6 +8,7 @@ async function getAllContacts(req: FastifyRequest, res: FastifyReply) {
 
     console.error("From Backend :>>>>>" + Number(req.headers['x-user-id']));
     const contacts = await chatRepo.getContacts(Number(req.headers['x-user-id']));
+    console.log("Done from me");
     return res.code(200).send(contacts);
 }
 

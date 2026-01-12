@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation , useNavigate } from "react-router-dom";
 import { verifyToken } from "../../globalUtils/verifyToken";
-import { UseTokenStore, UseUserStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore, UseUserStore } from "../../userAuth/zustand/useStore";
 import aiAvatarImg from "../../assets/images/aiAvatar.jpg";
 import user1Img from "../../assets/images/aiAvatar.jpg";
 

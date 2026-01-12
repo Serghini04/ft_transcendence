@@ -543,7 +543,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 },
                 credentials: 'include',
             });
-            
             if (response.ok) {
                 const contacts = await response.json();
                 set({ contacts });

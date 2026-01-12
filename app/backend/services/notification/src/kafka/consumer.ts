@@ -14,6 +14,7 @@ export interface NotificationEvent {
   message: string;
   type: string;
   timestamp: string;
+  showNotifications?: boolean;
 }
 
 export class KafkaConsumerService {
@@ -105,6 +106,9 @@ export class KafkaConsumerService {
       
       if (eventData.type === 'challenge')
         console.log(`Challenge notification stored in DB for user ${eventData.userId}, skipping toast (handled by game socket)`);
+      else if (eventData.showNotifications === false) {
+        console.log(`User ${eventData.userId} has notifications muted, notification stored but toast not sent`);
+      }
       else if (socketIds && socketIds.size > 0) {
         const notificationNS = this.io.of("/notification");
         socketIds.forEach(socketId => {

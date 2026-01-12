@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 import { toastManager } from "../utils/toastManager";
 
 export type Notification = {

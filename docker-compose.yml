@@ -54,26 +54,27 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # kafka-ui:
-  #   build:
-  #     context: ./infra/kafka-ui
-  #     dockerfile: Dockerfile
-  #   image: kafka-ui
-  #   container_name: kafka-ui
-  #   ports:
-  #     - "3022:3022"
-  #   environment:
-  #     - KAFKA_CLUSTERS_0_NAME=local
-  #     - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-  #   depends_on:
-  #     - kafka
-  #   networks:
-  #     - ft_Transc
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "3"
+  kafka-ui:
+    build:
+      context: ./infra/kafka-ui
+      dockerfile: Dockerfile
+    image: kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "9099:3022"
+    environment:
+      - SERVER_PORT=3022
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - ft_Transc
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   chat-service:
     build:

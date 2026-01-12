@@ -6,7 +6,7 @@ import MessagesArea from "./MessagesArea";
 import InputBar from "./InputBar";
 import { useChatStore } from "../store/useChatStore";
 import HistoryPanel from "./HistoryPanel";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 import isValidToken from "../../globalUtils/isValidToken";
 import { useNavigate } from "react-router-dom";
 
@@ -22,15 +22,18 @@ export default function ChatPage({ menuOpen }: ChatPageProps) {
 
   useEffect(() => {
     async function check() {
+      console.error("token", token);
       const result = await isValidToken(token);
       if (!result.valid)
       {
+
         navigate("/auth");
       }
       
       if (result.newToken) {
         setToken(result.newToken);
       }
+
     }
 
     check();
