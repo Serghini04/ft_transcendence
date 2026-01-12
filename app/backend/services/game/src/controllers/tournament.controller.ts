@@ -8,6 +8,7 @@ import {
   TournamentBracketData
 } from '../types/tournament.types';
 import { randomUUID } from 'crypto';
+import { checkAndAdvanceWinners } from './game.controller';
 
 /**
  * Create a new tournament
@@ -308,50 +309,122 @@ export const leaveTournament = async (
       return reply.status(404).send({ error: 'Tournament not found' });
     }
 
-    if (tournament.status !== 'waiting') {
-      return reply.status(400).send({ error: 'Cannot leave tournament after it has started' });
+    // Cannot leave completed tournaments
+    if (tournament.status === 'completed') {
+      return reply.status(400).send({ error: 'Cannot leave a completed tournament' });
     }
 
-    // Check if user is creator
-    if (tournament.creator_id === userId) {
-      // If creator leaves, delete the entire tournament
-      const deleteTournament = db.prepare('DELETE FROM tournaments WHERE id = ?');
-      deleteTournament.run(tournamentId);
+    // Handle leaving during waiting status (before tournament starts)
+    if (tournament.status === 'waiting') {
+      // Check if user is creator
+      if (tournament.creator_id === userId) {
+        // If creator leaves, delete the entire tournament
+        const deleteTournament = db.prepare('DELETE FROM tournaments WHERE id = ?');
+        deleteTournament.run(tournamentId);
+
+        return reply.send({
+          success: true,
+          message: 'Tournament deleted (creator left)',
+          deleted: true
+        });
+      }
+
+      // Remove participant
+      const deleteParticipant = db.prepare(`
+        DELETE FROM tournament_participants 
+        WHERE tournament_id = ? AND user_id = ?
+      `);
+
+      const result = deleteParticipant.run(tournamentId, userId);
+
+      if (result.changes === 0) {
+        return reply.status(400).send({ error: 'You are not a participant in this tournament' });
+      }
+
+      // Update tournament current_players count
+      const updateTournament = db.prepare(`
+        UPDATE tournaments 
+        SET current_players = current_players - 1 
+        WHERE id = ?
+      `);
+
+      updateTournament.run(tournamentId);
+
+      // Return updated tournament
+      const updatedTournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament;
 
       return reply.send({
         success: true,
-        message: 'Tournament deleted (creator left)',
-        deleted: true
+        tournament: updatedTournament,
+        deleted: false
       });
     }
 
-    // Remove participant
-    const deleteParticipant = db.prepare(`
-      DELETE FROM tournament_participants 
-      WHERE tournament_id = ? AND user_id = ?
-    `);
+    // Handle leaving during in_progress status (forfeit)
+    if (tournament.status === 'in_progress') {
+      console.log(`🚪 User ${userId} leaving active tournament ${tournamentId} (forfeit)`);
 
-    const result = deleteParticipant.run(tournamentId, userId);
+      // Find any active match where user is playing (no winner yet)
+      const activeMatch = db.prepare(`
+        SELECT * FROM tournament_matches 
+        WHERE tournament_id = ? 
+        AND (player1_id = ? OR player2_id = ?) 
+        AND winner_id IS NULL
+        AND player1_id IS NOT NULL
+        AND player2_id IS NOT NULL
+        LIMIT 1
+      `).get(tournamentId, userId, userId) as any;
 
-    if (result.changes === 0) {
-      return reply.status(400).send({ error: 'You are not a participant in this tournament' });
+      if (activeMatch) {
+        // User has an active match - mark opponent as winner (forfeit)
+        const opponentId = activeMatch.player1_id === userId ? activeMatch.player2_id : activeMatch.player1_id;
+        
+        console.log(`⚠️ Forfeit: User ${userId} forfeits match ${activeMatch.id}, opponent ${opponentId} wins`);
+
+        // Update match with forfeit result
+        const updateMatch = db.prepare(`
+          UPDATE tournament_matches 
+          SET winner_id = ?, 
+              score1 = CASE WHEN player1_id = ? THEN 5 ELSE 0 END,
+              score2 = CASE WHEN player2_id = ? THEN 5 ELSE 0 END
+          WHERE id = ?
+        `);
+
+        updateMatch.run(opponentId, opponentId, opponentId, activeMatch.id);
+
+        console.log(`✅ Match ${activeMatch.id} updated: Winner ${opponentId} by forfeit`);
+
+        // Notify opponent via socket that they won by forfeit
+        const namespace = request.server.io.of('/game');
+        const roomId = `tournament-${tournamentId}-${activeMatch.id}`;
+        
+        console.log(`📢 Emitting forfeit win to room: ${roomId}`);
+        namespace.to(roomId).emit('opponentForfeited', {
+          winnerId: opponentId,
+          message: 'Your opponent left the tournament. You win by forfeit!',
+          matchId: activeMatch.id,
+          tournamentId: tournamentId
+        });
+
+        // Check if we need to advance winners to next round
+        await checkAndAdvanceWinners(db, tournamentId, activeMatch.id);
+      } else {
+        console.log(`ℹ️ User ${userId} already eliminated or no active match - can leave freely`);
+      }
+
+      // Keep participant in database (they stay as a participant who lost)
+      console.log(`✅ User ${userId} forfeited tournament ${tournamentId} - marked as loser in match`);
+
+      return reply.send({
+        success: true,
+        message: 'Left tournament (forfeit)',
+        forfeited: true,
+        deleted: false
+      });
     }
-
-    // Update tournament current_players count
-    const updateTournament = db.prepare(`
-      UPDATE tournaments 
-      SET current_players = current_players - 1 
-      WHERE id = ?
-    `);
-
-    updateTournament.run(tournamentId);
-
-    // Return updated tournament
-    const updatedTournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament;
 
     return reply.send({
       success: true,
-      tournament: updatedTournament,
       deleted: false
     });
   } catch (error) {

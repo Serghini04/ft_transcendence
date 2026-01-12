@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import TournamentBracket from './TournamentBracket';
 import { UseUserStore } from '../../../userAuth/zustand/useStore';
 import * as tournamentAPI from './api';
 
 export default function Tournament() {
   const { user } = UseUserStore();
+  const location = useLocation();
   
   const [tournamentName, setTournamentName] = useState('');
   const [numberOfPlayers, setNumberOfPlayers] = useState('8');
@@ -14,6 +16,52 @@ export default function Tournament() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justCreatedTournament, setJustCreatedTournament] = useState(false);
+
+  // Check if returning from a tournament match
+  useEffect(() => {
+    const openTournamentId = (location.state as any)?.openTournamentId;
+    console.log('🔍 Checking location.state:', location.state);
+    console.log('🔍 openTournamentId:', openTournamentId);
+    
+    if (openTournamentId) {
+      console.log('🏆 Returning to tournament:', openTournamentId);
+      
+      // Set flag to prevent deletion check during tournament fetch
+      setJustCreatedTournament(true);
+      
+      // Find and open the tournament by fetching it directly (works for completed tournaments too)
+      const findAndOpenTournament = async () => {
+        try {
+          // First try to get the specific tournament bracket (includes completed tournaments)
+          const bracketResponse = await tournamentAPI.getTournamentBracket(openTournamentId);
+          console.log('🎯 Found tournament from bracket API:', bracketResponse);
+          
+          if (bracketResponse && bracketResponse.data && bracketResponse.data.tournament) {
+            setCreatedTournament(bracketResponse.data.tournament);
+            setShowBracket(true);
+            console.log('✅ Bracket opened for tournament:', bracketResponse.data.tournament.id);
+          } else {
+            // Fallback: try getting from tournaments list
+            const response = await tournamentAPI.getTournaments();
+            console.log('📋 All tournaments:', response.tournaments);
+            const tournament = response.tournaments.find(t => t.id === openTournamentId);
+            console.log('🎯 Found tournament from list:', tournament);
+            
+            if (tournament) {
+              setCreatedTournament(tournament);
+              setShowBracket(true);
+              console.log('✅ Bracket opened for tournament:', tournament.id);
+            } else {
+              console.error('❌ Tournament not found:', openTournamentId);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to open tournament:', err);
+        }
+      };
+      findAndOpenTournament();
+    }
+  }, [location.state]);
 
   // Wrap fetchTournaments in useCallback to prevent unnecessary re-renders
   const fetchTournaments = useCallback(async (showLoadingSpinner = true) => {
@@ -58,10 +106,28 @@ export default function Tournament() {
   useEffect(() => {
     if (showBracket && createdTournament && !justCreatedTournament) {
       // Check if the current tournament still exists in the tournament list
-      const tournamentExists = tournaments.some(t => t.id === createdTournament.id);
+      const tournamentInList = tournaments.find(t => t.id === createdTournament.id);
       
-      if (!tournamentExists && tournaments.length >= 0) {
-        // Tournament was deleted - notify user and return to list
+      console.log('🔍 Deletion check:', {
+        showBracket,
+        createdTournamentId: createdTournament.id,
+        justCreatedTournament,
+        tournamentExists: !!tournamentInList,
+        currentStatus: createdTournament.status,
+        listStatus: tournamentInList?.status,
+        tournamentsCount: tournaments.length,
+        tournamentIds: tournaments.map(t => t.id)
+      });
+      
+      // Don't close the bracket if tournament is in_progress or completed - we want players to see results
+      const isInProgressOrCompleted = 
+        createdTournament.status === 'in_progress' || 
+        createdTournament.status === 'completed' ||
+        tournamentInList?.status === 'in_progress' ||
+        tournamentInList?.status === 'completed';
+      
+      if (!tournamentInList && !isInProgressOrCompleted && tournaments.length >= 0) {
+        // Tournament was deleted before it started - notify user and return to list
         console.log('🚨 Tournament was deleted by creator');
         setError('This tournament has been cancelled by the creator');
         setShowBracket(false);
@@ -69,6 +135,10 @@ export default function Tournament() {
         
         // Clear error after 5 seconds
         setTimeout(() => setError(null), 5000);
+      } else if (tournamentInList && tournamentInList.status === 'completed' && createdTournament.status !== 'completed') {
+        // Update tournament status to completed if it changed
+        console.log('🏆 Tournament completed! Updating status...');
+        setCreatedTournament({ ...createdTournament, status: 'completed' });
       }
     }
   }, [tournaments, showBracket, createdTournament, justCreatedTournament]);
@@ -159,17 +229,46 @@ export default function Tournament() {
       setLoading(true);
       setError(null);
 
-      // Check if the current user is the creator
       const isCreator = createdTournament.creator_id === user.id.toString();
 
+      // If tournament is completed, just close the bracket (no API calls)
+      if (createdTournament.status === 'completed') {
+        console.log('🏁 Tournament completed, returning to lobby');
+        setShowBracket(false);
+        setCreatedTournament(null);
+        setTournamentName('');
+        await fetchTournaments();
+        setLoading(false);
+        return;
+      }
+
+      // If tournament is in_progress, allow leaving (with forfeit consequence)
+      if (createdTournament.status === 'in_progress') {
+        console.log('🚪 Leaving active tournament (forfeit if still in competition)');
+        await tournamentAPI.leaveTournament(
+          createdTournament.id,
+          user.id.toString()
+        );
+        
+        setShowBracket(false);
+        setCreatedTournament(null);
+        setTournamentName('');
+        await fetchTournaments();
+        setLoading(false);
+        return;
+      }
+
+      // Tournament is in 'waiting' status - allow cancel/leave
       if (isCreator) {
-        // If creator, delete the entire tournament
+        // Creator can cancel (delete) tournament only in waiting status
+        console.log('🗑️ Canceling tournament (waiting status)');
         await tournamentAPI.deleteTournament(
           createdTournament.id,
           user.id.toString()
         );
       } else {
-        // If participant, just leave the tournament
+        // Participant can leave tournament in waiting status
+        console.log('👋 Leaving tournament (waiting status)');
         await tournamentAPI.leaveTournament(
           createdTournament.id,
           user.id.toString()
@@ -191,6 +290,14 @@ export default function Tournament() {
     }
   };
 
+  // Callback to update tournament status when bracket detects changes
+  const handleTournamentStatusChange = (newStatus: string) => {
+    if (createdTournament && createdTournament.status !== newStatus) {
+      console.log(`🔄 Tournament status changed: ${createdTournament.status} → ${newStatus}`);
+      setCreatedTournament({ ...createdTournament, status: newStatus as 'waiting' | 'in_progress' | 'completed' });
+    }
+  };
+
   // If bracket view is active, show the bracket
   if (showBracket && createdTournament) {
     return (
@@ -199,6 +306,7 @@ export default function Tournament() {
         maxPlayers={createdTournament.max_players}
         tournamentId={createdTournament.id}
         onCancel={handleCancelTournament}
+        onStatusChange={handleTournamentStatusChange}
       />
     );
   }

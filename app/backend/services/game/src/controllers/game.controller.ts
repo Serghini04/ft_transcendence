@@ -1,6 +1,7 @@
 // gameController.ts
 import { saveGameResult } from "../plugins/game.db";
 import { Socket } from "socket.io";
+import { FastifyInstance } from "fastify";
 
 interface PlayerProfile {
   id: string; // User IDs are strings (from auth/JWT)
@@ -54,6 +55,7 @@ interface Room {
   restartReady: { left: boolean; right: boolean };
   namespace: any; // Store namespace reference for emit
   intervalId?: NodeJS.Timeout; // Store the game loop interval
+  tournamentContext?: { tournamentId: string; matchId: string }; // Tournament info if this is a tournament match
 }
 
 export const rooms = new Map<string, Room>();
@@ -166,6 +168,71 @@ export async function createRoom(
   }
 }
 
+// Create a tournament-specific room
+export async function createTournamentRoom(
+  p1: Socket,
+  p2: Socket,
+  roomId: string,
+  options: any,
+  namespace: any,
+  tournamentContext: { tournamentId: string; matchId: string }
+) {
+  const state = initGameState(options.powerUps || false, speedMap[options.speed] || 1.8);
+
+  // Socket auth passes userId as string from JWT
+  const player1Profile: PlayerProfile = { id: String(p1.handshake.auth?.userId) };
+  const player2Profile: PlayerProfile = { id: String(p2.handshake.auth?.userId) };
+
+  rooms.set(roomId, {
+    players: [p1, p2],
+    state,
+    configKey: "tournament",
+    options,
+    startTime: Date.now(),
+    playerProfiles: {
+      left: player1Profile,
+      right: player2Profile,
+    },
+    restartReady: { left: false, right: false },
+    namespace,
+    tournamentContext, // tournament info
+  });
+
+  p1.join(roomId);
+  p2.join(roomId);
+
+  p1.data.roomId = roomId;
+  p2.data.roomId = roomId;
+
+  p1.emit("start", {
+    roomId,
+    opponentId: player2Profile.id,
+    yourId: player1Profile.id,
+    position: "left",
+  });
+
+  p2.emit("start", {
+    roomId,
+    opponentId: player1Profile.id,
+    yourId: player2Profile.id,
+    position: "right",
+  });
+
+  console.log(`🏆 Tournament room ${roomId} created:`, {
+    tournamentId: tournamentContext.tournamentId,
+    matchId: tournamentContext.matchId,
+    players: [player1Profile.id, player2Profile.id]
+  });
+
+  // Start the game loop for this room
+  const room = rooms.get(roomId);
+  if (room) {
+    room.intervalId = setInterval(() => {
+      updateGame(roomId);
+    }, 16); // 60fps
+  }
+}
+
 function resetBall(state: GameState) {
   const ball = state.ball;
   ball.x = state.canvas.width / 2;
@@ -258,6 +325,7 @@ async function handleWin(room: Room, roomId: string, namespace: any) {
       gameId: roomId,
       winnerId: winnerProfile.id,
       scores,
+      isTournament: !!room.tournamentContext
     });
 
     try {
@@ -280,6 +348,19 @@ async function handleWin(room: Room, roomId: string, namespace: any) {
           createdAt: Date.now(),
         });
         console.log("✅ Game result saved successfully");
+
+        // 🏆 If this is a tournament match, record the result
+        if (room.tournamentContext) {
+          await recordTournamentMatchResult(db, {
+            matchId: room.tournamentContext.matchId,
+            tournamentId: room.tournamentContext.tournamentId,
+            winnerId: winnerProfile.id,
+            score1: scores.left,
+            score2: scores.right,
+            player1Id: playerProfiles.left.id,
+            player2Id: playerProfiles.right.id
+          });
+        }
       }
     } catch (error) {
       console.error("❌ Failed to save game result:", error);
@@ -288,6 +369,139 @@ async function handleWin(room: Room, roomId: string, namespace: any) {
     namespace.to(roomId).emit("gameOver", {
       winnerId: winnerProfile.id
     });
+  }
+}
+
+// Record tournament match result to database
+async function recordTournamentMatchResult(
+  db: any,
+  data: {
+    matchId: string;
+    tournamentId: string;
+    winnerId: string;
+    score1: number;
+    score2: number;
+    player1Id: string;
+    player2Id: string;
+  }
+) {
+  try {
+    console.log(`🏆 Recording tournament match result:`, data);
+
+    // Update the tournament match with winner and scores
+    db.prepare(`
+      UPDATE tournament_matches 
+      SET winner_id = ?, score1 = ?, score2 = ?
+      WHERE id = ?
+    `).run(data.winnerId, data.score1, data.score2, data.matchId);
+
+    console.log(`✅ Tournament match ${data.matchId} result recorded: Winner ${data.winnerId}, Score ${data.score1}-${data.score2}`);
+
+    // Check if we need to advance winners to next round
+    await checkAndAdvanceWinners(db, data.tournamentId, data.matchId);
+
+  } catch (error) {
+    console.error(`❌ Failed to record tournament match result:`, error);
+    throw error;
+  }
+}
+
+// Check if both matches in a round are complete and advance winners
+export async function checkAndAdvanceWinners(db: any, tournamentId: string, matchId: string | number) {
+  try {
+    console.log(`🔍 Checking for winner advancement in tournament ${tournamentId}`);
+
+    // Get the current match details
+    const currentMatch = db.prepare(`
+      SELECT * FROM tournament_matches WHERE id = ?
+    `).get(matchId);
+
+    if (!currentMatch) {
+      console.error(`❌ Match ${matchId} not found`);
+      return;
+    }
+
+    const { round, position } = currentMatch;
+    console.log(`📊 Current match: Round ${round}, Position ${position}`);
+
+    // Get all matches in the same round for this tournament
+    const roundMatches = db.prepare(`
+      SELECT * FROM tournament_matches 
+      WHERE tournament_id = ? AND round = ?
+      ORDER BY position
+    `).all(tournamentId, round);
+
+    console.log(`📋 Round ${round} matches:`, roundMatches.map(m => ({
+      id: m.id,
+      position: m.position,
+      winner: m.winner_id
+    })));
+
+    // Determine the next round
+    const nextRound = round + 1;
+
+    // Check if next round matches already exist
+    const nextRoundMatches = db.prepare(`
+      SELECT * FROM tournament_matches 
+      WHERE tournament_id = ? AND round = ?
+      ORDER BY position
+    `).all(tournamentId, nextRound);
+
+    if (nextRoundMatches.length === 0) {
+      // Check if ALL matches are complete (this was potentially the final round)
+      const allMatchesComplete = roundMatches.every(match => match.winner_id !== null);
+      
+      if (allMatchesComplete) {
+        // This was the final round - tournament is complete!
+        console.log(`🏆 Tournament ${tournamentId} is complete!`);
+        
+        // Update tournament status to completed
+        db.prepare(`
+          UPDATE tournaments SET status = 'completed' WHERE id = ?
+        `).run(tournamentId);
+      }
+      
+      return;
+    }
+
+    // Advance winners to next round matches
+    // For each pair of matches in current round, their winners go to one match in next round
+    for (let i = 0; i < roundMatches.length; i += 2) {
+      const match1 = roundMatches[i];
+      const match2 = roundMatches[i + 1];
+      
+      if (!match1 || !match2) continue;
+
+      const winner1 = match1.winner_id;
+      const winner2 = match2.winner_id;
+
+      // Calculate next round position
+      const nextMatchPosition = Math.floor(i / 2);
+      const nextMatch = nextRoundMatches[nextMatchPosition];
+
+      if (!nextMatch) continue;
+
+      // Advance winners INDIVIDUALLY as they complete
+      // First winner goes to player1, second winner goes to player2
+      
+      if (winner1 && !nextMatch.player1_id) {
+        // Winner 1 is ready and slot is empty - assign immediately
+        console.log(`🎯 Advancing winner from Match ${match1.id} to Round ${nextRound}, Position ${nextMatchPosition}, Slot 1: ${winner1}`);
+        db.prepare(`UPDATE tournament_matches SET player1_id = ? WHERE id = ?`).run(winner1, nextMatch.id);
+        console.log(`✅ Player 1 assigned to Match ${nextMatch.id}`);
+      }
+
+      if (winner2 && !nextMatch.player2_id) {
+        // Winner 2 is ready and slot is empty - assign immediately
+        console.log(`🎯 Advancing winner from Match ${match2.id} to Round ${nextRound}, Position ${nextMatchPosition}, Slot 2: ${winner2}`);
+        db.prepare(`UPDATE tournament_matches SET player2_id = ? WHERE id = ?`).run(winner2, nextMatch.id);
+        console.log(`✅ Player 2 assigned to Match ${nextMatch.id}`);
+      }
+    }
+
+    console.log(`✅ Winner advancement complete for Round ${round}`);
+  } catch (error) {
+    console.error(`❌ Error in checkAndAdvanceWinners:`, error);
   }
 }
 

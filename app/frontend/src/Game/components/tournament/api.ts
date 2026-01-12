@@ -174,7 +174,7 @@ export const leaveTournament = async (
 export const getTournamentBracket = async (
   tournamentId: string
 ): Promise<{ success: boolean; data: TournamentBracketData }> => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/bracket`, {
+  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/bracket?_t=${Date.now()}`, {
     method: 'GET',
     headers: getAuthHeaders(),
   });

@@ -1,7 +1,7 @@
 // gameGateway.ts
 import { FastifyInstance } from "fastify";
 import { Socket } from "socket.io";
-import { createRoom, rooms, updateGame } from "./game.controller";
+import { createRoom, createTournamentRoom, rooms, updateGame } from "./game.controller";
 import { saveGameResult } from "../plugins/game.db";
 
 // Export these for HTTP routes to access
@@ -14,6 +14,7 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
   namespace.fastify = fastify;
 
   const waitingPlayers = new Map<string, Socket>();
+  const tournamentWaitingPlayers = new Map<string, any>(); // roomId -> { socket, userId, matchId, tournamentId }
 
   namespace.on("connection", (socket: any) => {
     console.log(`🟢 ${socket.id} connected`);
@@ -75,6 +76,88 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
       } else {
         console.log(`⏳ Waiting for other player to join challenge room ${roomId}`);
         socket.emit("waiting");
+      }
+    });
+
+    // Handle joining a tournament match
+    socket.on("joinTournamentMatch", async ({ 
+      tournamentId, 
+      matchId, 
+      userId, 
+      opponentId, 
+      options 
+    }: any) => {
+      console.log(`🏆 Tournament match join request:`, {
+        tournamentId,
+        matchId,
+        userId,
+        opponentId,
+        socketId: socket.id
+      });
+      
+      // Create unique room ID for this specific tournament match
+      const roomId = `tournament-${tournamentId}-${matchId}`;
+      console.log(`🔑 Generated roomId: ${roomId}`);
+      
+      // Check if opponent is already waiting
+      const waitingPlayer = tournamentWaitingPlayers.get(roomId);
+      console.log(`🔍 Checking waiting queue for roomId ${roomId}:`, {
+        hasWaitingPlayer: !!waitingPlayer,
+        waitingPlayerId: waitingPlayer?.userId,
+        currentPlayerId: userId,
+        allWaitingRooms: Array.from(tournamentWaitingPlayers.keys())
+      });
+      
+      if (!waitingPlayer) {
+        // First player to join - store and wait
+        tournamentWaitingPlayers.set(roomId, {
+          socket,
+          userId,
+          matchId,
+          tournamentId,
+          options
+        });
+        socket.emit("waiting");
+        console.log(`⏳ ${userId} (socket ${socket.id}) waiting for opponent in tournament match ${matchId}`);
+        console.log(`📊 Current waiting players:`, Array.from(tournamentWaitingPlayers.keys()));
+      } else {
+        // Verify this is the correct opponent
+        console.log(`👥 Found waiting player ${waitingPlayer.userId}, current player ${userId}`);
+        
+        // Second player joined - start the match!
+        tournamentWaitingPlayers.delete(roomId);
+        
+        console.log(`✅ Both players ready for tournament match ${matchId}, starting game...`);
+        console.log(`📊 Remaining waiting players:`, Array.from(tournamentWaitingPlayers.keys()));
+        
+        try {
+          // Create the tournament game room
+          console.log(`🎮 Calling createTournamentRoom with:`, {
+            player1Socket: waitingPlayer.socket.id,
+            player2Socket: socket.id,
+            roomId,
+            tournamentId,
+            matchId
+          });
+          
+          await createTournamentRoom(
+            waitingPlayer.socket,
+            socket,
+            roomId,
+            options,
+            namespace,
+            {
+              tournamentId,
+              matchId
+            }
+          );
+          
+          console.log(`✅ createTournamentRoom completed for ${roomId}`);
+        } catch (error) {
+          console.error(`❌ Error creating tournament room:`, error);
+          socket.emit("error", { message: "Failed to create tournament match" });
+          waitingPlayer.socket.emit("error", { message: "Failed to create tournament match" });
+        }
       }
     });
 
