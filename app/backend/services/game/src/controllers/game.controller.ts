@@ -373,7 +373,7 @@ async function handleWin(room: Room, roomId: string, namespace: any) {
 }
 
 // Record tournament match result to database
-async function recordTournamentMatchResult(
+export async function recordTournamentMatchResult(
   db: any,
   data: {
     matchId: string;

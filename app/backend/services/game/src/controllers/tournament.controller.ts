@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { db } from '../plugins/game.db';
+import { db, saveGameResult } from '../plugins/game.db';
 import {
   CreateTournamentRequest,
   JoinTournamentRequest,
@@ -381,18 +381,37 @@ export const leaveTournament = async (
         
         console.log(`⚠️ Forfeit: User ${userId} forfeits match ${activeMatch.id}, opponent ${opponentId} wins`);
 
+        // Determine scores based on who forfeited
+        const score1 = activeMatch.player1_id === opponentId ? 5 : 0;
+        const score2 = activeMatch.player2_id === opponentId ? 5 : 0;
+
         // Update match with forfeit result
         const updateMatch = db.prepare(`
           UPDATE tournament_matches 
           SET winner_id = ?, 
-              score1 = CASE WHEN player1_id = ? THEN 5 ELSE 0 END,
-              score2 = CASE WHEN player2_id = ? THEN 5 ELSE 0 END
+              score1 = ?,
+              score2 = ?,
+              completed_at = ?
           WHERE id = ?
         `);
 
-        updateMatch.run(opponentId, opponentId, opponentId, activeMatch.id);
+        updateMatch.run(opponentId, score1, score2, Date.now(), activeMatch.id);
 
-        console.log(`✅ Match ${activeMatch.id} updated: Winner ${opponentId} by forfeit`);
+        console.log(`✅ Match ${activeMatch.id} updated: Winner ${opponentId} by forfeit (${score1}-${score2})`);
+
+        // Save game result to games table
+        saveGameResult(db, {
+          gameId: `tournament-${tournamentId}-${activeMatch.id}`,
+          mode: 'tournament',
+          player1Id: activeMatch.player1_id,
+          player2Id: activeMatch.player2_id,
+          winnerId: opponentId,
+          score1: score1,
+          score2: score2,
+          createdAt: Date.now()
+        });
+
+        console.log(`💾 Forfeit game saved to database`);
 
         // Notify opponent via socket that they won by forfeit
         const namespace = request.server.io.of('/game');

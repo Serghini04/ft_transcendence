@@ -141,6 +141,8 @@ services:
       - "3005:3005"
     environment:
       - KAFKA_BROKER=kafka:9092
+    volumes:
+      - ./app/backend/services/game/src/db:/app/src/db
     depends_on:
       kafka:
         condition: service_healthy

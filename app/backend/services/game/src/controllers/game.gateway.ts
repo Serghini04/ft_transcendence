@@ -316,6 +316,8 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
               if (db) {
                 // Set score to 5-0 for forfeit win
                 const isLeftPlayerWinner = disconnectedPlayerIndex === 0 ? false : true;
+                const score1 = isLeftPlayerWinner ? 5 : 0;
+                const score2 = isLeftPlayerWinner ? 0 : 5;
                 
                 await saveGameResult(db, {
                   gameId: roomId,
@@ -323,11 +325,28 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
                   player1Id: room.playerProfiles.left.id,
                   player2Id: room.playerProfiles.right.id,
                   winnerId: opponentUserId,
-                  score1: isLeftPlayerWinner ? 5 : 0,
-                  score2: isLeftPlayerWinner ? 0 : 5,
+                  score1,
+                  score2,
                   createdAt: Date.now(),
                 });
                 console.log("✅ Forfeit game result saved successfully");
+                
+                // If this is a tournament match, update tournament_matches table and advance winner
+                if (room.tournamentContext) {
+                  const { recordTournamentMatchResult } = await import('./game.controller');
+                  
+                  await recordTournamentMatchResult(db, {
+                    matchId: room.tournamentContext.matchId,
+                    tournamentId: room.tournamentContext.tournamentId,
+                    winnerId: opponentUserId,
+                    score1,
+                    score2,
+                    player1Id: room.playerProfiles.left.id,
+                    player2Id: room.playerProfiles.right.id,
+                  });
+                  
+                  console.log("✅ Tournament match result recorded and winner advanced");
+                }
               } else {
                 console.error("❌ Database not available for saving forfeit game");
               }

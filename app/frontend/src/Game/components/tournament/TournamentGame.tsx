@@ -221,15 +221,39 @@ export default function TournamentGame() {
       });
 
       s.on("opponentDisconnected", ({ winnerId, gameActive }: { winnerId: string, reason: string, gameActive: boolean }) => {
-        console.log("⚠️ Opponent disconnected from tournament match", { gameActive });
+        console.log("⚠️ Opponent disconnected from tournament match", { gameActive, winnerId });
+        
+        // If game is already over (not active), ignore the disconnect event
+        // The winner is already set, and we don't need to show "opponent left" message
+        if (!gameActive) {
+          console.log("ℹ️ Ignoring disconnect - game already finished");
+          return;
+        }
+        
+        // Game was active - opponent forfeited
+        const currentYourProfile = yourProfileRef.current;
+        
+        console.log("🎯 Handling active disconnect:", {
+          winnerId,
+          currentYourProfile,
+          match: winnerId === currentYourProfile?.id
+        });
         
         setWinner(winnerId);
         winnerRef.current = winnerId;
+        setForfeitWin(true);
+        setWaiting(false); // Hide "waiting" overlay to show winner screen
         
-        if (gameActive) {
-          setForfeitWin(true);
+        // Set winner profile (should be current user since opponent disconnected)
+        if (currentYourProfile && winnerId === currentYourProfile.id) {
+          setWinnerProfile(currentYourProfile);
+          console.log("🏆 You won by opponent disconnect! Profile set:", currentYourProfile);
         } else {
-          setOpponentLeftPostGame(true);
+          console.log("⚠️ Winner profile NOT set:", {
+            hasProfile: !!currentYourProfile,
+            winnerId,
+            profileId: currentYourProfile?.id
+          });
         }
       });
 
