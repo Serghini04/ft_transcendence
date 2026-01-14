@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { jwtDecode } from "jwt-decode";
+import bgPhoto from "../../../public/profileBG.png";
+import profilePhoto from "../../../public/breakingbad1.jpg";
 
 type User = {
   id: number;
@@ -146,8 +148,8 @@ export const UseShowOtpInputStore = create<ShowOtpInputState>((set) => ({
 }));
 
 export const UseimageDataUrlStore = create<imageDataUrlState>((set) => ({
-  BgImageDataUrl: "",
-  profileImageDataUrl: "",
+  BgImageDataUrl: bgPhoto,
+  profileImageDataUrl: profilePhoto,
   setProfileImageDataUrl: (url) => set({ profileImageDataUrl: url }),
   setBgImageDataUrl: (url) => set({ BgImageDataUrl: url }),
 }));

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, RotateCcw, Trophy, User, Users, Sparkles, Star } from "lucide-react";
 import Circle from "./Assets/circle.png";
 import cross from "./Assets/cross.png";
-import { UseUserStore } from "../userAuth/LoginAndSignup/zustand/useStore";
+import { UseUserStore } from "../userAuth/zustand/useStore";
 
 interface TicTacGameProps {
   mode: "local" | "online";

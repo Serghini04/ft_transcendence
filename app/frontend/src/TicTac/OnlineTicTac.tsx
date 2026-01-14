@@ -4,7 +4,7 @@ import { TicTacAPI, type User, type UserStats } from "./services/api";
 import { useOnlineGame } from "./hooks/useOnlineGame";
 import TicTacGame from "./TicTacGame";
 import { ArrowLeft, Sparkles, Trophy, User as UserIcon } from "lucide-react";
-import { UseUserStore } from "../userAuth/LoginAndSignup/zustand/useStore";
+import { UseUserStore } from "../userAuth/zustand/useStore";
 
 const OnlineTicTac = () => {
   const { user: authUser } = UseUserStore();

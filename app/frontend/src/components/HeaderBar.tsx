@@ -2,7 +2,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { Menu } from "lucide-react";
 import IconButton from "@mui/material/IconButton";
 import { useEffect } from "react";
-import { UseTokenStore } from "../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../userAuth/zustand/useStore";
 import { useNotificationStore } from "../notification/store/useNotificationStroe";
 import { NotificationBell } from "../notification/components/NotificationBell";
 

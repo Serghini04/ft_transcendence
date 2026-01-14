@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { UseimageDataUrlStore, UsephotosFileStore } from "../../zustand/useStore";
 import UserProfile from "./UserProfile";
+import bgPhoto from "../../../../public/profileBG.png";
+
 
 
 interface params {
@@ -18,12 +20,16 @@ export default function PhotosSide(props: params) {
   const { setBgImageFile } = UsephotosFileStore();
   useEffect(() => {
     if (props.user.bgPhotoURL) {
-      setBgImageDataUrl(props.user.bgPhotoURL);
+      const fullUrl = props.user.bgPhotoURL.startsWith('http') 
+          ? props.user.bgPhotoURL 
+          : `${window.location.origin}/${props.user.bgPhotoURL}`;
+      setBgImageDataUrl(fullUrl);
     }
   }, [props.user.bgPhotoURL]);
 
     const handleChoosePhoto = () => {
         filrInputRef.current?.click();
+        console.log(filrInputRef);
     }
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -43,7 +49,7 @@ export default function PhotosSide(props: params) {
       <>
       <div
         style={{
-          backgroundImage: BgImageDataUrl ? `url(${BgImageDataUrl})` : "none",
+          backgroundImage: BgImageDataUrl ? `url(${BgImageDataUrl})` : `url(${bgPhoto})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
