@@ -64,13 +64,7 @@ export default function LastMatches() {
               relative flex items-center justify-between px-6 py-4 rounded-2xl
               bg-black/60 shadow-md overflow-hidden
               border-2
-              ${
-                isWin
-                  ? "border-green-400/60"
-                  : isLose
-                  ? "border-red-600/60"
-                  : "border-gray-400"
-              }
+              border-primary
             `}
           >
             {/* Animated glow */}

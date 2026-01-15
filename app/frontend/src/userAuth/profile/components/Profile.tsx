@@ -1,13 +1,58 @@
+import { useEffect, useState } from "react";
 import Bio from "./Bio";
 import GoalStats from "./GoalStats";
 import LastMatches from "./LastMatches";
 import PlayerStats from "./PlayerStats";
 import ProfileCard from "./ProfileCard";
 import ProfileHeader from "./ProfileHeader";
+import verifyToken from "../../../globalUtils/verifyToken";
+import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 
 export default function Profile()
 {
-    console
+    const { user } = UseUserStore();
+    const { token } = UseTokenStore();
+    const [userInfo, setUserInfo] = useState({
+        name: "",
+        email: "",
+        photoURL: "",
+        bgPhotoURL: "public/profileBG.png",
+        profileVisibility: true,
+        showNotifications: true,
+        bio: ""
+      });
+      useEffect(() => {
+        async function fetchUserData() {
+          try {
+            const res = await fetch("http://localhost:8080/api/v1/auth/profile/getProfileUser", {
+              method: "POST",
+              headers: { "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`
+              },
+              credentials: "include",
+              body: JSON.stringify({ id: user.id })
+            });
+        const data = await res.json();
+        console.log("USER DATA SETTINGS: ", data);
+        verifyToken(data);
+        setUserInfo({
+          name: data.user.name,
+          email: data.user.email,
+          photoURL: data.user.photoURL,
+          bgPhotoURL: data.user.bgPhotoURL,
+          profileVisibility: Boolean(data.user.profileVisibility),
+          showNotifications: Boolean(data.user.showNotifications),
+          bio: data.user.bio
+        });
+        console.log("USER INFO IN SETTINGS: ", userInfo);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+    }
+    fetchUserData();
+    }, [token]);
+
+    console.log("--------------------> : ", userInfo);
     return (
         <div
         className="

@@ -23,7 +23,7 @@ const rankGradient: Record<Rank, string> = {
 
 export default function ProfileCard({wins, losses }: PlayerStatsProps) {
   let rank: Rank; // Example rank, this would be dynamic in a real app
-  wins = 100;
+  wins = 3;
   losses = 12;
   let total = wins + losses;
   let winRate = total > 0 ? (wins / total) * 100 : 0;
