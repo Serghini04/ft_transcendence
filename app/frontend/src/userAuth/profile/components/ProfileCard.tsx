@@ -5,6 +5,12 @@ type Rank = "bronze" | "silver" | "gold" | "diamond";
 interface PlayerStatsProps {
   wins: number;
   losses: number;
+  user: {
+    name: string;
+    email: string;
+    photoURL: string;
+    bgPhotoURL: string;
+  };
 }
 
 const rankGlow: Record<Rank, string> = {
@@ -21,12 +27,12 @@ const rankGradient: Record<Rank, string> = {
   diamond: "#22d3ee, #38bdf8, #6366f1",
 };
 
-export default function ProfileCard({wins, losses }: PlayerStatsProps) {
+export default function ProfileCard(props: PlayerStatsProps) {
   let rank: Rank; // Example rank, this would be dynamic in a real app
-  wins = 3;
-  losses = 12;
-  let total = wins + losses;
-  let winRate = total > 0 ? (wins / total) * 100 : 0;
+  props.wins = 3;
+  props.losses = 12;
+  let total = props.wins + props.losses;
+  let winRate = total > 0 ? (props.wins / total) * 100 : 0;
   switch (true) {
     case (winRate < 70): // Replace with actual condition for bronze
       rank = "bronze";
@@ -54,7 +60,7 @@ export default function ProfileCard({wins, losses }: PlayerStatsProps) {
             style={{
             background: `linear-gradient(135deg, rgba(0,0,0,0.65), rgba(0,0,0,0.3))`,
             backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.10) 80%, rgba(0,0,0,0.75) 100%
-    ), url("public/rasselBG.png")`,
+    ), url(${props.user.bgPhotoURL.startsWith('http') ? props.user.bgPhotoURL : `${window.location.origin}/${props.user.bgPhotoURL}`})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
               boxShadow: `0 0 30px ${rankGlow[rank]}`,
@@ -72,7 +78,7 @@ export default function ProfileCard({wins, losses }: PlayerStatsProps) {
 
             {/* Avatar */}
             <img
-            src="public/rasell.png"
+            src={`${props.user.photoURL.startsWith('http') ? props.user.photoURL : `${window.location.origin}/${props.user.photoURL}`}`}
             alt="avatar"
             className="w-12 h-12 md:w-14 md:h-14 lg:w-19 lg:h-19 xl:w-24 xl:h-24 rounded-full object-cover border-2 border-white"
             />
@@ -80,11 +86,11 @@ export default function ProfileCard({wins, losses }: PlayerStatsProps) {
             {/* Info */}
             <div className="relative z-10 flex flex-col min-w-0">
             <span className="text-sm md:text-lg lg:text-xl xl:text-2xl font-semibold text-white truncate">
-                Soulayman Ouaourikt
+                {props.user.name}
             </span>
 
             <span className="text-xs lg:text-base xl:text-lg text-gray-300 truncate">
-                ouaouriktsoulaymane@gmail.com
+                {props.user.email}
             </span>
 
             {/* Level bar */}

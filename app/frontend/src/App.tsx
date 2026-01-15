@@ -37,7 +37,7 @@ export default function App() {
             <Route path="/home" element={<Home />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:id" element={<Profile />} />
               
             <Route path="/game" element={<Game menuOpen={menuOpen} />}>
               <Route path="challenge" element={<Online />} />
