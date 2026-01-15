@@ -4,6 +4,8 @@ import ModifyUserInformation from "./ModifyUserInformation";
 import PhotosSide from "./PhotosSide";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import verifyToken from "../../../globalUtils/verifyToken";
+import bgPhoto from "../../../../public/profileBG.png";
+import profilePhoto from "../../../../public/breakingbad1.jpg";
 
 export default function Settings() {
   const { user } = UseUserStore();
@@ -11,12 +13,13 @@ export default function Settings() {
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",
-    photoURL: "",
-    bgPhotoURL: "public/profileBG.png",
+    photoURL: profilePhoto,
+    bgPhotoURL: bgPhoto,
     profileVisibility: true,
     showNotifications: true,
     bio: ""
   });
+ 
   useEffect(() => {
     async function fetchUserData() {
       try {

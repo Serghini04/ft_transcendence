@@ -1,13 +1,14 @@
 import fastify from "fastify";
 import db from "./db.js";
 import bcrypt from "bcrypt";
-import { Console, error, profile } from "console";
+import { Console, error, profile, timeStamp } from "console";
 import {OAuth2Client } from "google-auth-library";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { request } from "http";
 import {generateJwtAccessToken, generateJwtRefreshToken, verifyRefreshToken } from "./jwt.js";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
 import { generateOTP, sendOTPEmail } from "./2FA.js";
 import { access } from "fs";
 import { str } from "ajv";
@@ -16,6 +17,10 @@ import path from "path";
 import fs from "fs";
 import multipart, { MultipartFile } from "@fastify/multipart"
 import { pipeline } from "stream/promises";
+import { promiseHooks } from "v8";
+import { UserEvent, kafkaProducerService } from "./kafka/producer.js";
+
+// ...existing code...
 
 
 interface User {
@@ -46,6 +51,22 @@ await app.register(multipart, {
   }
 });
 
+// Register static file serving for uploads
+const uploadsDir = process.env.NODE_ENV === 'production' 
+  ? '/app/uploads' 
+  : path.join(process.cwd(), 'uploads');
+  
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+await app.register(fastifyStatic, {
+  root: uploadsDir,
+  prefix: '/uploads/',
+});
+
+
+// consumer.connect(5000);
 
 
 
@@ -291,6 +312,20 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
 
     db.prepare("INSERT INTO users (name, email, password, photoURL, bgPhotoURL, bio) VALUES (?, ?, ?, ?, ?, ?)").run(pending.name, pending.email, pending.password, pending.photoURL, pending.bgPhotoURL, pending.bio);
 
+    // const message = {
+    //   event: 'USER_CREATED',
+    //   user: {
+    //     id: pending.id,
+    //     name: pending.name,
+    //     email: pending.email,
+    //     photoURL: pending.photoURL,
+    //     bgPhotoURL: pending.bgPhotoURL,
+    //     bio: pending.bio
+    //   },
+    //   timestamp: new Date().toISOString()
+    // };
+    // const result = await producer.send(message);
+    // console.log("Kafka message sent result:", result);
     // Remove from pending_users
     db.prepare("DELETE FROM temp_users WHERE email = ?").run(emailOrName);
 
@@ -316,6 +351,18 @@ app.post("/api/v1/auth/verifyEmail", async (request, reply) => {
       const RefreshToken = generateJwtRefreshToken({id: row.id, name: row.name, email: row.email});
 
       const isProd = process.env.NODE_ENV === "production";
+
+      const message : UserEvent = {
+        userId: String(row.id),
+        name: row.name,
+        email: row.email,
+        photoURL: row.photoURL || "",
+        bgPhotoURL: row.bgPhotoURL || "",
+        bio: row.bio || "",
+        profileVisibility: row.profileVisibility || true,
+        showNotifications: row.showNotifications || true
+      }
+      kafkaProducerService.publishUserCreated(message);
 
       // console.log("Generated JWT Token:", AccessToken);
       reply.setCookie("refreshToken", RefreshToken, {
@@ -452,8 +499,17 @@ app.post("/api/v1/auth/setting/getUserData", async (request, reply) => {
   }
 });
 
-const uploadDir = path.join("../../../", "frontend/public/uploads");
-// if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+function safeDelete(fileUrl?: string | null) {
+  if (!fileUrl) return;
+
+  const filePath = path.join(uploadsDir, path.basename(fileUrl)); // Use uploadsDir
+
+  fs.unlink(filePath, err => {
+    if (err && err.code !== "ENOENT") {
+      console.error("Failed to delete old file:", err);
+    }
+  });
+}
 
 app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
   const parts = req.parts();
@@ -475,21 +531,33 @@ app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
       const filePart = part as MultipartFile;
       const ext = path.extname(filePart.filename);
       let filename = "";
+      let field = "";
 
+      const timestamp = Date.now();
       if (part.fieldname === "photo") {
-        filename = `user-${userId}-photo${ext}`;
-        photoURL = `public/uploads/${filename}`;
+        field = "photoURL";
+        filename = `user-${userId}-photo${timestamp}${ext}`;
+        photoURL = `uploads/${filename}`;
       }
 
       if (part.fieldname === "bgPhoto") {
-        filename = `user-${userId}-bg${ext}`;
-        bgPhotoURL = `public/uploads/${filename}`;
+        field = "bgPhotoURL";
+        filename = `user-${userId}-bg${timestamp}${ext}`;
+        bgPhotoURL = `uploads/${filename}`;
       }
 
       if (!filename) continue;
 
-      const savePath = path.join(uploadDir, filename);
+      const old = db
+        .prepare(`SELECT ${field} FROM users WHERE id = ?`)
+        .get(userId) as any;
+
+      const savePath = path.join(uploadsDir, filename); // Use uploadsDir
       await pipeline(filePart.file, fs.createWriteStream(savePath));
+
+      if (old?.[field]) {
+        safeDelete(old[field]);
+      }
     }
   }
 
@@ -498,6 +566,8 @@ app.post("/api/v1/auth/setting/uploadPhotos", async (req, reply) => {
     bgPhotoURL,
   });
 });
+
+// ...existing code...
 
 
 app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
@@ -544,6 +614,19 @@ app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
       const hashedPassword = await bcrypt.hash(newpassword, 10);
       db.prepare("UPDATE users SET password = ? WHERE id = ?").run(hashedPassword, id);
     }
+    const pending = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User;
+    const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User;
+    const message : UserEvent = {
+      userId: String(row.id),
+      name: row.name,
+      email: row.email,
+      photoURL: row.photoURL || "",
+      bgPhotoURL: row.bgPhotoURL || "",
+      bio: row.bio || "",
+      profileVisibility: row.profileVisibility || true,
+      showNotifications: row.showNotifications || true
+    }
+    kafkaProducerService.publishUserUpdated(message);
     reply.status(201).send({ 
       message: "User data updated successfully",
       code: "USER_DATA_UPDATED_SUCCESS" });
@@ -552,6 +635,7 @@ app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
     reply.status(500).send({ error: "Internal server error" });
   }
 });
+
 
 
 // app.post("/api/v1/auth/signup", async (request, reply) => {
@@ -633,6 +717,31 @@ app.post("/api/v1/auth/setting/updateUserData", async (request, reply) => {
 //     }
 //   });
 
+app.post("/api/v1/auth/profile/getProfileUser", async (request, reply) => {
+  try {
+    const { id } = (request.body as {id: number});
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+    if (!user) {
+      reply.status(401).send({ error: "Invalid user id", code: "INVALID_USER_ID" });
+      return ;
+    }
+    const userInfo = {
+      name: user.name,
+      email: user.email,
+      photoURL: user.photoURL,
+      bgPhotoURL: user.bgPhotoURL,
+      bio: user.bio
+    }
+    reply.status(201).send({ 
+      message: "User data fetched successfully",
+      user: userInfo,
+      code: "USER_DATA_FETCHED_SUCCESS" });
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: "Internal server error" });
+  }
+});
+
 app.get("/api/v1/auth/protect", async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
@@ -648,6 +757,22 @@ app.get("/api/v1/auth/protect", async (request, reply) => {
 //   }
 // });
 
+// app.get("/kafka", async (request, reply) => {
+//   await consumer.start(async (message) => {
+//     switch (message.value.event) {
+//       case "USER_CREATED":
+//         console.log("✅ User created event received:", message.value.user);
+//         break;
+  
+//       case "USER_UPDATED":
+//         console.log("✅ User updated:", message.value.user);
+//         break;
+  
+//       default:
+//         console.log("⚠️ Unknown event:", message.value);
+//     }
+//   });
+// });
 
 app.listen({ port: 3004, host: '0.0.0.0' }, (err, address) => {
   if (err) {
@@ -656,3 +781,111 @@ app.listen({ port: 3004, host: '0.0.0.0' }, (err, address) => {
   }
   console.log(`Server running at ${address}`);
 });
+
+await kafkaProducerService.connect();
+
+// app.post("/api/v1/auth/profile/getProfileUser", async (request, reply) => {
+//   try {
+//     const { id } = (request.body as {id: number});
+//     const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+//     if (!user) {
+//       reply.status(401).send({ error: "Invalid user id", code: "INVALID_USER_ID" });
+//       return ;
+//     }
+//     const userInfo = {
+//       name: user.name,
+//       email: user.email,
+//       photoURL: user.photoURL,
+//       bgPhotoURL: user.bgPhotoURL,
+//       bio: user.bio
+//     }
+//     reply.status(201).send({ 
+//       message: "User data fetched successfully",
+//       user: userInfo,
+//       code: "USER_DATA_FETCHED_SUCCESS" });
+//   } catch (err) {
+//     console.error(err);
+//     reply.status(500).send({ error: "Internal server error" });
+//   }
+// });
+
+
+// app.post("/api/v1/auth/signup", async (request, reply) => {
+//     try {
+//       const { name, email, password, cpassword , key} = request.body as { name: string; email: string; password: string; cpassword: string; key?: string };
+    
+      
+//       let AccessToken: string = "";
+//       let RefreshToken: string = "";
+//       let userInfo: {id: number; name: string; email: string;} = {id: 0, name: "", email: ""};
+//       let otp: string = "";
+//       if (key === "KO")
+//         {
+//         if (!name || !email || !password || !cpassword) {
+//           reply.status(400).send({ error: "All fields are required" });
+//           return ;
+//         }
+//         const isNameExist = db.prepare("SELECT * FROM users WHERE name = ?").get(name);
+//         const isEmailExist = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+//         if (isNameExist || isEmailExist)
+//         {
+//           if (isNameExist)
+//             reply.status(400).send({ error: "Name already exists", code: "NAME_ALR_EXIST"});
+//           if (isEmailExist)
+//             reply.status(400).send({ error: "Email already exists", code: "EMAIL_ALR_EXIST"});
+//           return ;
+//         }
+//         if (!strongPassword.test(password))
+//         {
+//           reply.status(400).send({ error: "Min 8 chars, 1 uppercase, 1 number, 1 symbol", code: "PASSWORD_NOT_STROMG"})
+//           return ;
+//         }
+//         if (password != cpassword)
+//         {
+//           reply.status(400).send({error: "cpassword not matching", code: "CPASSWORD_NOT_MATCHING"})
+//           return ;
+//         }
+
+//         //generate OTP
+//         otp = generateOTP();
+//         sendOTPEmail(email, otp);
+//       }
+//       else{
+//         //hashing password
+//         const hashedPassword = await bcrypt.hash(password, 10);
+//         //stor in db
+//         db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)").run(name, email, hashedPassword);
+
+//         //save user info for sending back to client
+//         const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
+//         userInfo = {
+//           id: row.id,
+//           name: row.name,
+//           email: row.email
+//         }
+        
+//         //jwt token generation
+//         const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
+//         AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+//         RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
+//     }
+      
+//       reply.setCookie("refreshToken", RefreshToken, {
+//         httpOnly: true,
+//         secure: false,      
+//         sameSite: "lax",
+//         path: "/",           
+//         maxAge: 60 * 60 * 24 * 7, 
+//       })
+//       .status(201).status(201).send({
+//         message: "User added successfully",
+//         AccessToken: AccessToken,
+//         otp: otp,
+//         user: userInfo,
+//         code: "USER_ADDED_SUCCESS" });
+//     } catch (err: any) {
+//         console.error(err);
+//         reply.status(500).send({ error: "Internal server error!" });
+//     }
+//   });
+
