@@ -1,12 +1,14 @@
 import { CircleX, RotateCcw, Sword, UserX, UserCheck } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
+import { useNotificationStore } from "../../notification/store/useNotificationStroe";
 import { useState, useEffect } from "react";
 import { UseUserStore, UseTokenStore } from "../../userAuth/zustand/useStore";
 import { useChatToast } from "../hooks/useChatToast";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, onlineUsers, blockUser, unblockUser} = useChatStore();
+    const {selectedContact, blockUser, unblockUser} = useChatStore();
+    const onlineUsers = useNotificationStore((s) => s.onlineUsers);
     const { user } = UseUserStore();
     const { token } = UseTokenStore();
     const { showSuccessToast, showErrorToast } = useChatToast();

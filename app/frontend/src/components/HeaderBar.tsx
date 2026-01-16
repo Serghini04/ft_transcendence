@@ -18,6 +18,7 @@ type SearchUser = {
 export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const userId = UseTokenStore((s) => s.userId);
   const token = UseTokenStore((s) => s.token);
+  const setToken = UseTokenStore((s) => s.setToken);
   const navigate = useNavigate();
 
   const connectSocket = useNotificationStore((s) => s.connectSocket);
@@ -62,20 +63,45 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(
+        let currentToken = token;
+        let res = await fetch(
           `http://localhost:8080/api/v1/chat/search?q=${encodeURIComponent(searchQuery)}`,
           {
             method: "GET",
             credentials: "include",
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${currentToken}` }
           }
         );
 
         if (res.ok) {
           const data = await res.json();
-          const users = Array.isArray(data) ? data : [];
-          setSearchResults(users);
-          setShowResults(true);
+          
+          // Handle token refresh
+          if (data.code === 'TOKEN_REFRESHED' && data.accessToken) {
+            setToken(data.accessToken);
+            currentToken = data.accessToken;
+            
+            // Retry with new token
+            res = await fetch(
+              `http://localhost:8080/api/v1/chat/search?q=${encodeURIComponent(searchQuery)}`,
+              {
+                method: "GET",
+                credentials: "include",
+                headers: { Authorization: `Bearer ${currentToken}` }
+              }
+            );
+            
+            if (res.ok) {
+              const retryData = await res.json();
+              const users = Array.isArray(retryData) ? retryData : [];
+              setSearchResults(users);
+              setShowResults(true);
+            }
+          } else {
+            const users = Array.isArray(data) ? data : [];
+            setSearchResults(users);
+            setShowResults(true);
+          }
         }
       } catch (err) {
         console.error("Search failed:", err);

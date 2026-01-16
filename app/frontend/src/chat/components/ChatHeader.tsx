@@ -1,11 +1,13 @@
 import { CircleEllipsis, PanelLeftOpen } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
+import { useNotificationStore } from "../../notification/store/useNotificationStroe";
 
 export default function ChatHeader({
   toggleSidebar,
   toggleHistory,
 }: any) {
-  const { selectedContact, onlineUsers } = useChatStore();
+  const { selectedContact } = useChatStore();
+  const onlineUsers = useNotificationStore((s) => s.onlineUsers);
   
   return (
     <div className="flex h-16 justify-between items-center px-4 md:px-6 py-4 border-b-2 border-[#27445E]">

@@ -164,7 +164,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   fetchNotifications: async () => {
-    const { token } = UseTokenStore.getState();
+    const { token, setToken } = UseTokenStore.getState();
     const { loginId } = get();
 
     if (!token || !loginId) return;
@@ -172,10 +172,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/notifications`, {
+      let currentToken = token;
+      let response = await fetch(`${API_URL}/api/v1/notifications`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${currentToken}`
         },
         credentials: "include",
       });
@@ -184,7 +185,29 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         throw new Error(`Failed to fetch notifications: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      let data = await response.json();
+      
+      // Handle token refresh
+      if (data.code === 'TOKEN_REFRESHED' && data.accessToken) {
+        setToken(data.accessToken);
+        currentToken = data.accessToken;
+        
+        // Retry with new token
+        response = await fetch(`${API_URL}/api/v1/notifications`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${currentToken}`
+          },
+          credentials: "include",
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+        }
+        
+        data = await response.json();
+      }
+      
       const notifications: Notification[] = Array.isArray(data) ? data : [];
       const unseenCount = notifications.filter((n) => !n.read).length;
 

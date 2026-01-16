@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
+import { useNotificationStore } from "../../notification/store/useNotificationStroe";
 import { toast } from "react-toastify";
 import { UseTokenStore } from "../../userAuth/zustand/useStore";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +25,8 @@ interface ContactsListProps {
 }
 
 export default function ContactsList({ closeSidebar, menuOpen }: ContactsListProps) {
-  const { contacts, selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, fetchContacts } = useChatStore();
+  const { contacts, selectedContact, setSelectedContact, setMessages, loginId, unseenMessageCounts, fetchContacts } = useChatStore();
+  const onlineUsers = useNotificationStore((s) => s.onlineUsers);
   const { token} = UseTokenStore();
   const navigate = useNavigate();
 
