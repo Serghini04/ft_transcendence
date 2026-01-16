@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import {db} from "./plugins/game.db";
 import gameSocket from "./plugins/game.socket";
 import { kafkaProducerService } from "./kafka/producer";
+import { kafkaConsumerService } from "./kafka/consumer";
 import tournamentRoutes from "./routes/tournament.routes";
 
 const app = Fastify({
@@ -219,24 +220,31 @@ app.get("/api/v1/game/history/:userId/:opponentId", async (request, reply) => {
 const start = async () => {
   try {
     // Seed test users if they don't exist (will be replaced by Kafka consumer in production)
-    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-    if (userCount.count === 0) {
-      console.log("🌱 Seeding test users...");
-      const insertUser = db.prepare(`
-        INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, 0)
-      `);
+    // const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    // if (userCount.count === 0) {
+    //   console.log("🌱 Seeding test users...");
+    //   const insertUser = db.prepare(`
+    //     INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, 0)
+    //   `);
 
-      insertUser.run("1", "skarim", "/src/assets/images/profiles/skarim.png");
-      insertUser.run("2", "meserghi", "/src/assets/images/profiles/meserghi.png");
-      insertUser.run("3", "souaouri", "/src/assets/images/profiles/souaouri.png");
-      insertUser.run("4", "hidriouc", "/src/assets/images/profiles/hidriouc.png");
-      console.log("✅ Test users seeded successfully");
-    } else {
-      console.log(`ℹ️  Users table already has ${userCount.count} users`);
-    }
+    //   insertUser.run("1", "skarim", "/src/assets/images/profiles/skarim.png");
+    //   insertUser.run("2", "meserghi", "/src/assets/images/profiles/meserghi.png");
+    //   insertUser.run("3", "souaouri", "/src/assets/images/profiles/souaouri.png");
+    //   insertUser.run("4", "hidriouc", "/src/assets/images/profiles/hidriouc.png");
+    //   console.log("✅ Test users seeded successfully");
+    // } else {
+    //   console.log(`ℹ️  Users table already has ${userCount.count} users`);
+    // }
 
+    // Connect Kafka producer
     await kafkaProducerService.connect();
     app.log.info("Kafka producer connected successfully");
+    
+    // Connect and start Kafka consumer
+    await kafkaConsumerService.connect();
+    await kafkaConsumerService.subscribe();
+    await kafkaConsumerService.startConsuming();
+    app.log.info("Kafka consumer started successfully");
     
     await app.listen({ port: 3005, host: "0.0.0.0" });
     app.log.info("🎮 Game Service running at http://0.0.0.0:3005");
@@ -247,3 +255,18 @@ const start = async () => {
 };
 
 start();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully...');
+  await kafkaConsumerService.disconnect();
+  await kafkaProducerService.disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('🛑 SIGINT received, shutting down gracefully...');
+  await kafkaConsumerService.disconnect();
+  await kafkaProducerService.disconnect();
+  process.exit(0);
+});

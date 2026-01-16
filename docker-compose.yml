@@ -481,7 +481,7 @@ services:
     image: user_auth
     container_name: user_auth
     volumes:
-      - user-auth-data:/app/db
+      - ./app/backend/services/userAuth/src/db:/app/db
     ports:
       - "3004:3004"
     environment:
@@ -513,4 +513,3 @@ volumes:
   grafana-data:
   elasticsearch-data:
   tictac-data:
-  user-auth-data:
