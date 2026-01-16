@@ -544,7 +544,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 credentials: 'include',
             });
             if (response.ok) {
-                const contacts = await response.json();
+                const data = await response.json();
+                const contacts = Array.isArray(data) ? data : [];
                 set({ contacts });
                 get().initializeUnseenCounts(contacts);
                 

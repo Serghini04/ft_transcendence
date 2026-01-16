@@ -110,24 +110,24 @@ export function setupSocketGateway(app: FastifyInstance) {
       transports: ["websocket"],
     });
 
-    gameSocket.on("connect", () => app.log.info(`🔗 Game socket connected for user ${user.id}`));
-    gameSocket.on("connect_error", (err) => app.log.error({ err }, `❌ Game socket connect_error for user ${user.id}`));
-    gameSocket.on("error", (err) => app.log.error({ err }, `❌ Game socket error for user ${user.id}`));
+    gameSocket.on("connect", () => app.log.info(`Game socket connected for user ${user.id}`));
+    gameSocket.on("connect_error", (err) => app.log.error({ err }, `Game socket connect_error for user ${user.id}`));
+    gameSocket.on("error", (err) => app.log.error({ err }, `Game socket error for user ${user.id}`));
 
     socket.onAny((event, ...args) => {
-      app.log.info(`📤 [User ${user.id}] -> game event: ${String(event)}`);
+      app.log.info(`[User ${user.id}] -> game event: ${String(event)}`);
       gameSocket.emit(event, ...args);
     });
 
     gameSocket.onAny((event, ...args) => {
-      app.log.info(`📥 [game -> User ${user.id}] event: ${String(event)}`);
+      app.log.info(`[game -> User ${user.id}] event: ${String(event)}`);
       socket.emit(event, ...args);
     });
 
     socket.on("disconnect", () => gameSocket.disconnect());
   });
 
-  app.log.info("✅ Socket.IO Gateway initialized on path /socket.io");
+  app.log.info("Socket.IO Gateway initialized on path /socket.io");
 
   const notifNamespace = io.of("/notification");
   

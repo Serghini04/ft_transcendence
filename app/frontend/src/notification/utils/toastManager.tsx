@@ -7,6 +7,10 @@ interface ToastOptions {
   message: string;
   type: "message" | "friend_request" | "game" | "default";
   autoHideDuration?: number;
+  metadata?: {
+    senderId?: number;
+    senderName?: string;
+  };
 }
 
 class ToastManager {
@@ -33,6 +37,7 @@ class ToastManager {
         type={options.type}
         onClose={handleClose}
         autoHideDuration={options.autoHideDuration}
+        metadata={options.metadata}
       />
     );
 

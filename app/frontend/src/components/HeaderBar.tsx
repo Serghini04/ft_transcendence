@@ -73,7 +73,8 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
 
         if (res.ok) {
           const data = await res.json();
-          setSearchResults(data);
+          const users = Array.isArray(data) ? data : [];
+          setSearchResults(users);
           setShowResults(true);
         }
       } catch (err) {

@@ -37,13 +37,11 @@ const start = async () => {
     await app.listen({ port: 3003, host: '0.0.0.0' });
     app.log.info("Chat Service running at http://0.0.0.0:3003");
     
-    // Connect Kafka producer with retry logic
     try {
       await kafkaProducerService.connect();
       app.log.info("Kafka producer connected successfully");
     } catch (error) {
       app.log.error({ err: error }, "Failed to connect Kafka producer, will retry in background");
-      // Retry in background
       setTimeout(async () => {
         try {
           await kafkaProducerService.connect();
@@ -54,7 +52,6 @@ const start = async () => {
       }, 10000);
     }
     
-    // Connect and start Kafka consumer with retry logic
     try {
       await kafkaConsumerService.connect();
       await kafkaConsumerService.subscribe();
@@ -62,7 +59,6 @@ const start = async () => {
       app.log.info("Kafka consumer started successfully");
     } catch (error) {
       app.log.error({ err: error }, "Failed to start Kafka consumer, will retry in background");
-      // Retry in background
       setTimeout(async () => {
         try {
           await kafkaConsumerService.connect();

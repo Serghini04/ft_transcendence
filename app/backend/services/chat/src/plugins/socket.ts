@@ -149,27 +149,26 @@ const socketPlugin = fp(async (fastify: FastifyInstance) => {
           }
         } catch (kafkaError) {
           fastify.log.error(`Failed to publish Kafka notification: ${kafkaError}`);
-          // Don't fail the message send if Kafka fails
         }
 
         // Emit to receiver if online
         const receiverOnline = isUserOnline(receiverUserId);
-        fastify.log.info(`📤 Emitting message to receiver ${receiverUserId} (online: ${receiverOnline})`);
+        fastify.log.info(`Emitting message to receiver ${receiverUserId} (online: ${receiverOnline})`);
         
         if (receiverOnline) {
           chatNS.to(`user_${receiverUserId}`).emit("message:receive", finalMessageData);
-          fastify.log.info(`✅ message:receive emitted to user_${receiverUserId}`);
+          fastify.log.info(`message:receive emitted to user_${receiverUserId}`);
         } else {
-          fastify.log.info(`⚠️ Receiver ${receiverUserId} is offline, message not emitted`);
+          fastify.log.info(`Receiver ${receiverUserId} is offline, message not emitted`);
         }
 
         // Emit confirmation to sender
-        fastify.log.info(`📤 Emitting message:sent confirmation to sender ${userIdNum}`);
+        fastify.log.info(`Emitting message:sent confirmation to sender ${userIdNum}`);
         chatNS.to(`user_${userIdNum}`).emit("message:sent", {
           ...finalMessageData,
           isSender: true
         });
-        fastify.log.info(`✅ message:sent emitted to user_${userIdNum}`);
+        fastify.log.info(`message:sent emitted to user_${userIdNum}`);
 
       } catch (error) {
         socket.emit("message:error", { 

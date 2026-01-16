@@ -69,7 +69,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 }
 
 interface NotificationItemProps {
-  notification: Notification;
+  notification: Notification & { metadata?: { senderId?: number; senderName?: string } };
 }
 
 function NotificationItem({ notification }: NotificationItemProps) {

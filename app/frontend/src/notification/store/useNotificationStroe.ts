@@ -29,6 +29,7 @@ type NotificationStore = {
   markAllAsRead: () => Promise<void>;
   markAsRead: (notificationId: number) => Promise<void>;
   addNotification: (notification: Notification) => void;
+  removeNotification: (notificationId: number) => void;
 
   clearError: () => void;
 };
@@ -98,7 +99,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       set({ onlineUsers: new Set(ids) });
     });
 
-    socket.on("notification:new", (notification: Notification) => {
+    socket.on("notification:new", (notification: Notification & { metadata?: { senderId?: number; senderName?: string } }) => {
       get().addNotification(notification);
 
       // Map notification type to toast type
@@ -120,7 +121,8 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         title: notification.title,
         message: notification.message,
         type: getNotificationType(notification.type),
-        autoHideDuration: 5000,
+        autoHideDuration: notification.type === 'friend_request' ? undefined : 5000,
+        metadata: notification.metadata,
       });
     });
 
@@ -182,7 +184,8 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         throw new Error(`Failed to fetch notifications: ${response.statusText}`);
       }
 
-      const notifications: Notification[] = await response.json();
+      const data = await response.json();
+      const notifications: Notification[] = Array.isArray(data) ? data : [];
       const unseenCount = notifications.filter((n) => !n.read).length;
 
       set({
@@ -275,6 +278,19 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set({
       notifications: [notification, ...notifications],
       unseenNotifications: notification.read ? unseenNotifications : unseenNotifications + 1,
+    });
+  },
+
+  removeNotification: (notificationId: number) => {
+    const { notifications, unseenNotifications } = get();
+    const notification = notifications.find((n) => n.id === notificationId);
+    const updatedNotifications = notifications.filter((n) => n.id !== notificationId);
+    
+    set({
+      notifications: updatedNotifications,
+      unseenNotifications: notification && !notification.read 
+        ? Math.max(0, unseenNotifications - 1)
+        : unseenNotifications,
     });
   },
 

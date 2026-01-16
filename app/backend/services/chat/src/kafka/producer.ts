@@ -1,7 +1,7 @@
 import { Kafka, Producer } from "kafkajs";
 
-const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
-const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "chat-service";
+const KAFKA_BROKER = "kafka:9092";
+const KAFKA_CLIENT_ID = "chat-service";
 
 export interface NotificationEvent {
   userId: number;
@@ -59,12 +59,12 @@ export class KafkaProducerService {
 
   async publishNotification(event: NotificationEvent): Promise<void> {
     if (!this.isConnected) {
-      console.error("❌ Cannot publish notification: Producer not connected");
+      console.error("Cannot publish notification: Producer not connected");
       return;
     }
 
     try {
-      console.log("📤 Publishing notification to Kafka topic 'notifications':", event);
+      console.log("Publishing notification to Kafka topic 'notifications':", event);
       await this.producer.send({
         topic: "notifications",
         messages: [
@@ -77,9 +77,9 @@ export class KafkaProducerService {
           },
         ],
       });
-      console.log(`✅ Notification event published successfully for user ${event.userId}`);
+      console.log(`Notification event published successfully for user ${event.userId}`);
     } catch (error) {
-      console.error("❌ Failed to publish notification event:", error);
+      console.error("Failed to publish notification event:", error);
       throw error;
     }
   }
@@ -99,6 +99,40 @@ export class KafkaProducerService {
     console.log(`Publishing notification event:`, event);
     await this.publishNotification(event);
   }
+
+  async publishFriendRequestNotification(recipientId: number, senderName: string, senderId: number, timestamp: Date | string): Promise<void> {
+    const event: NotificationEvent = {
+      userId: recipientId,
+      title: `Friend Request`,
+      message: `${senderName} sent you a friend request`,
+      type: "friend_request",
+      timestamp: timestamp instanceof Date ? timestamp.toISOString() : timestamp,
+      showNotifications: true,
+    };
+
+    // Add metadata for friend request
+    await this.producer.send({
+      topic: "notifications",
+      messages: [
+        {
+          key: recipientId.toString(),
+          value: JSON.stringify({
+            ...event,
+            metadata: {
+              senderId,
+              senderName
+            }
+          }),
+          headers: {
+            "event-type": "notification.friend_request",
+          },
+        },
+      ],
+    });
+    
+    console.log(`Friend request notification published for user ${recipientId} from ${senderName}`);
+  }
 }
 
 export const kafkaProducerService = new KafkaProducerService();
+

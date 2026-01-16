@@ -1,9 +1,9 @@
 import { Kafka, Consumer, EachMessagePayload } from "kafkajs";
 import { db } from "../plugins/chat.db";
 
-const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
-const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "chat-service";
-const KAFKA_GROUP_ID = process.env.KAFKA_GROUP_ID || "chat-service-group";
+const KAFKA_BROKER = "kafka:9092";
+const KAFKA_CLIENT_ID = "chat-service";
+const KAFKA_GROUP_ID = "chat-service-group";
 
 interface UserEvent {
   userId: string;
@@ -40,9 +40,9 @@ export class KafkaConsumerService {
     try {
       await this.consumer.connect();
       this.isConnected = true;
-      console.log("✅ Kafka consumer connected successfully");
+      console.log("Kafka consumer connected successfully");
     } catch (error) {
-      console.error("❌ Failed to connect Kafka consumer:", error);
+      console.error("Failed to connect Kafka consumer:", error);
       throw error;
     }
   }
@@ -62,9 +62,9 @@ export class KafkaConsumerService {
   async subscribe(): Promise<void> {
     try {
       await this.consumer.subscribe({ topics: ["UserCreated", "userUpdated"], fromBeginning: true });
-      console.log("📬 Subscribed to topics: UserCreated, userUpdated");
+      console.log("Subscribed to topics: UserCreated, userUpdated");
     } catch (error) {
-      console.error("❌ Failed to subscribe to topics:", error);
+      console.error("Failed to subscribe to topics:", error);
       throw error;
     }
   }
@@ -78,7 +78,7 @@ export class KafkaConsumerService {
             if (!value) return;
 
             const event: UserEvent = JSON.parse(value);
-            console.log(`📥 Received event from topic '${topic}':`, event);
+            console.log(`Received event from topic '${topic}':`, event);
 
             if (topic === "UserCreated") {
               await this.handleUserCreated(event);
@@ -86,21 +86,21 @@ export class KafkaConsumerService {
               await this.handleUserUpdated(event);
             }
           } catch (error) {
-            console.error(`❌ Error processing message from topic '${topic}':`, error);
+            console.error(`Error processing message from topic '${topic}':`, error);
           }
         },
       });
 
-      console.log("🎧 Kafka consumer is now listening for events...");
+      console.log("Kafka consumer is now listening for events...");
     } catch (error) {
-      console.error("❌ Failed to start consuming messages:", error);
+      console.error("Failed to start consuming messages:", error);
       throw error;
     }
   }
 
   private async handleUserCreated(event: UserEvent): Promise<void> {
     try {
-      console.log(`🆕 Handling UserCreated event for user ${event.userId}`);
+      console.log(`Handling UserCreated event for user ${event.userId}`);
 
       const insertUser = db.prepare(`
         INSERT OR IGNORE INTO users (id, full_name, avatar_url, bg_photo_url, bio, profileVisibility, showNotifications)
@@ -118,19 +118,19 @@ export class KafkaConsumerService {
       );
 
       if (result.changes > 0) {
-        console.log(`✅ User ${event.userId} created in chat database`);
+        console.log(`User ${event.userId} created in chat database`);
       } else {
-        console.log(`ℹ️  User ${event.userId} already exists in chat database`);
+        console.log(`User ${event.userId} already exists in chat database`);
       }
     } catch (error) {
-      console.error(`❌ Failed to handle UserCreated event:`, error);
+      console.error(`Failed to handle UserCreated event:`, error);
       throw error;
     }
   }
 
   private async handleUserUpdated(event: UserEvent): Promise<void> {
     try {
-      console.log(`🔄 Handling UserUpdated event for user ${event.userId}`);
+      console.log(`Handling UserUpdated event for user ${event.userId}`);
 
       const updateUser = db.prepare(`
         UPDATE users
@@ -155,14 +155,13 @@ export class KafkaConsumerService {
       );
 
       if (result.changes > 0) {
-        console.log(`✅ User ${event.userId} updated in chat database`);
+        console.log(`User ${event.userId} updated in chat database`);
       } else {
-        console.log(`⚠️  User ${event.userId} not found in chat database, creating new record`);
-        // If user doesn't exist, create it
+        console.log(`User ${event.userId} not found in chat database, creating new record`);
         await this.handleUserCreated(event);
       }
     } catch (error) {
-      console.error(`❌ Failed to handle UserUpdated event:`, error);
+      console.error(`Failed to handle UserUpdated event:`, error);
       throw error;
     }
   }

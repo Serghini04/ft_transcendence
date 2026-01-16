@@ -1,5 +1,6 @@
-import { MessageCircle, Users, Gamepad2, Bell, X } from "lucide-react";
+import { MessageCircle, Users, Gamepad2, Bell, X, Check } from "lucide-react";
 import { useEffect, useState } from "react";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 
 interface NotificationToastProps {
   id: string;
@@ -8,6 +9,10 @@ interface NotificationToastProps {
   type: "message" | "friend_request" | "game" | "default";
   onClose: () => void;
   autoHideDuration?: number;
+  metadata?: {
+    senderId?: number;
+    senderName?: string;
+  };
 }
 
 export function NotificationToast({ 
@@ -17,12 +22,18 @@ export function NotificationToast({
   type,
   onClose, 
   autoHideDuration = 5000,
+  metadata,
 }: NotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [progress, setProgress] = useState(100);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const token = UseTokenStore((s) => s.token);
+  const setToken = UseTokenStore((s) => s.setToken);
 
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 10);
+
+    if (!autoHideDuration) return;
 
     const hideTimer = setTimeout(() => {
       handleClose();
@@ -81,6 +92,50 @@ export function NotificationToast({
 
   const styles = getTypeStyles();
 
+  const handleFriendRequestAction = async (action: 'accept' | 'reject') => {
+    if (!metadata?.senderId || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const endpoint = action === 'accept' 
+        ? `/api/v1/chat/friends/accept/${metadata.senderId}`
+        : `/api/v1/chat/friends/reject/${metadata.senderId}`;
+
+      let currentToken = token;
+      let res = await fetch(`http://localhost:8080${endpoint}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Authorization: `Bearer ${currentToken}` }
+      });
+
+      // Handle token refresh
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Check if response is token refresh
+        if (data.code === 'TOKEN_REFRESHED' && data.accessToken) {
+          setToken(data.accessToken);
+          currentToken = data.accessToken;
+          
+          // Retry the request with new token
+          res = await fetch(`http://localhost:8080${endpoint}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${currentToken}` }
+          });
+        }
+        
+        if (res.ok) {
+          handleClose();
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to ${action} friend request:`, err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div
       data-toast-id={id}
@@ -93,12 +148,14 @@ export function NotificationToast({
       `}
     >
       {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700/30 rounded-b-xl overflow-hidden">
-        <div
-          className={`h-full ${styles.progressBg} transition-all duration-100 ease-linear`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      {autoHideDuration && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700/30 rounded-b-xl overflow-hidden">
+          <div
+            className={`h-full ${styles.progressBg} transition-all duration-100 ease-linear`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
 
       <div className="p-4">
         <div className="flex items-start gap-3">
@@ -115,6 +172,28 @@ export function NotificationToast({
             <p className="text-white/90 text-sm leading-relaxed">
               {message}
             </p>
+
+            {/* Friend Request Actions */}
+            {type === 'friend_request' && metadata?.senderId && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => handleFriendRequestAction('accept')}
+                  disabled={isProcessing}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Check size={14} />
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleFriendRequestAction('reject')}
+                  disabled={isProcessing}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <X size={14} />
+                  Reject
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Close Button */}

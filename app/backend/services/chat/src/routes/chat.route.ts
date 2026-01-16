@@ -44,4 +44,49 @@ export default async function chatRoutes(fastify: FastifyInstance) {
             })
         }
     }, chatController.unblockUser);
+
+    // Friend request endpoints
+    fastify.post("/friends/request/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.sendFriendRequest);
+
+    fastify.post("/friends/accept/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.acceptFriendRequest);
+
+    fastify.post("/friends/reject/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.rejectFriendRequest);
+
+    fastify.get("/friends/pending", chatController.getPendingRequests);
+
+    fastify.get("/friends", chatController.getFriends);
+
+    fastify.delete("/friends/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.removeFriend);
+
+    fastify.get("/friendship/status/:id", {
+        schema: {
+            params: Type.Object({
+                id: Type.Integer({minimum:1})
+            })
+        }
+    }, chatController.getFriendshipStatus);
 }

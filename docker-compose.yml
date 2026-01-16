@@ -82,6 +82,8 @@ services:
       dockerfile: Dockerfile
     image: chat-service
     container_name: chat-service
+    volumes:
+      - ./infra/data/chat:/app/db
     ports:
       - "3003:3003"
     environment:
@@ -438,7 +440,7 @@ services:
     image: user_auth
     container_name: user_auth
     volumes:
-      - ./backend/services/userauth/db:/app/db
+      - ./infra/data/user_auth:/app/db
     ports:
       - "3004:3004"
     environment:
@@ -503,3 +505,5 @@ volumes:
   vault-data:
   vault-logs:
   vault-config:
+  chat-data:
+  userauth-data:

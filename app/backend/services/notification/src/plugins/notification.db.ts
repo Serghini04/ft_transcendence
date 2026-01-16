@@ -9,6 +9,7 @@ db.exec(`
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         type TEXT NOT NULL,
+        metadata TEXT,
         read INTEGER DEFAULT 0,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP
     );

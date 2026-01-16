@@ -15,6 +15,10 @@ export interface NotificationEvent {
   type: string;
   timestamp: string;
   showNotifications?: boolean;
+  metadata?: {
+    senderId?: number;
+    senderName?: string;
+  };
 }
 
 export class KafkaConsumerService {
@@ -53,7 +57,7 @@ export class KafkaConsumerService {
       console.log("Starting consumer run...");
       await this.consumer.run({
         eachMessage: async (payload: EachMessagePayload) => {
-          console.log("🎯 eachMessage handler called!");
+          console.log("eachMessage handler called!");
           await this.handleMessage(payload);
         },
       });
@@ -97,7 +101,8 @@ export class KafkaConsumerService {
         eventData.userId,
         eventData.title,
         eventData.message,
-        eventData.type
+        eventData.type,
+        eventData.metadata
       );
 
       console.log(`Notification saved to database for user ${eventData.userId}`);
@@ -111,8 +116,14 @@ export class KafkaConsumerService {
       }
       else if (socketIds && socketIds.size > 0) {
         const notificationNS = this.io.of("/notification");
+        
+        // Add metadata to notification if it's a friend request
+        const notificationPayload = eventData.type === 'friend_request' && eventData.metadata
+          ? { ...notification, metadata: eventData.metadata }
+          : notification;
+        
         socketIds.forEach(socketId => {
-          notificationNS.to(socketId).emit("notification:new", notification);
+          notificationNS.to(socketId).emit("notification:new", notificationPayload);
         });
         console.log(`Toast notification sent to online user ${eventData.userId} (${socketIds.size} socket(s))`);
       }
