@@ -1,6 +1,6 @@
 
 import { Outlet } from "react-router-dom";
-import { UseTokenStore } from "../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../userAuth/zustand/useStore";
 import { useNavigate } from "react-router-dom";
 import { useEffect} from "react";
 import isValidToken from "../globalUtils/isValidToken";

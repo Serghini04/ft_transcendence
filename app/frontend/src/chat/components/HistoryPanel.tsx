@@ -1,7 +1,7 @@
 import { CircleX, RotateCcw, Sword, UserX, UserCheck } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useState, useEffect } from "react";
-import { UseUserStore, UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseUserStore, UseTokenStore } from "../../userAuth/zustand/useStore";
 import { useChatToast } from "../hooks/useChatToast";
 
 

@@ -4,8 +4,8 @@ import ModifyUserInformation from "./ModifyUserInformation";
 import PhotosSide from "./PhotosSide";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import verifyToken from "../../../globalUtils/verifyToken";
-import bgPhoto from "../../../assets/images/profileBG.png"
-import profilePhoto from "../../../assets/images/breakingbad1.jpg"
+import bgPhoto from "../../../../public/backgroundPhoto.png";
+import profilePhoto from "../../../../public/breakingbad1.jpg";
 
 export default function Settings() {
   const { user } = UseUserStore();
@@ -19,6 +19,7 @@ export default function Settings() {
     showNotifications: true,
     bio: ""
   });
+ 
   useEffect(() => {
     async function fetchUserData() {
       try {

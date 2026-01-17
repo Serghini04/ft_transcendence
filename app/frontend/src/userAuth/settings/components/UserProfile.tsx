@@ -1,5 +1,6 @@
 import { useEffect, useRef} from "react";
 import { UseimageDataUrlStore, UsephotosFileStore } from "../../zustand/useStore";
+import profilePhoto from "../../../../public/breakingbad1.jpg";
 
 export default function UserProfile(props: {profilePhoto: string}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -8,7 +9,7 @@ export default function UserProfile(props: {profilePhoto: string}) {
 
   useEffect(() => {
       if (props.profilePhoto) {
-        setProfileImageDataUrl(`https://localhost/${props.profilePhoto}`);
+        setProfileImageDataUrl(props.profilePhoto);
       }
     }, [props.profilePhoto]);
   const handleProfileClick = (e: React.MouseEvent) => {
@@ -39,7 +40,7 @@ export default function UserProfile(props: {profilePhoto: string}) {
 
       <div
       style={{
-        backgroundImage: profileImageDataUrl ? `url(${profileImageDataUrl})` : "none",
+        backgroundImage: profileImageDataUrl ? `url(${profileImageDataUrl})` : `url(${profilePhoto})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
