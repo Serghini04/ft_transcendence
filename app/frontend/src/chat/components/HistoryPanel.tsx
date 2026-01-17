@@ -85,11 +85,17 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
           {/* Avatar Section */}
           <div className="flex flex-col mt-16 items-center space-y-3">
             <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-600">
-              <img
-                src="/user.png"
-                alt="User avatar"
-                className="w-full h-full object-cover"
-              />
+              {selectedContact?.avatarUrl ? (
+                <img
+                  src={selectedContact.avatarUrl}
+                  alt={`${selectedContact.user.fullName}'s Avatar`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold text-4xl">
+                  {selectedContact?.user.fullName?.[0] || '?'}
+                </div>
+              )}
             </div>
             <div className="text-center">
               <h2 className="text-xl font-semibold">{selectedContact?.user.fullName}</h2>

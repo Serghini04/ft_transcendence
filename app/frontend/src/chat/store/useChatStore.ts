@@ -14,6 +14,7 @@ type ContactUser = {
 type Contact = {
     id: number;
     user: ContactUser;
+    avatarUrl: string;
     unseenMessages: number;
     blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
@@ -545,7 +546,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             });
             if (response.ok) {
                 const data = await response.json();
-                const contacts = Array.isArray(data) ? data : [];
+                const contacts = Array.isArray(data) ? data.map((contact: any) => ({
+                    ...contact,
+                    avatarUrl: contact.avatarUrl || contact.user?.avatarUrl || ''
+                })) : [];
                 set({ contacts });
                 get().initializeUnseenCounts(contacts);
                 
