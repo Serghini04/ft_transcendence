@@ -1,4 +1,5 @@
 import { Forward } from "lucide-react";
+import watlerPhoto from "../../../../public/walterDashboard.png";
 
 
 export default function LaunchTheGame() {
@@ -41,7 +42,7 @@ export default function LaunchTheGame() {
               </div>
             </div>
           </div>
-          <img src="/public/walterDashboard.png" alt="photo" className="hidden xl:block xl:absolute xl:left-96 xl:top-[-5.1rem] xl:w-[550px] xl:h-[600px]" />
+          <img src={watlerPhoto} alt="photo" className="hidden xl:block xl:absolute xl:left-96 xl:top-[-5.1rem] xl:w-[550px] xl:h-[600px]" />
         </div>
       </div>
     </div>

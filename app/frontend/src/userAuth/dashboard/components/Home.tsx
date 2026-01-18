@@ -52,7 +52,7 @@ export default function Home() {
       >
       <div className="w-full flex flex-col gap-8 pb-8 pt-4 px-4 md:px-6 items-center xl:items-start">
         {/* Two Column Grid Layout - 35% left, 65% right on XL screens */}
-        <div className="grid grid-cols-1 xl:grid-cols-[63%_35%] gap-8 w-full xl:w-auto max-w-full xl:max-w-none">
+        <div className="grid grid-cols-1 xl:grid-cols-[63%_35%] gap-12 w-full xl:w-auto max-w-full xl:max-w-none">
           {/* Row 1 Left - Hero Section */}
           <LaunchTheGame />
           

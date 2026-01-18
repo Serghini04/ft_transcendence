@@ -14,7 +14,7 @@ export default function WeeklyLevel() {
   const maxValue = 100;
 
   return (
-    <div className="w-full xl:h-6 xl:mt-[-7rem]">
+    <div className="w-full xl:h-6 xl:mt-[-6.2rem]">
       <div className="rounded-2xl p-6 bg-[rgba(68,78,106,0.3)] border border-white/10 shadow-xl backdrop-blur-md">
         <h2 className="text-white text-lg font-semibold  mb-6 xl:mb-76">Weekly Level</h2>
         
@@ -33,17 +33,18 @@ export default function WeeklyLevel() {
               const ticTacToeHeight = (day.ticTacToe / maxValue) * 100;
 
               return (
-                <div key={index} className="flex flex-col items-center gap-2 flex-1">
+                 <div
+                  key={index}
+                  className="flex flex-col items-center gap-2 flex-1 min-w-0"
+                >
                   {/* Bars container */}
-                  <div className="flex gap-1 items-end h-48 w-full justify-center">
-                    {/* PingPong bar */}
+                  <div className="flex items-end gap-1 h-48 w-full justify-center">
                     <div
-                      className="w-3 bg-gradient-to-t from-amber-400 to-amber-300 rounded-t transition-all duration-500 hover:opacity-80"
+                      className="w-[clamp(10px,1vw,12px)] bg-gradient-to-t from-amber-400 to-amber-300 rounded-t"
                       style={{ height: `${pingPongHeight}%` }}
                     />
-                    {/* TicTacToe bar */}
                     <div
-                      className="w-3 bg-gradient-to-t from-cyan-400 to-cyan-300 rounded-t transition-all duration-500 hover:opacity-80"
+                      className="w-[clamp(10px,1vw,12px)] bg-gradient-to-t from-cyan-400 to-cyan-300 rounded-t"
                       style={{ height: `${ticTacToeHeight}%` }}
                     />
                   </div>

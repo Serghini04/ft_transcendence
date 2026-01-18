@@ -45,6 +45,45 @@ export default function Profile()
       const [error, setError] = useState<string | null>(null);
       
       useEffect(() => {
+        async function fetchUserStatistic() {
+          // Don't fetch if token is not available
+          if (!token || !profileUserId) {
+            console.log("Waiting for token or profileUserId...");
+            return;
+          }
+
+          try {
+            const res = await fetch(`http://localhost:8080/api/v1/leaderboard/player/${profileUserId}`, {
+              method: "GET",
+              headers: { 
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              credentials: "include",
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+              if (res.status === 404) {
+                console.log("Player has no leaderboard stats yet");
+              } else if (res.status === 401) {
+                console.error("Authentication error:", data);
+              } else {
+                console.error(`Error ${res.status}:`, data);
+              }
+              return;
+            }
+            
+            console.log("USER STATS DATA: ", data);
+          } catch (err) {
+            console.error("Error fetching user statistics:", err);
+          }
+        }
+        fetchUserStatistic();
+      }, [profileUserId, token]);
+
+      useEffect(() => {
         // Skip fetch if validation failed
         if (!isValidPath || !isValidId || (id && isNaN(profileUserId))) {
             return;
