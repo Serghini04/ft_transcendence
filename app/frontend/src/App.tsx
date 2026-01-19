@@ -20,6 +20,7 @@ import GameSelection from './TicTac/GameSelection';
 import TicTac from './TicTac/TicTac';
 import OnlineTicTac from './TicTac/OnlineTicTac';
 import Profile from './userAuth/profile/components/Profile';
+import NotFound from './components/NotFound';
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -52,6 +53,9 @@ export default function App() {
             <Route path="/SecondGame" element={<GameSelection />} />
             <Route path="/tictac" element={<TicTac />} />
             <Route path="/tictac/online" element={<OnlineTicTac />} />
+            
+            {/* Catch all - 404 Not Found */}
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </Router>
