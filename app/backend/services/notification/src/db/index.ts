@@ -13,7 +13,19 @@ await db.exec(`
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     type TEXT NOT NULL,
+    metadata TEXT,
     read INTEGER DEFAULT 0,
     createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Add metadata column if it doesn't exist (migration)
+try {
+  await db.exec(`ALTER TABLE notifications ADD COLUMN metadata TEXT;`);
+  console.log("✅ Added metadata column to notifications table");
+} catch (error: any) {
+  // Column already exists, ignore error
+  if (!error.message?.includes("duplicate column name")) {
+    console.error("Error adding metadata column:", error.message);
+  }
+}
