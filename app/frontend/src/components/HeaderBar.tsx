@@ -201,7 +201,10 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
         <NotificationBell />
 
         {/* Avatar */}
-        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-white transition-all cursor-pointer">
+        <div 
+          onClick={() => navigate(`/profile/${userId}`)}
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-white transition-all cursor-pointer"
+        >
           <img src="/user.png" alt="User avatar" className="w-full h-full object-cover" />
         </div>
 

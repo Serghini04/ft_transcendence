@@ -7,7 +7,8 @@ import {
   LogOut,
  
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { UseTokenStore } from "../userAuth/zustand/useStore";
 
 function TicTacCombinedIcon({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
@@ -25,6 +26,14 @@ interface SideMenuProps {
 
 export default function SideMenu({ open, onClose }: SideMenuProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const setToken = UseTokenStore((s) => s.setToken);
+
+  const handleLogout = () => {
+    setToken("");
+    onClose();
+    navigate("/auth");
+  };
 
   return (
     <>
@@ -37,7 +46,10 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
       )}
 
       {/* --- Logo Bar (Always visible) --- */}
-      <div className="fixed top-0 left-0 h-20 w-20 bg-[rgba(13,34,52,0.65)] flex flex-col items-center justify-center z-30 backdrop-blur-md border-r border-white/10 shadow-lg">
+      <div 
+        onClick={() => navigate("/")}
+        className="fixed top-0 left-0 h-20 w-20 bg-[rgba(13,34,52,0.65)] flex flex-col items-center justify-center z-30 backdrop-blur-md border-r border-white/10 shadow-lg cursor-pointer hover:bg-[rgba(13,34,52,0.85)] transition-all"
+      >
         <img
           src="/logo.png"
           alt="Logo"
@@ -92,7 +104,14 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
         {/* Logout Section */}
         <div className="w-full flex flex-col items-center mt-4 mb-6">
           <div className="w-10 border-t border-gray-700 mb-3"></div>
-          <NavItem icon={<LogOut size={32} />} color="#FF4C4C" to="/auth" onClick={onClose} />
+          <button
+            onClick={handleLogout}
+            className="group relative flex items-center justify-center w-full cursor-pointer bg-transparent border-none outline-none"
+          >
+            <div className="transition-all duration-300 transform text-gray-400 group-hover:text-[#FF4C4C] group-hover:scale-110 group-hover:rotate-6">
+              <LogOut size={32} />
+            </div>
+          </button>
         </div>
       </aside>
   </>
