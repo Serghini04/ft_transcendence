@@ -1,6 +1,5 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import dotenv from "dotenv";
 import {authMiddleware} from "./middleware/auth.middleware";
 import { chatService } from "./services/chat.service";
 import { setupSocketGateway } from "./utils/socket.gateway";
@@ -9,8 +8,8 @@ import cookie from "@fastify/cookie";
 import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
 import { tictacService } from "./services/tictac.service";
-
-dotenv.config();
+import { vaultClient } from "./utils/vault.client";
+let secrets: any = null;
 
 const app = Fastify({
   logger: {
@@ -22,42 +21,53 @@ const app = Fastify({
   },
 });
 
-app.log.info({
-  hasJwtSecret: !!process.env.JWT_SECRET,
-  hasJwtRefresh: !!process.env.JWT_REFRESH,
-  hasCookieSecret: !!process.env.COOKIE_SECRET,
-}, "🔐 Environment variables loaded");
+async function initializeApp() {
+  try {
+    secrets = await vaultClient.loadSecrets();
+    
+    app.log.info({
+      hasJwtSecret: !!secrets.JWT_SECRET,
+      hasJwtRefresh: !!secrets.JWT_REFRESH,
+      hasCookieSecret: !!secrets.COOKIE_SECRET,
+      hasInternalSecret: !!secrets.INTERNAL_SECRET_KEY,
+    }, "Secrets loaded from Vault");
 
-app.register(cors, {
-  origin: (origin, cb) => {
-    // Allow all origins in development
-    if (!origin) {
-      cb(null, true);
-    } else {
-      cb(null, true);
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
-  exposedHeaders: ["Set-Cookie"],
-  maxAge: 86400, // Cache preflight for 24 hours
-});
+    app.register(cors, {
+      origin: (origin, cb) => {
+        if (!origin) {
+          cb(null, true);
+        } else {
+          cb(null, true);
+        }
+      },
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+      allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
+      exposedHeaders: ["Set-Cookie"],
+      maxAge: 86400,
+    });
 
-app.register(cookie, {
-  secret: process.env.COOKIE_SECRET || "super-secret", 
-  hook: "onRequest"
-});
+    app.register(cookie, {
+      secret: secrets.COOKIE_SECRET, 
+      hook: "onRequest"
+    });
+  } catch (error: any) {
+    app.log.error('Failed to initialize with Vault secrets:', error.message);
+  }
+}
 
 
 app.addHook("preHandler", authMiddleware);
-app.register(tictacService); // Register first to handle /api/* (non-v1) routes
-app.register(chatService);
 app.register(userAuthService);
+app.register(tictacService);
+app.register(chatService);
 app.register(gameService);
 app.register(NotificationService);
+
 const start = async () => {
   try {
+
+    await initializeApp();    
     await setupSocketGateway(app);
     await app.listen({ port: 8080, host: "0.0.0.0" });
     app.log.info("API Gateway running at http://localhost:8080");
@@ -68,3 +78,5 @@ const start = async () => {
 };
 
 start();
+
+export { secrets };

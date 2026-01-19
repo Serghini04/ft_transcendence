@@ -71,8 +71,8 @@ export interface DBGame {
 }
 
 export interface DBUser {
-  id: string;
-  username: string;
+  userId: string;
+  name: string;
   rating: number;
   created_at: number;
 }

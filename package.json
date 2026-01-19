@@ -1,5 +1,10 @@
 {
+<<<<<<< HEAD
   "dependencies": {
     "kafkajs": "^2.2.4"
+=======
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.4"
+>>>>>>> 8506c0268e6b9e0ef91f4a484ac5459128588916
   }
 }

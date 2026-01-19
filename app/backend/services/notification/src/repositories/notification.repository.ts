@@ -6,7 +6,7 @@ export class NotificationRepository {
 
   getUserNotifications(userId: number): Notification[] {
     const stmt = this.db.prepare(`
-      SELECT id, userId, title, message, read, createdAt
+      SELECT id, userId, title, message, type, metadata, read, createdAt
       FROM notifications
       WHERE userId = ?
       ORDER BY createdAt DESC;
@@ -16,6 +16,7 @@ export class NotificationRepository {
     return rows.map((row: any) => ({
       ...row,
       read: !!row.read,
+      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
     })) as Notification[];
   }
 
@@ -40,17 +41,18 @@ export class NotificationRepository {
     return row.count;
   }
 
-  createNotification(userId: number, title: string, message: string, type: string = 'message'): Notification {
+  createNotification(userId: number, title: string, message: string, type: string = 'message', metadata?: any): Notification {
+    const metadataStr = metadata ? JSON.stringify(metadata) : null;
     const stmt = this.db.prepare(`
-      INSERT INTO notifications (userId, title, message, type, read, createdAt)
-      VALUES (?, ?, ?, ?, 0, datetime('now'))
+      INSERT INTO notifications (userId, title, message, type, metadata, read, createdAt)
+      VALUES (?, ?, ?, ?, ?, 0, datetime('now'))
     `);
 
-    const result = stmt.run(userId, title, message, type);
+    const result = stmt.run(userId, title, message, type, metadataStr);
     const notificationId = result.lastInsertRowid as number;
 
     const getStmt = this.db.prepare(`
-      SELECT id, userId, title, message, type, read, createdAt
+      SELECT id, userId, title, message, type, metadata, read, createdAt
       FROM notifications
       WHERE id = ?
     `);
@@ -59,6 +61,7 @@ export class NotificationRepository {
     return {
       ...row,
       read: !!row.read,
+      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
     } as Notification;
   }
 }

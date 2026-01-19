@@ -1,28 +1,29 @@
 
-export type UserStatus = 'online' | 'offline' | string;
-
 export class User{
     id: number;
     fullName: string;
-    username: string;
-    status: UserStatus;
     avatarUrl: string;
+    bgPhotoUrl: string;
+    bio: string;
+    showNotifications: boolean;
 
-    constructor(id: number, fullName: string, username: string, status: UserStatus, avatarUrl: string) {
+    constructor(id: number, fullName: string, avatarUrl: string, bgPhotoUrl: string, bio: string, showNotifications: boolean) {
         this.id = id;
         this.fullName = fullName;
-        this.username = username;
-        this.status = status;
         this.avatarUrl = avatarUrl;
+        this.bgPhotoUrl = bgPhotoUrl;
+        this.bio = bio;
+        this.showNotifications = showNotifications;
     }
 
     toJSON() {
         return {
             id: this.id,
             fullName: this.fullName,
-            username: this.username,
-            status: this.status,
-            avatarUrl: this.avatarUrl
+            avatarUrl: this.avatarUrl,
+            bgPhotoUrl: this.bgPhotoUrl,
+            bio: this.bio,
+            showNotifications: this.showNotifications
         };
     }
 }

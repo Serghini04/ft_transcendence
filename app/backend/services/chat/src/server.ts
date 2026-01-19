@@ -4,6 +4,7 @@ import { db } from "./plugins/chat.db";
 import chatRoutes from "./routes/chat.route";
 import socketPlugin from "./plugins/socket";
 import { kafkaProducerService } from "./kafka/producer";
+import { kafkaConsumerService } from "./kafka/consumer";
 
 
 const app = Fastify({
@@ -34,9 +35,42 @@ app.register(chatRoutes, { prefix: "/api/v1/chat"});
 const start = async () => {
   try {
     await app.listen({ port: 3003, host: '0.0.0.0' });
-    await kafkaProducerService.connect();
-    app.log.info("Kafka producer connected successfully");
     app.log.info("Chat Service running at http://0.0.0.0:3003");
+    
+    try {
+      await kafkaProducerService.connect();
+      app.log.info("Kafka producer connected successfully");
+    } catch (error) {
+      app.log.error({ err: error }, "Failed to connect Kafka producer, will retry in background");
+      setTimeout(async () => {
+        try {
+          await kafkaProducerService.connect();
+          app.log.info("Kafka producer reconnected successfully");
+        } catch (retryError) {
+          app.log.error({ err: retryError }, "Kafka producer retry failed");
+        }
+      }, 10000);
+    }
+    
+    try {
+      await kafkaConsumerService.connect();
+      await kafkaConsumerService.subscribe();
+      await kafkaConsumerService.startConsuming();
+      app.log.info("Kafka consumer started successfully");
+    } catch (error) {
+      app.log.error({ err: error }, "Failed to start Kafka consumer, will retry in background");
+      setTimeout(async () => {
+        try {
+          await kafkaConsumerService.connect();
+          await kafkaConsumerService.subscribe();
+          await kafkaConsumerService.startConsuming();
+          app.log.info("Kafka consumer reconnected successfully");
+        } catch (retryError) {
+          app.log.error({ err: retryError }, "Kafka consumer retry failed");
+        }
+      }, 10000);
+    }
+    
   } catch (err) {
     app.log.error(err);
     process.exit(1);

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { TicTacAPI, type User } from "./services/api";
 import { useOnlineGame } from "./hooks/useOnlineGame";
 import TicTacGame from "./TicTacGame";
-import { UseUserStore } from "../userAuth/LoginAndSignup/zustand/useStore";
+import { UseUserStore } from "../userAuth/zustand/useStore";
 
 const OnlineTicTac = ({ isSidebarOpen }: { isSidebarOpen?: boolean }) => {
 

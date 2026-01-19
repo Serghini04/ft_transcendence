@@ -4,9 +4,9 @@ import { Server } from "socket.io";
 import Database from "better-sqlite3";
 import { userSockets } from "../plugins/socket";
 
-const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
-const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "notification-service";
-const KAFKA_GROUP_ID = process.env.KAFKA_GROUP_ID || "notification-service-group";
+const KAFKA_BROKER = "kafka:9092";
+const KAFKA_CLIENT_ID = "notification-service";
+const KAFKA_GROUP_ID = "notification-service-group";
 
 export interface NotificationEvent {
   userId: number;
@@ -14,6 +14,11 @@ export interface NotificationEvent {
   message: string;
   type: string;
   timestamp: string;
+  showNotifications?: boolean;
+  metadata?: {
+    senderId?: number;
+    senderName?: string;
+  };
 }
 
 export class KafkaConsumerService {
@@ -52,7 +57,7 @@ export class KafkaConsumerService {
       console.log("Starting consumer run...");
       await this.consumer.run({
         eachMessage: async (payload: EachMessagePayload) => {
-          console.log("🎯 eachMessage handler called!");
+          console.log("eachMessage handler called!");
           await this.handleMessage(payload);
         },
       });
@@ -96,7 +101,8 @@ export class KafkaConsumerService {
         eventData.userId,
         eventData.title,
         eventData.message,
-        eventData.type
+        eventData.type,
+        eventData.metadata
       );
 
       console.log(`Notification saved to database for user ${eventData.userId}`);
@@ -105,10 +111,19 @@ export class KafkaConsumerService {
       
       if (eventData.type === 'challenge')
         console.log(`Challenge notification stored in DB for user ${eventData.userId}, skipping toast (handled by game socket)`);
+      else if (eventData.showNotifications === false) {
+        console.log(`User ${eventData.userId} has notifications muted, notification stored but toast not sent`);
+      }
       else if (socketIds && socketIds.size > 0) {
         const notificationNS = this.io.of("/notification");
+        
+        // Add metadata to notification if it's a friend request
+        const notificationPayload = eventData.type === 'friend_request' && eventData.metadata
+          ? { ...notification, metadata: eventData.metadata }
+          : notification;
+        
         socketIds.forEach(socketId => {
-          notificationNS.to(socketId).emit("notification:new", notification);
+          notificationNS.to(socketId).emit("notification:new", notificationPayload);
         });
         console.log(`Toast notification sent to online user ${eventData.userId} (${socketIds.size} socket(s))`);
       }

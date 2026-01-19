@@ -8,7 +8,6 @@ export async function chatService(app: FastifyInstance) {
     upstream: "http://chat-service:3003",
     prefix: "/api/v1/chat",
     rewritePrefix: "/api/v1/chat",
-    // http2: false,
     
     preHandler: async (req: FastifyRequest, reply: FastifyReply) => {
       req.headers["x-user-id"] = String(req.user?.id);

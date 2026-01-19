@@ -6,11 +6,38 @@ import MessagesArea from "./MessagesArea";
 import InputBar from "./InputBar";
 import { useChatStore } from "../store/useChatStore";
 import HistoryPanel from "./HistoryPanel";
-import { UseTokenStore } from "../../userAuth/LoginAndSignup/zustand/useStore";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
+import isValidToken from "../../globalUtils/isValidToken";
+import { useNavigate } from "react-router-dom";
 
-export default function ChatPage() {
+interface ChatPageProps {
+  menuOpen: boolean;
+}
+
+export default function ChatPage({ menuOpen }: ChatPageProps) {
   const { userId } = UseTokenStore();
   const { connectSocket, disconnectSocket } = useChatStore();
+  const navigate = useNavigate();
+  const { token, setToken } = UseTokenStore();
+
+  useEffect(() => {
+    async function check() {
+      console.error("token", token);
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+
+        navigate("/auth");
+      }
+      
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
+
+    }
+
+    check();
+  }, [token, navigate]);
 
   useEffect(() => {
     if (userId)
@@ -60,20 +87,29 @@ export default function ChatPage() {
   const historyPanelId = "chat-history-panel";
 
   return (
-    <div
-      className="
+    <div className="relative w-full min-h-screen">
+      <div
+        className="
         fixed
         bg-[rgba(15,26,36,0.5)]
         mt-20
-        md:ml-30
-        md:border-l-2 border-t-2
-        md:rounded-tl-4xl
+        md:ml-30 ml-[-5rem]
+        border-l-2 md:border-l-2 border-t-2
+        rounded-tl-4xl
         border-[#27445E]
         inset-0
         flex
-        overflow-hidden
       "
-    >
+      >
+        <div 
+          className={`
+            flex-1
+            flex
+            overflow-hidden
+            transition-all duration-500 ease-in-out
+            ${menuOpen ? "ml-40 md:ml-0" : "ml-20 md:ml-0"}
+          `}
+        >
       {/* Mobile Overlay for Left Sidebar */}
       {isSidebarOpen && (
         <div
@@ -92,9 +128,10 @@ export default function ChatPage() {
           flex flex-col
           border-r-2 border-[#27445E]
           bg-[rgba(15,26,36,0.98)] md:bg-transparent
-          transform transition-transform duration-300 ease-in-out
+          transform transition-all duration-500 ease-in-out
           z-50 md:z-auto
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          ${menuOpen ? "ml-20 md:ml-0" : "ml-0"}
         `}
       >
         {/* Header */}
@@ -114,7 +151,7 @@ export default function ChatPage() {
         </div>
 
         {/* Chat List */}
-        <ContactsList closeSidebar={closeSidebar} />
+        <ContactsList closeSidebar={closeSidebar} menuOpen={menuOpen} />
       </aside>
 
       {/* MAIN CHAT AREA */}
@@ -149,6 +186,8 @@ export default function ChatPage() {
         isHistoryOpen={isHistoryOpen}
         toggleHistory={toggleHistory}
       />
+        </div>
+      </div>
     </div>
   );
 }

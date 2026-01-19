@@ -1,10 +1,10 @@
 
 
+
 export async function isValidToken(token: string | null): Promise<{ valid: boolean; newToken: string | null }> {
   if (!token) 
     return { valid: false, newToken: null };
   
-  console.log(token);
   const res = await fetch("http://localhost:8080/api/v1/auth/protect", {
     method: "GET",
     credentials: "include",

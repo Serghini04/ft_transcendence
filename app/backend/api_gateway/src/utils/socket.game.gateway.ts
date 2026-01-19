@@ -4,6 +4,7 @@ import { io as ClientIO } from "socket.io-client";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
 import { parse as parseCookie } from "cookie";
 import { generateJwtAccessToken } from "../middleware/auth.middleware";
+import { secrets } from "../server";
 
 export function setupGameSocketGateway(app: FastifyInstance) {
   const io = new Server(app.server, {
@@ -14,10 +15,7 @@ export function setupGameSocketGateway(app: FastifyInstance) {
     },
     transports: ["polling", "websocket"],
   });
-
-  // ----------------------
-  // AUTH LAYER
-  // ----------------------
+  
   io.use(async (socket, next) => {
     try {
       let accessToken = socket.handshake.auth?.token;
@@ -33,7 +31,7 @@ export function setupGameSocketGateway(app: FastifyInstance) {
         // Verify access token
         const decoded = jwt.verify(
           accessToken,
-          process.env.JWT_SECRET!
+          secrets.JWT_SECRET!
         );
 
         socket.data.user = decoded;
@@ -47,8 +45,8 @@ export function setupGameSocketGateway(app: FastifyInstance) {
           try {
             const decodedRefresh = jwt.verify(
               refreshToken,
-              process.env.JWT_REFRESH!
-            );
+              secrets.JWT_REFRESH!
+            ) as any;
 
             const newAccessToken = generateJwtAccessToken({
               id: decodedRefresh.id,
@@ -77,12 +75,12 @@ export function setupGameSocketGateway(app: FastifyInstance) {
     const user = socket.data.user;
 
     if (!user) {
-      app.log.error("❌ No user data in socket");
+      app.log.error("No user data in socket");
       socket.disconnect();
       return;
     }
 
-    app.log.info(`🔌 User ${user.id} connected via Gateway (${user.email})`);
+    app.log.info(`User ${user.id} connected via Gateway (${user.email})`);
 
     // Connect to chat microservice
     const gameSocket = ClientIO("http://localhost:3005", {
@@ -96,42 +94,40 @@ export function setupGameSocketGateway(app: FastifyInstance) {
     });
 
     gameSocket.on("connect", () => {
-      app.log.info(`✅ Connected to game service for user: ${user.id}`);
+      app.log.info(`Connected to game service for user: ${user.id}`);
     });
 
     gameSocket.on("connect_error", (error) => {
-      app.log.error({ err: error }, `❌ game service connection error for user ${user.id}`);
+      app.log.error({ err: error }, `game service connection error for user ${user.id}`);
       socket.emit("service_error", { message: "game service unavailable" });
     });
 
     gameSocket.on("disconnect", (reason) => {
-      app.log.info(`❌ game service disconnected for user ${user.id}: ${reason}`);
+      app.log.info(`game service disconnected for user ${user.id}: ${reason}`);
     });
 
     // Forward all events from client to chat service
     socket.onAny((event, ...args) => {
-      app.log.debug(`📤 [User ${user.id}] Forwarding to chat: ${event}`);
       gameSocket.emit(event, ...args);
     });
 
     // Forward all events from chat service to client
     gameSocket.onAny((event, ...args) => {
-      app.log.debug(`📥 [User ${user.id}] Forwarding to client: ${event}`);
       socket.emit(event, ...args);
     });
 
     // Handle client disconnection
     socket.on("disconnect", (reason) => {
-      app.log.info(`❌ User ${user.id} disconnected: ${reason}`);
+      app.log.info(`User ${user.id} disconnected: ${reason}`);
       gameSocket.removeAllListeners();
       gameSocket.disconnect();
     });
 
     // Handle errors
     socket.on("error", (error) => {
-      app.log.error({ err: error }, `❌ Socket error for user ${user.id}`);
+      app.log.error({ err: error }, `Socket error for user ${user.id}`);
     });
   });
 
-  app.log.info("✅ Socket.IO Gateway initialized on path /socket.io");
+  app.log.info("Socket.IO Gateway initialized on path /socket.io");
 }

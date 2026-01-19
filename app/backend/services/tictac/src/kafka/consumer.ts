@@ -6,15 +6,15 @@ const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "tictac-service";
 const KAFKA_GROUP_ID = process.env.KAFKA_GROUP_ID || "tictac-service-group";
 
 export interface UserCreatedEvent {
-  id: string;
-  username: string;
+  userId: string;
+  name: string;
   email?: string;
   createdAt: string;
 }
 
 export interface UserUpdatedEvent {
-  id: string;
-  username?: string;
+  userId: string;
+  name?: string;
   email?: string;
   updatedAt: string;
 }
@@ -47,9 +47,9 @@ export class KafkaConsumerService {
       console.log("Connecting Kafka consumer...");
       await this.consumer.connect();
       
-      console.log("Subscribing to 'userCreated' 'userUpdated' topic...");
+      console.log("Subscribing to 'UserCreated' 'userUpdated' topic...");
       await this.consumer.subscribe({ 
-        topic: "userCreated", 
+        topic: "UserCreated", 
         fromBeginning: false
       });
       await this.consumer.subscribe({ 
@@ -65,7 +65,7 @@ export class KafkaConsumerService {
       });
 
       this.isConnected = true;
-      console.log("Kafka consumer connected and listening to topics: userCreated, userUpdated, userDeleted");
+      console.log("Kafka consumer connected and listening to topics: userCreated, userUpdated");
     } catch (error) {
       console.error("Failed to connect Kafka consumer:", error);
       throw error;
@@ -97,7 +97,7 @@ export class KafkaConsumerService {
 
       const event = JSON.parse(message.value.toString());
       
-      if (!event || typeof event !== 'object' || !event.id) {
+      if (!event || typeof event !== 'object' || !event.userId) {
         console.error(`Invalid event structure from topic ${topic}:`, event);
         return;
       }
@@ -105,7 +105,7 @@ export class KafkaConsumerService {
       console.log(`Processing event from ${topic}:`, event);
       
       switch (topic) {
-        case "userCreated":
+        case "UserCreated":
           await this.handleUserCreated(event as UserCreatedEvent);
           break;
         case "userUpdated":
@@ -121,21 +121,21 @@ export class KafkaConsumerService {
 
   private async handleUserCreated(event: UserCreatedEvent): Promise<void> {
     try {
-      const { id, username } = event;
+      const { userId, name } = event;
       
-      if (!username) {
-        console.error(`Cannot create user ${id}: missing username`);
+      if (!name) {
+        console.error(`Cannot create user ${userId}: missing username`);
         return;
       }
       
-      const existingUser = UserModel.findById(id);
+      const existingUser = UserModel.findById(userId);
       if (existingUser) {
-        console.log(`User ${id} already exists, skipping creation`);
+        console.log(`User ${userId} already exists, skipping creation`);
         return;
       }
 
       // Create the user in tictac database
-      const user = UserModel.create(id, username);
+      const user = UserModel.create(userId, name);
       console.log(`User created in tictac service:`, user);
     } catch (error) {
       console.error("Error handling user-created event:", error);
@@ -144,28 +144,28 @@ export class KafkaConsumerService {
 
   private async handleUserUpdated(event: UserUpdatedEvent): Promise<void> {
     try {
-      const { id, username } = event;
+      const { userId, name } = event;
       
       // Check if user exists
-      const existingUser = UserModel.findById(id);
+      const existingUser = UserModel.findById(userId);
       
       if (!existingUser) {
         // If user doesn't exist, create them
-        if (username) {
-          const user = UserModel.create(id, username);
+        if (name) {
+          const user = UserModel.create(userId, name);
           console.log(`User created (from update event) in tictac service:`, user);
         } else {
-          console.warn(`Cannot create user ${id} from update event: missing username`);
+          console.warn(`Cannot create user ${userId} from update event: missing username`);
         }
         return;
       }
 
       // Update username if provided
-      if (username && username !== existingUser.username) {
-        UserModel.updateUsername(id, username);
-        console.log(`User ${id} username updated to: ${username}`);
+      if (name && name !== existingUser.name) {
+        UserModel.updateUsername(userId, name);
+        console.log(`User ${userId} username updated to: ${name}`);
       } else {
-        console.log(`User ${id} already up to date`);
+        console.log(`User ${userId} already up to date`);
       }
     } catch (error) {
       console.error("Error handling user-updated event:", error);
