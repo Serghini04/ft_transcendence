@@ -20,14 +20,14 @@ up:
 	docker-compose up -d
 
 up-dev:
-	docker-compose up -d frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game zookeeper kafka user_auth vault
+	docker-compose up -d frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game kafka user_auth vault
 
 up-ops:
 	docker-compose up -d prometheus grafana alertmanager node-exporter elasticsearch logstash kibana filebeat kafka-ui
 
 down-dev:
-	docker-compose stop frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game zookeeper kafka user_auth
-	docker-compose rm -f frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game zookeeper kafka user_auth
+	docker-compose stop frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game kafka user_auth
+	docker-compose rm -f frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game kafka user_auth
 
 down-ops:
 	docker-compose stop prometheus grafana alertmanager node-exporter elasticsearch logstash kibana filebeat kafka-ui
