@@ -11,6 +11,13 @@ export type Notification = {
   message: string;
   read: boolean;
   createdAt: Date;
+  metadata?: {
+    invitationId?: number;
+    tournamentId?: string;
+    inviterName?: string;
+    tournamentName?: string;
+    status?: 'pending' | 'accepted' | 'declined';
+  };
 };
 
 type NotificationStore = {
@@ -29,6 +36,7 @@ type NotificationStore = {
   markAllAsRead: () => Promise<void>;
   markAsRead: (notificationId: number) => Promise<void>;
   addNotification: (notification: Notification) => void;
+  updateNotificationMetadata: (invitationId: number, status: 'accepted' | 'declined') => void;
 
   clearError: () => void;
 };
@@ -117,6 +125,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
             return {
               icon: "🎮",
               background: "linear-gradient(to right, #112434, #0d2234)",
+            };
+          case "tournament_invite":
+            return {
+              icon: "🏆",
+              background: "linear-gradient(to right, #0C7368, #0A5B52)",
             };
           default:
             return {
@@ -255,38 +268,18 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   markAsRead: async (notificationId: number) => {
-    const { token } = UseTokenStore.getState();
-    const { loginId } = get();
+    // For now, just update locally without calling API
+    // Tournament invitations are handled by accept/decline actions
+    const { notifications } = get();
+    const updated = notifications.map((n) =>
+      n.id === notificationId ? { ...n, read: true } : n
+    );
+    const unseenCount = updated.filter((n) => !n.read).length;
 
-    if (!token || !loginId)
-        return;
-
-    try {
-      const response = await fetch(`${API_URL}/api/v1/notifications/${notificationId}/read`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok)
-        throw new Error("Failed to mark notification as read");
-
-      const { notifications } = get();
-      const updated = notifications.map((n) =>
-        n.id === notificationId ? { ...n, read: true } : n
-      );
-      const unseenCount = updated.filter((n) => !n.read).length;
-
-      set({
-        notifications: updated,
-        unseenNotifications: unseenCount,
-      });
-    } catch (error) {
-      console.error("Error marking as read:", error);
-      set({ error: error instanceof Error ? error.message : "Failed to mark as read" });
-    }
+    set({
+      notifications: updated,
+      unseenNotifications: unseenCount,
+    });
   },
 
   addNotification: (notification: Notification) => {
@@ -299,6 +292,25 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       notifications: [notification, ...notifications],
       unseenNotifications: notification.read ? unseenNotifications : unseenNotifications + 1,
     });
+  },
+
+  updateNotificationMetadata: (invitationId: number, status: 'accepted' | 'declined') => {
+    const { notifications } = get();
+    
+    const updated = notifications.map((n) => {
+      if (n.type === 'tournament_invite' && n.metadata?.invitationId === invitationId) {
+        return {
+          ...n,
+          metadata: {
+            ...n.metadata,
+            status
+          }
+        };
+      }
+      return n;
+    });
+
+    set({ notifications: updated });
   },
 
   clearError: () => set({ error: null }),

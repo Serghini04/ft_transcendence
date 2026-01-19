@@ -207,3 +207,117 @@ export const deleteTournament = async (
 
   return response.json();
 };
+
+/**
+ * Get user's friends
+ */
+export const getUserFriends = async (userId: string): Promise<{ 
+  success: boolean; 
+  friends: Array<{ id: string; username: string; avatar_url: string }> 
+}> => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/friends`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch friends');
+  }
+
+  return response.json();
+};
+
+/**
+ * Invite a friend to tournament
+ */
+export const inviteFriendToTournament = async (
+  tournamentId: string,
+  userId: string,
+  friendId: string
+): Promise<{ 
+  success: boolean; 
+  message: string;
+}> => {
+  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/invite`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ userId, friendIds: [friendId] }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to invite friend');
+  }
+
+  return response.json();
+};
+
+/**
+ * Get user's tournament invitations
+ */
+export const getUserTournamentInvitations = async (userId: string): Promise<{
+  success: boolean;
+  invitations: Array<{
+    id: number;
+    tournament_id: string;
+    tournament_name: string;
+    inviter_name: string;
+    created_at: number;
+  }>;
+}> => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/tournament-invitations`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch invitations');
+  }
+
+  return response.json();
+};
+
+/**
+ * Accept tournament invitation
+ */
+export const acceptTournamentInvitation = async (
+  invitationId: number,
+  userId: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/tournament-invitations/${invitationId}/accept`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ userId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to accept invitation');
+  }
+
+  return response.json();
+};
+
+/**
+ * Decline tournament invitation
+ */
+export const declineTournamentInvitation = async (
+  invitationId: number,
+  userId: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/tournament-invitations/${invitationId}/decline`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ userId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to decline invitation');
+  }
+
+  return response.json();
+};
+

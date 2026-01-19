@@ -43,6 +43,12 @@ export default function TournamentBracket({
   const [opponent, setOpponent] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Invite friends modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [friends, setFriends] = useState<Array<{ id: string; username: string; avatar_url: string }>>([]);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
 
   // Fetch tournament bracket data
   useEffect(() => {
@@ -97,6 +103,51 @@ export default function TournamentBracket({
     
     return () => clearInterval(interval);
   }, [tournamentId]);
+
+  // Handle friend invitation
+  const handleInviteFriend = async () => {
+    if (!selectedFriendId) return;
+    
+    setInviting(true);
+    try {
+      const response = await tournamentAPI.inviteFriendToTournament(
+        tournamentId,
+        user.id.toString(),
+        selectedFriendId
+      );
+      
+      console.log('✅ Invited friend:', response);
+      
+      // Close modal and reset
+      setShowInviteModal(false);
+      setSelectedFriendId(null);
+    } catch (err) {
+      console.error('Error inviting friend:', err);
+      alert(err instanceof Error ? err.message : 'Failed to invite friend');
+    } finally {
+      setInviting(false);
+    }
+  };
+  
+  // Open invite modal when clicking on +
+  const handlePlusClick = async () => {
+    if (tournamentStatus !== 'waiting' || creatorId !== user.id.toString()) {
+      return; // Only creator can invite while waiting
+    }
+    
+    // Fetch friends
+    try {
+      const response = await tournamentAPI.getUserFriends(user.id.toString());
+      // Filter out friends who already joined
+      const joinedUserIds = new Set(players.map(p => p.id));
+      const availableFriends = response.friends.filter(f => !joinedUserIds.has(f.id));
+      setFriends(availableFriends);
+      setShowInviteModal(true);
+    } catch (err) {
+      console.error('Error fetching friends:', err);
+      alert('Failed to load friends list');
+    }
+  };
 
   // When tournament starts, find user's first match and opponent
   useEffect(() => {
@@ -227,21 +278,6 @@ export default function TournamentBracket({
     if (finalMatch) {
       leftFinalist = getPlayerById(finalMatch.player1_id);
       rightFinalist = getPlayerById(finalMatch.player2_id);
-    // } else {
-    //   // No final match yet - check if we have any Round 1 winners we can show
-    //   const round1Winners = round1Matches
-    //     .filter(m => m.winner_id)
-    //     .map(m => m.winner_id);
-      
-    //   console.log('� Round 1 winners so far:', round1Winners);
-      
-    //   // Show first winner on the left, second on the right (or TBD)
-    //   if (round1Winners.length > 0) {
-    //     leftFinalist = getPlayerById(round1Winners[0]);
-    //   }
-    //   if (round1Winners.length > 1) {
-    //     rightFinalist = getPlayerById(round1Winners[1]);
-    //   }
     }
     
     console.log('�🏆 Finalists found:', {
@@ -265,11 +301,22 @@ export default function TournamentBracket({
   }
 
   const renderPlayerSlot = (player?: Player, showPlus: boolean = true, isChampion: boolean = false, showTBD: boolean = false) => {
+    const isCreator = creatorId === user.id.toString();
+    const canInvite = !player && showPlus && tournamentStatus === 'waiting' && isCreator;
+    
     return (
       <div className="relative flex justify-center">
-        <div className={`${isChampion ? 'bg-teal-600/80 border-2 border-teal-400' : 'bg-slate-600/60'} text-white px-4 py-2 rounded-lg text-sm font-medium text-center w-[110px] h-[40px] flex items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap`}>
+        <div 
+          onClick={canInvite ? handlePlusClick : undefined}
+          className={`
+            ${isChampion ? 'bg-teal-600/80 border-2 border-teal-400' : 'bg-slate-600/60'} 
+            text-white px-4 py-2 rounded-lg text-sm font-medium text-center 
+            w-[110px] h-[40px] flex items-center justify-center 
+            overflow-hidden text-ellipsis whitespace-nowrap
+            ${canInvite ? 'cursor-pointer hover:bg-teal-600/40 hover:border-2 hover:border-teal-500/50 transition-all' : ''}
+          `}
+        >
           {player ? player.name : showPlus ? '+' : ''}
-          {/* {player ? player.name : showPlus ? '+' : showTBD ? 'TBD' : ''} */}
         </div>
       </div>
     );
@@ -572,6 +619,92 @@ export default function TournamentBracket({
               : 'Leave Tournament'}
           </button>
         </div>
+
+        {/* Invite Friends Modal */}
+        {showInviteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-slate-800 rounded-2xl border border-slate-600 p-6 w-full max-w-md mx-4">
+              <h2 className="text-2xl font-bold text-white mb-4">Invite a Friend</h2>
+              
+              {friends.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-400">No friends available to invite</p>
+                  <p className="text-slate-500 text-sm mt-2">
+                    {players.length >= maxPlayers 
+                      ? 'Tournament is full' 
+                      : 'All your friends may have already joined'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Select a friend to invite to this tournament
+                  </p>
+                  
+                  <div className="max-h-64 overflow-y-auto space-y-2 mb-6">
+                    {friends.map(friend => (
+                      <div
+                        key={friend.id}
+                        onClick={() => setSelectedFriendId(friend.id)}
+                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                          selectedFriendId === friend.id
+                            ? 'bg-teal-600/30 border-2 border-teal-500'
+                            : 'bg-slate-700/40 border-2 border-transparent hover:bg-slate-700/60'
+                        }`}
+                      >
+                        <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {friend.avatar_url ? (
+                            <img 
+                              src={friend.avatar_url.startsWith('/src/') 
+                                ? friend.avatar_url.replace('/src/', '/') 
+                                : friend.avatar_url} 
+                              alt={friend.username} 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }} 
+                            />
+                          ) : null}
+                          <span className={`text-sm text-white font-medium ${friend.avatar_url ? 'hidden' : ''}`}>
+                            {friend.username?.substring(0, 2).toUpperCase() || 'FR'}
+                          </span>
+                        </div>
+                        <span className="text-white font-medium flex-1">{friend.username}</span>
+                        {selectedFriendId === friend.id && (
+                          <svg className="w-5 h-5 text-teal-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setSelectedFriendId(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                {friends.length > 0 && (
+                  <button
+                    onClick={handleInviteFriend}
+                    disabled={!selectedFriendId || inviting}
+                    className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  >
+                    {inviting ? 'Inviting...' : 'Invite'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

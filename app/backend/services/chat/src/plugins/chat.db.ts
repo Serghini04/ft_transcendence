@@ -49,16 +49,27 @@ const userInsert = db.prepare(`
   INSERT OR IGNORE INTO users (id, full_name, username, status) VALUES (?, ?, ?, ?)
 `);
 
-const messageInsert = db.prepare(`
-  INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
-`);
+// const messageInsert = db.prepare(`
+//   INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
+// `);
 
-userInsert.run(1, "Mehdi Serghini", "meserghi", "online");
-userInsert.run(2, "King Ana", "king", "online");
+// userInsert.run(1, "Mehdi Serghini", "meserghi", "online");
+// userInsert.run(2, "King Ana", "king", "online");
 
+// relationshipsInsert.run(1, 2, 'friend');
+
+// messageInsert.run(1, 2, "hey, king!");
+// messageInsert.run(2, 1, "hey, Mehdi!");
+// messageInsert.run(2, 1, "how are you?");
+// messageInsert.run(1, 2, "I'm fine");
+
+// Seed users (will be synced from Kafka in production)
+userInsert.run(1, "User 1", "user1", "offline");
+userInsert.run(2, "User 2", "user2", "offline");
+userInsert.run(3, "User 3", "user3", "offline");
+userInsert.run(4, "User 4", "user4", "offline");
+
+// Make user1 friends with all other users
 relationshipsInsert.run(1, 2, 'friend');
-
-messageInsert.run(1, 2, "hey, king!");
-messageInsert.run(2, 1, "hey, Mehdi!");
-messageInsert.run(2, 1, "how are you?");
-messageInsert.run(1, 2, "I'm fine");
+relationshipsInsert.run(1, 3, 'friend');
+relationshipsInsert.run(1, 4, 'friend');

@@ -138,12 +138,75 @@ const createTables = (db: Database.Database) => {
     CREATE INDEX IF NOT EXISTS idx_matches_tournament ON tournament_matches(tournament_id);
     CREATE INDEX IF NOT EXISTS idx_matches_round ON tournament_matches(tournament_id, round);
   `);
+
+  // Relationships table (synced from chat service via Kafka)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS relationships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user1_id TEXT NOT NULL,
+      user2_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('friend', 'blocked', 'pending')),
+      blocked_by_user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user1_id, user2_id),
+      FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (blocked_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_relationships_user1 ON relationships(user1_id);
+    CREATE INDEX IF NOT EXISTS idx_relationships_user2 ON relationships(user2_id);
+    CREATE INDEX IF NOT EXISTS idx_relationships_type ON relationships(type);
+  `);
+
+  // Tournament invitations table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tournament_invitations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tournament_id TEXT NOT NULL,
+      inviter_id TEXT NOT NULL,
+      invitee_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'declined')),
+      created_at INTEGER NOT NULL,
+      responded_at INTEGER,
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+      UNIQUE(tournament_id, invitee_id)
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_invitations_tournament ON tournament_invitations(tournament_id);
+    CREATE INDEX IF NOT EXISTS idx_invitations_invitee ON tournament_invitations(invitee_id);
+    CREATE INDEX IF NOT EXISTS idx_invitations_status ON tournament_invitations(status);
+  `);
 };
 
 // Execute table creation
 createTables(db);
 console.log("✅ Database tables initialized (including tournaments)");
 
+// Seed relationships (user1 is friends with all others)
+// In production, this will be synced from chat service via Kafka
+const seedRelationships = () => {
+  const relationshipsInsert = db.prepare(`
+    INSERT OR IGNORE INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
+  `);
+  
+  // Make user1 friends with users 2, 3, and 4
+  relationshipsInsert.run('1', '2', 'friend');
+  relationshipsInsert.run('1', '3', 'friend');
+  relationshipsInsert.run('1', '4', 'friend');
+  
+  console.log("✅ Relationships seeded (user1 is friends with all others)");
+};
+
+// Only seed if there are no relationships yet
+const relationshipCount = db.prepare("SELECT COUNT(*) as count FROM relationships").get() as { count: number };
+if (relationshipCount.count === 0) {
+  seedRelationships();
+}
 
 // -------------------------
 // Game operations

@@ -98,6 +98,8 @@ services:
       - "3003:3003"
     environment:
       - KAFKA_BROKER=kafka:9092
+    volumes:
+      - ./app/backend/services/chat/src/db:/app/src/db
     depends_on:
       kafka:
         condition: service_healthy
