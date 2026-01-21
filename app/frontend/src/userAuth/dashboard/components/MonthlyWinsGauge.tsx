@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 
-export default function MonthlyWinsCard() {
-  const [wins, setWins] = useState(78);
-  const [percentageChange, setPercentageChange] = useState(48);
-  const [winRate, setWinRate] = useState(60);
+interface MonthlyWinsGaugeProps {
+  wins?: number;
+  totalGames?: number;
+}
+
+export default function MonthlyWinsCard({ wins = 0, totalGames = 0 }: MonthlyWinsGaugeProps) {
+  const percentageChange = 0;
+  const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
 
   // Gauge settings
   const radius = 80;

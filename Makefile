@@ -158,6 +158,11 @@ delete-all: stop-all
 	@docker rm -f $$(docker ps -aq) 2>/dev/null || echo "No containers to remove"
 	@echo "🗑️  Removing all Docker volumes..."
 	@docker volume rm $$(docker volume ls -q) 2>/dev/null || echo "No volumes to remove"
+	@echo "🗑️  Removing bind-mounted database files..."
+	@rm -rf ./app/backend/services/leaderboard/src/db/*.sqlite* 2>/dev/null || true
+	@rm -rf ./app/backend/services/userAuth/db/*.db 2>/dev/null || true
+	@rm -rf ./app/backend/services/userAuth/db/*.db-* 2>/dev/null || true
+	@echo "✅ Database files removed (leaderboard + userAuth)"
 	@echo "🗑️  Removing all Docker images..."
 	@docker rmi -f $$(docker images -q) 2>/dev/null || echo "No images to remove"
 	@echo "🗑️  Removing all Docker networks (except defaults)..."

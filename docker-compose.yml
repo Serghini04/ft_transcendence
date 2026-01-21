@@ -475,6 +475,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - uploads:/app/uploads
+      - userauth-data:/app/data
     image: user_auth
     container_name: user_auth
     ports:
@@ -507,3 +508,4 @@ volumes:
   elasticsearch-data:
   tictac-data:
   uploads:
+  userauth-data:

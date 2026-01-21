@@ -8,10 +8,7 @@ interface PlayerStatsProps {
 }
 // w-full max-w-3xl  mx-auto flex flex-col gap-4 p-4 pl-[6rem]
 export default function PlayerStats({ played, wins, losses }: PlayerStatsProps) {
-
-  played = 10;
-  wins = 7;
-  losses = 3;
+  // console.log("PlayerStats Props: ", { played, wins, losses });
   return (
     <motion.div
       transition={{ duration: 0.6 }}

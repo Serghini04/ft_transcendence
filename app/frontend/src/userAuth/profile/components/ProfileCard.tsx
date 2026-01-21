@@ -29,10 +29,9 @@ const rankGradient: Record<Rank, string> = {
 
 export default function ProfileCard(props: PlayerStatsProps) {
   let rank: Rank; // Example rank, this would be dynamic in a real app
-  props.wins = 3;
-  props.losses = 12;
   let total = props.wins + props.losses;
   let winRate = total > 0 ? (props.wins / total) * 100 : 0;
+  const level = (1 + (total * 0.02) + (props.wins * 0.03)).toFixed(1);
   switch (true) {
     case (winRate < 70): // Replace with actual condition for bronze
       rank = "bronze";
@@ -99,13 +98,13 @@ export default function ProfileCard(props: PlayerStatsProps) {
                 <div
                     className="h-full"
                     style={{
-                    width: "65%",
+                    width: `${Math.min(parseFloat(level) * 10, 100)}%`,
                     background: `linear-gradient(90deg, ${rankGradient[rank]})`,
                     }}
                 />
                 </div>
                 <span className="text-xs lg:text-sm text-gray-300 whitespace-nowrap">
-                level 9.2
+                level {level}
                 </span>
             </div>
             </div>

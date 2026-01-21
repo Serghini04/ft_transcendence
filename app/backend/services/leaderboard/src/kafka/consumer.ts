@@ -115,6 +115,7 @@ export class KafkaConsumerService {
                 event.player1Id,
                 player1IsWinner,
                 event.score1,
+                event.score2, // goals conceded by player1
                 Math.floor(event.createdAt / 1000)
               );
 
@@ -124,6 +125,7 @@ export class KafkaConsumerService {
                 event.player2Id,
                 player2IsWinner,
                 event.score2,
+                event.score1, // goals conceded by player2
                 Math.floor(event.createdAt / 1000)
               );
 

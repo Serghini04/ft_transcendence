@@ -1,21 +1,18 @@
 import { Gamepad2, Trophy, Users } from "lucide-react";
 
 interface ActivityProps {
-    pingPongMatchesPlayed?: number;
-    ticTacToeMatchesPlayed?: number;
-    pingPongGamesWon?: number;
-    ticTacToeGamesWon?: number;
-    challengesSent?: number;
-    challengesReceived?: number;
+    played?: number;
+    wins?: number;
+    losses?: number;
 }
 
-export default function Activity({pingPongMatchesPlayed, ticTacToeMatchesPlayed, pingPongGamesWon, ticTacToeGamesWon, challengesSent, challengesReceived}: ActivityProps) {
-    ticTacToeMatchesPlayed = 0;
-    pingPongMatchesPlayed = 4;
-    ticTacToeGamesWon = 2;
-    pingPongGamesWon = 3;
-    challengesSent = 5;
-    challengesReceived = 3;
+export default function Activity({played = 0, wins = 0, losses = 0}: ActivityProps) {
+    const ticTacToeMatchesPlayed = 0;
+    const pingPongMatchesPlayed = played;
+    const ticTacToeGamesWon = 0;
+    const pingPongGamesWon = wins;
+    const challengesSent = 0;
+    const challengesReceived = 0;
     return (
         <div className="w-full h-50">
             <div className="rounded-xl p-4 backdrop-blur-md shadow-xl bg-[rgba(68,78,106,0.3)]">

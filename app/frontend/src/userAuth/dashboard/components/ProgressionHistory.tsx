@@ -1,22 +1,130 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { authenticatedFetch } from "../../../globalUtils/authenticatedFetch";
 
-const monthlyData = [
-  { month: "Jan", value1: 30, value2: 25 },
-  { month: "Feb", value1: 45, value2: 35 },
-  { month: "Mar", value1: 35, value2: 50 },
-  { month: "Apr", value1: 55, value2: 45 },
-  { month: "May", value1: 40, value2: 60 },
-  { month: "Jun", value1: 70, value2: 55 },
-  { month: "Jul", value1: 50, value2: 40 },
-  { month: "Aug", value1: 65, value2: 70 },
-  { month: "Sep", value1: 75, value2: 60 },
-  { month: "Oct", value1: 60, value2: 80 },
-  { month: "Nov", value1: 85, value2: 75 },
-  { month: "Dec", value1: 70, value2: 85 },
-];
+interface DailyStats {
+  day: string;
+  scored: number;
+  conceded: number;
+}
 
-export default function ProgressionHistory() {
-  const maxValue = 100;
+interface ProgressionHistoryProps {
+  scored?: number;
+  conceded?: number;
+  totalGames?: number;
+}
+
+interface GameData {
+  id: number;
+  game_id: string;
+  mode: string;
+  player1_id: string;
+  player2_id: string;
+  winner_id: string;
+  score1: number;
+  score2: number;
+  created_at: number;
+}
+
+export default function ProgressionHistory({ scored = 0, conceded = 0, totalGames = 0 }: ProgressionHistoryProps) {
+  const { token } = UseTokenStore();
+  const { user } = UseUserStore();
+  
+  const [dailyData, setDailyData] = useState<DailyStats[]>([
+    { day: "Mon", scored: 0, conceded: 0 },
+    { day: "Tue", scored: 0, conceded: 0 },
+    { day: "Wed", scored: 0, conceded: 0 },
+    { day: "Thu", scored: 0, conceded: 0 },
+    { day: "Fri", scored: 0, conceded: 0 },
+    { day: "Sat", scored: 0, conceded: 0 },
+    { day: "Sun", scored: 0, conceded: 0 },
+  ]);
+
+  useEffect(() => {
+    async function fetchDailyGoals() {
+      if (!token || !user.id) {
+        console.log("⚠️ Missing token or user.id");
+        return;
+      }
+
+      console.log("🔄 Fetching games - Total games:", totalGames);
+
+      try {
+        const res = await authenticatedFetch(`http://localhost:8080/api/v1/leaderboard/player/${user.id}/games?limit=100`);
+        
+        const data = await res.json();
+
+        console.log("📊 Goals History - Full response:", data);
+        console.log("📊 Goals History - Games count:", data.count);
+        console.log("📊 Goals History - Games array length:", data.games?.length || 0);
+        
+        if (res.ok && data.games && Array.isArray(data.games)) {
+          const goalsPerDay = [
+            { day: "Mon", scored: 0, conceded: 0 },
+            { day: "Tue", scored: 0, conceded: 0 },
+            { day: "Wed", scored: 0, conceded: 0 },
+            { day: "Thu", scored: 0, conceded: 0 },
+            { day: "Fri", scored: 0, conceded: 0 },
+            { day: "Sat", scored: 0, conceded: 0 },
+            { day: "Sun", scored: 0, conceded: 0 },
+          ];
+          
+          const now = new Date();
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 7);
+          
+          console.log("📅 Date range:", sevenDaysAgo.toLocaleString(), "to", now.toLocaleString());
+          
+          let processedCount = 0;
+          data.games.forEach((game: GameData, index: number) => {
+            const gameDate = new Date(game.created_at);
+            
+            if (index === 0) {
+              console.log("🔍 First game full object:", game);
+              console.log("🔍 Game properties:", Object.keys(game));
+            }
+            
+            console.log(`🎮 Game ${game.id}: date=${gameDate.toLocaleString()}, in range=${gameDate >= sevenDaysAgo}`);
+            
+            if (gameDate >= sevenDaysAgo) {
+              processedCount++;
+              let dayOfWeek = gameDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+              const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0, Sun=6
+              
+              let userScore = 0;
+              let opponentScore = 0;
+              
+              // Convert to string for comparison
+              const userIdStr = String(user.id);
+              if (game.player1_id === userIdStr) {
+                userScore = game.score1;
+                opponentScore = game.score2;
+              } else if (game.player2_id === userIdStr) {
+                userScore = game.score2;
+                opponentScore = game.score1;
+              }
+              
+              console.log(`⚽ Game on ${goalsPerDay[dayIndex].day} - Scored: ${userScore} Conceded: ${opponentScore}`);
+              
+              goalsPerDay[dayIndex].scored += userScore;
+              goalsPerDay[dayIndex].conceded += opponentScore;
+            }
+          });
+          
+          console.log(`✅ Processed ${processedCount} of ${data.games.length} games`);
+          console.log("📈 Final daily data:", goalsPerDay);
+          setDailyData(goalsPerDay);
+        } else {
+          console.log("❌ No games found or invalid response");
+        }
+      } catch (err) {
+        console.error("Error fetching games:", err);
+      }
+    }
+    fetchDailyGoals();
+  }, [user.id, token, totalGames]);
+  
+  const maxValue = Math.max(100, ...dailyData.map(d => Math.max(d.scored, d.conceded)));
   const height = 150;
   const width = 600;
   const padding = { top: 20, right: 20, bottom: 30, left: 40 };
@@ -24,14 +132,14 @@ export default function ProgressionHistory() {
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
-  const xStep = chartWidth / (monthlyData.length - 1);
+  const xStep = chartWidth / (dailyData.length - 1);
 
   const getY = (value: number) => {
     return padding.top + chartHeight - (value / maxValue) * chartHeight;
   };
 
-  const createPath = (dataKey: 'value1' | 'value2') => {
-    return monthlyData.map((point, index) => {
+  const createPath = (dataKey: 'scored' | 'conceded') => {
+    return dailyData.map((point, index) => {
       const x = padding.left + index * xStep;
       const y = getY(point[dataKey]);
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
@@ -41,7 +149,13 @@ export default function ProgressionHistory() {
   return (
     <div className="w-full">
       <div className="rounded-2xl p-6 bg-[rgba(68,78,106,0.3)] shadow-xl backdrop-blur-md">
-        <h2 className="text-white text-lg font-semibold mb-6">Progression History</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-white text-lg font-semibold">Goals Stats</h2>
+          <div className="text-right">
+            <p className="text-amber-400 text-sm">Scored: <span className="font-semibold">{scored}</span></p>
+            <p className="text-cyan-400 text-sm">Conceded: <span className="font-semibold">{conceded}</span></p>
+          </div>
+        </div>
         
         <div className="relative">
           <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
@@ -73,7 +187,7 @@ export default function ProgressionHistory() {
 
             {/* Line 1 - Yellow/Amber */}
             <path
-              d={createPath('value1')}
+              d={createPath('scored')}
               fill="none"
               stroke="#FCD34D"
               strokeWidth="2"
@@ -82,7 +196,7 @@ export default function ProgressionHistory() {
 
             {/* Line 2 - Cyan */}
             <path
-              d={createPath('value2')}
+              d={createPath('conceded')}
               fill="none"
               stroke="#22D3EE"
               strokeWidth="2"
@@ -90,19 +204,19 @@ export default function ProgressionHistory() {
             />
 
             {/* Data points */}
-            {monthlyData.map((point, index) => {
+            {dailyData.map((point, index) => {
               const x = padding.left + index * xStep;
               return (
                 <g key={index}>
                   <circle
                     cx={x}
-                    cy={getY(point.value1)}
+                    cy={getY(point.scored)}
                     r="3"
                     fill="#FCD34D"
                   />
                   <circle
                     cx={x}
-                    cy={getY(point.value2)}
+                    cy={getY(point.conceded)}
                     r="3"
                     fill="#22D3EE"
                   />
@@ -111,7 +225,7 @@ export default function ProgressionHistory() {
             })}
 
             {/* X-axis labels */}
-            {monthlyData.map((point, index) => {
+            {dailyData.map((point, index) => {
               const x = padding.left + index * xStep;
               return (
                 <text
@@ -122,7 +236,7 @@ export default function ProgressionHistory() {
                   fill="#9CA3AF"
                   fontSize="10"
                 >
-                  {point.month}
+                  {point.day}
                 </text>
               );
             })}

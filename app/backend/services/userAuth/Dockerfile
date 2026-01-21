@@ -3,7 +3,9 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+RUN apk update && \
+    apk add --no-cache python3 make g++ || \
+    (apk cache clean && apk update && apk add --no-cache python3 make g++)
 
 COPY ./package*.json ./
 
