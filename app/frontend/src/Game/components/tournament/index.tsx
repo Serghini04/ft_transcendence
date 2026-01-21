@@ -17,14 +17,21 @@ export default function Tournament() {
   const [error, setError] = useState<string | null>(null);
   const [justCreatedTournament, setJustCreatedTournament] = useState(false);
 
-  // Check if returning from a tournament match
+  // Check if returning from a tournament match OR if user reloaded while viewing a bracket
   useEffect(() => {
     const openTournamentId = (location.state as any)?.openTournamentId;
-    console.log('🔍 Checking location.state:', location.state);
-    console.log('🔍 openTournamentId:', openTournamentId);
+    const storedTournamentId = localStorage.getItem('currentTournamentId');
     
-    if (openTournamentId) {
-      console.log('🏆 Returning to tournament:', openTournamentId);
+    console.log('🔍 Checking tournament to open:', {
+      locationState: openTournamentId,
+      localStorage: storedTournamentId
+    });
+    
+    // Prioritize location.state (from navigation), fallback to localStorage (from reload)
+    const tournamentIdToOpen = openTournamentId || storedTournamentId;
+    
+    if (tournamentIdToOpen) {
+      console.log('🏆 Opening tournament:', tournamentIdToOpen);
       
       // Set flag to prevent deletion check during tournament fetch
       setJustCreatedTournament(true);
@@ -33,7 +40,7 @@ export default function Tournament() {
       const findAndOpenTournament = async () => {
         try {
           // First try to get the specific tournament bracket (includes completed tournaments)
-          const bracketResponse = await tournamentAPI.getTournamentBracket(openTournamentId);
+          const bracketResponse = await tournamentAPI.getTournamentBracket(tournamentIdToOpen);
           console.log('🎯 Found tournament from bracket API:', bracketResponse);
           
           if (bracketResponse && bracketResponse.data && bracketResponse.data.tournament) {
@@ -44,7 +51,7 @@ export default function Tournament() {
             // Fallback: try getting from tournaments list
             const response = await tournamentAPI.getTournaments();
             console.log('📋 All tournaments:', response.tournaments);
-            const tournament = response.tournaments.find(t => t.id === openTournamentId);
+            const tournament = response.tournaments.find(t => t.id === tournamentIdToOpen);
             console.log('🎯 Found tournament from list:', tournament);
             
             if (tournament) {
@@ -52,11 +59,15 @@ export default function Tournament() {
               setShowBracket(true);
               console.log('✅ Bracket opened for tournament:', tournament.id);
             } else {
-              console.error('❌ Tournament not found:', openTournamentId);
+              console.error('❌ Tournament not found:', tournamentIdToOpen);
+              // Clear localStorage if tournament no longer exists
+              localStorage.removeItem('currentTournamentId');
             }
           }
         } catch (err) {
           console.error('Failed to open tournament:', err);
+          // Clear localStorage on error
+          localStorage.removeItem('currentTournamentId');
         }
       };
       findAndOpenTournament();
@@ -133,6 +144,9 @@ export default function Tournament() {
         setShowBracket(false);
         setCreatedTournament(null);
         
+        // Clear localStorage when tournament is deleted
+        localStorage.removeItem('currentTournamentId');
+        
         // Clear error after 5 seconds
         setTimeout(() => setError(null), 5000);
       } else if (tournamentInList && tournamentInList.status === 'completed' && createdTournament.status !== 'completed') {
@@ -176,6 +190,9 @@ export default function Tournament() {
       setCreatedTournament(response.tournament);
       setShowBracket(true);
       
+      // Store tournament ID in localStorage for reload persistence
+      localStorage.setItem('currentTournamentId', response.tournament.id);
+      
       // Set flag BEFORE fetch to prevent false deletion detection
       setJustCreatedTournament(true);
       
@@ -210,6 +227,9 @@ export default function Tournament() {
         // Set the tournament and show the bracket
         setCreatedTournament(joinedTournament);
         setShowBracket(true);
+        
+        // Store tournament ID in localStorage for reload persistence
+        localStorage.setItem('currentTournamentId', tournamentId);
       }
       
       // Refresh tournament list
@@ -237,6 +257,10 @@ export default function Tournament() {
         setShowBracket(false);
         setCreatedTournament(null);
         setTournamentName('');
+        
+        // Clear localStorage when leaving bracket
+        localStorage.removeItem('currentTournamentId');
+        
         await fetchTournaments();
         setLoading(false);
         return;
@@ -253,6 +277,10 @@ export default function Tournament() {
         setShowBracket(false);
         setCreatedTournament(null);
         setTournamentName('');
+        
+        // Clear localStorage when leaving bracket
+        localStorage.removeItem('currentTournamentId');
+        
         await fetchTournaments();
         setLoading(false);
         return;
@@ -279,6 +307,9 @@ export default function Tournament() {
       setShowBracket(false);
       setCreatedTournament(null);
       setTournamentName('');
+      
+      // Clear localStorage when leaving bracket
+      localStorage.removeItem('currentTournamentId');
       
       // Refresh tournament list
       await fetchTournaments();
