@@ -903,6 +903,19 @@ export const acceptTournamentInvitation = async (
 
     db.prepare('UPDATE tournaments SET current_players = ? WHERE id = ?').run(newCount.count, invitation.tournament_id);
 
+    // Get updated tournament to check if it's full
+    const updatedTournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(invitation.tournament_id) as Tournament;
+
+    // Check if tournament is now full and start it
+    if (updatedTournament.current_players >= updatedTournament.max_players) {
+      // Tournament is full - start it!
+      console.log(`🚀 Tournament ${invitation.tournament_id} is full (via invitation)! Starting...`);
+      startTournament(invitation.tournament_id);
+      console.log(`✅ Tournament ${invitation.tournament_id} start complete`);
+    } else {
+      console.log(`⏳ Tournament ${invitation.tournament_id} waiting: ${updatedTournament.current_players}/${updatedTournament.max_players} players`);
+    }
+
     // Update notification metadata to mark invitation as accepted
     const updateData = JSON.stringify({
       userId,

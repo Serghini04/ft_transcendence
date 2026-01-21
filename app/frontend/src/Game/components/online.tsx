@@ -144,6 +144,30 @@ export default function Online() {
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));
   
+      // Handle rejoining after forfeit
+      s.on("rejoinAfterForfeit", ({ winnerId, loserId, reason }: { winnerId: string, loserId: string, reason: string }) => {
+        console.log("⚠️ Rejoined after forfeit - showing game result");
+        
+        const currentYourProfile = yourProfileRef.current;
+        
+        // Set game as over with forfeit
+        setWinner(winnerId);
+        winnerRef.current = winnerId;
+        setForfeitWin(true);
+        setWaiting(false);
+        
+        // Set winner profile (you lost, so winner is opponent)
+        if (currentYourProfile) {
+          setWinnerProfile({
+            id: winnerId,
+            name: "Opponent",
+            avatar: ""
+          });
+        }
+        
+        console.log("📺 Showing forfeit result screen");
+      });
+
       s.on("start", async ({ opponentId, yourId, position }: { opponentId: string, yourId: string, position: "left" | "right" }) => {
         console.log("🚀 Match started - Position:", position);
         playerPositionRef.current = position;
@@ -512,7 +536,7 @@ export default function Online() {
                   : (user && winner === String(user.id) ? "🏆 You Won!" : `😞 You Lost To ${winnerProfile.name}`)
               }
             </h2>
-            {forfeitWin && !opponentLeftPostGame && (
+            {forfeitWin && !opponentLeftPostGame && user && winner === String(user.id) && (
               <p className="text-gray-300 text-sm mb-4">Your opponent left the game</p>
             )}
             

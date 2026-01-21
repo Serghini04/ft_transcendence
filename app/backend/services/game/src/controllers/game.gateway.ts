@@ -9,6 +9,9 @@ export const userSocketMap = new Map<number, Socket>();
 export const pendingChallenges = new Map<string, any>();
 export const challengeRooms = new Map<string, any>(); // roomId -> { player1Id, player2Id, connectedSockets: [] }
 
+// Track forfeited games for recent disconnects (userId -> { winnerId, gameType, timestamp })
+export const recentForfeits = new Map<number, { winnerId: number, gameType: string, timestamp: number }>();
+
 export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
   // ✅ Store fastify instance on namespace so we can access it later
   namespace.fastify = fastify;
@@ -32,6 +35,25 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
       }: any) => {
         try {
           console.log("debuuuuuug: joining game", userId, options);
+          
+          // Check if this user recently forfeited a game (within last 30 seconds)
+          const recentForfeit = recentForfeits.get(userId);
+          if (recentForfeit && Date.now() - recentForfeit.timestamp < 30000) {
+            console.log(`⚠️ User ${userId} rejoined after forfeit, sending game result`);
+            
+            // Send them the forfeit result
+            socket.emit("rejoinAfterForfeit", {
+              winnerId: recentForfeit.winnerId,
+              loserId: userId,
+              reason: "forfeit",
+              gameType: recentForfeit.gameType
+            });
+            
+            // Clean up the forfeit record
+            recentForfeits.delete(userId);
+            return;
+          }
+          
           const configKey = JSON.stringify(options);
           const waiting = waitingPlayers.get(configKey);
 
@@ -318,6 +340,19 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
                 const isLeftPlayerWinner = disconnectedPlayerIndex === 0 ? false : true;
                 const score1 = isLeftPlayerWinner ? 5 : 0;
                 const score2 = isLeftPlayerWinner ? 0 : 5;
+                
+                const disconnectedUserId = disconnectedPlayerIndex === 0 
+                  ? room.playerProfiles.left.id 
+                  : room.playerProfiles.right.id;
+                
+                // Store forfeit info for reconnection detection
+                recentForfeits.set(Number(disconnectedUserId), {
+                  winnerId: Number(opponentUserId),
+                  gameType: room.tournamentContext ? 'tournament' : 'online',
+                  timestamp: Date.now()
+                });
+                
+                console.log(`📝 Stored forfeit for user ${disconnectedUserId}, winner: ${opponentUserId}`);
                 
                 await saveGameResult(db, {
                   gameId: roomId,
