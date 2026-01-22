@@ -73,7 +73,6 @@ export function runMigrations(): void {
   }
 }
 
-// Run migrations if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   runMigrations();
   process.exit(0);

@@ -10,7 +10,6 @@ const __dirname = dirname(__filename);
 const dbPath = process.env.DATABASE_PATH || join(__dirname, '../../data/tictac.db');
 const dbDir = dirname(dbPath);
 
-// Ensure data directory exists
 if (!existsSync(dbDir)) {
   mkdirSync(dbDir, { recursive: true });
 }

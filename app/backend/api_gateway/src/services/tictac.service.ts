@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import proxy from "@fastify/http-proxy";
 
+
 export async function tictacService(app: FastifyInstance) {
   app.log.info("Registering TicTac Service proxy...");
 
