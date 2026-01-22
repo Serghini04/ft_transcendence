@@ -8,7 +8,6 @@ export async function userAuthService(app: FastifyInstance) {
     upstream: "http://user_auth:3004",
     prefix: "/api/v1/auth",
     rewritePrefix: "/api/v1/auth",
-    // http2: false,
     
     replyOptions: {
       rewriteRequestHeaders: (originalReq, headers) => {

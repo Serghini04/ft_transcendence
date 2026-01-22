@@ -1,0 +1,46 @@
+server.name: kibana
+server.host: "0.0.0.0"
+server.port: 5601
+
+# Elasticsearch configuration
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "${KIBANA_PASSWORD}"
+
+# Monitoring
+monitoring.ui.container.elasticsearch.enabled: true
+xpack.monitoring.enabled: true
+
+# Security
+xpack.security.enabled: true
+xpack.encryptedSavedObjects.encryptionKey: "something_at_least_32_characters_long_for_encryption"
+
+# Logging configuration for Kibana 8.x
+logging:
+  appenders:
+    console:
+      type: console
+      layout:
+        type: pattern
+  root:
+    appenders: [console]
+    level: info
+
+# Server settings
+server.maxPayloadBytes: 1048576
+server.compression.enabled: true
+
+# Saved objects
+savedObjects.maxImportPayloadBytes: 26214400
+
+# Telemetry
+telemetry.enabled: false
+telemetry.optIn: false
+
+# Dashboard settings
+xpack.canvas.enabled: true
+xpack.infra.enabled: true
+xpack.apm.enabled: false
+
+# Custom branding
+xpack.reporting.kibanaServer.hostname: "kibana"

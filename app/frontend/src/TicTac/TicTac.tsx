@@ -1,7 +1,11 @@
 import TicTacGame from "./TicTacGame";
 
-const TicTac = () => {
-  return <TicTacGame mode="local" />;
+interface TicTacProps {
+  isSidebarOpen?: boolean;
+}
+
+const TicTac = ({isSidebarOpen}: TicTacProps) => {
+  return <TicTacGame mode="local" isSidebarOpen={isSidebarOpen} />;
 };
 
 export default TicTac;

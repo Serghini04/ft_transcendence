@@ -1,0 +1,164 @@
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+# Container log collection
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      templates:
+        - condition:
+            contains:
+              docker.container.name: "api-gateway"
+          config:
+            - type: filestream
+              id: api-gateway-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      name: api-gateway
+                      type: gateway
+                - decode_json_fields:
+                    fields: ["message"]
+                    target: "json"
+                    overwrite_keys: true
+
+        - condition:
+            contains:
+              docker.container.name: "chat-service"
+          config:
+            - type: filestream
+              id: chat-service-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      name: chat-service
+                      type: microservice
+
+        - condition:
+            contains:
+              docker.container.name: "game-service"
+          config:
+            - type: filestream
+              id: game-service-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      name: game-service
+                      type: microservice
+
+        - condition:
+            contains:
+              docker.container.name: "notification-service"
+          config:
+            - type: filestream
+              id: notification-service-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      name: notification-service
+                      type: microservice
+
+        - condition:
+            contains:
+              docker.container.name: "tictac-game"
+          config:
+            - type: filestream
+              id: tictac-game-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      name: tictac-game
+                      type: game
+
+        - condition:
+            contains:
+              docker.container.name: "frontend"
+          config:
+            - type: filestream
+              id: frontend-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      name: frontend
+                      type: nginx
+
+        - condition:
+            or:
+              - contains:
+                  docker.container.name: "kafka"
+              - contains:
+                  docker.container.name: "zookeeper"
+          config:
+            - type: filestream
+              id: infrastructure-logs
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - container: ~
+              processors:
+                - add_fields:
+                    target: service
+                    fields:
+                      type: infrastructure
+
+# Global processors
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_docker_metadata: ~
+  - add_locale: ~
+  - add_fields:
+      target: ''
+      fields:
+        environment: production
+        project: ft_transcendence
+
+# Output to Logstash
+output.logstash:
+  hosts: ["logstash:5044"]
+  loadbalance: true
+  worker: 2
+  bulk_max_size: 2048
+  compression_level: 3
+
+# Logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /usr/share/filebeat/logs
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644

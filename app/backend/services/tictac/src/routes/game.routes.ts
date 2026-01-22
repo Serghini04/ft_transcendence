@@ -3,7 +3,7 @@ import { GameModel } from '../models/game.model.js';
 import { GameService } from '../services/game.service.js';
 
 export async function gameRoutes(fastify: FastifyInstance) {
-  // Get game by ID
+  
   fastify.get('/games/:gameId', async (request: FastifyRequest<{
     Params: { gameId: string }
   }>, reply: FastifyReply) => {
@@ -23,7 +23,6 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Make a move
   fastify.post('/games/:gameId/move', async (request: FastifyRequest<{
     Params: { gameId: string };
     Body: { playerId: string; position: number }
@@ -40,7 +39,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = GameService.makeMove(gameId, playerId, position);
+      const result = await GameService.makeMove(gameId, playerId, position);
 
       if (!result.success) {
         return reply.code(400).send({ error: result.error });
@@ -53,7 +52,6 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Forfeit game
   fastify.post('/games/:gameId/forfeit', async (request: FastifyRequest<{
     Params: { gameId: string };
     Body: { playerId: string }
@@ -66,7 +64,7 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = GameService.forfeitGame(gameId, playerId);
+      const result = await GameService.forfeitGame(gameId, playerId);
 
       if (!result.success) {
         return reply.code(400).send({ error: result.error });
@@ -79,7 +77,6 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get player's active game
   fastify.get('/games/player/:playerId/active', async (request: FastifyRequest<{
     Params: { playerId: string }
   }>, reply: FastifyReply) => {
@@ -99,7 +96,6 @@ export async function gameRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get player's games
   fastify.get('/games/player/:playerId', async (request: FastifyRequest<{
     Params: { playerId: string };
     Querystring: { limit?: string }

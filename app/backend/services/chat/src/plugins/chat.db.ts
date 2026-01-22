@@ -1,16 +1,21 @@
 import Database from "better-sqlite3";
+import path from "path";
 
-export const db = new Database("./src/db/chat.sqlite");
+const dbPath = path.join(process.cwd(), "db", "chat.sqlite");
+
+export const db = new Database(dbPath);
 
 db.exec(`
   -- Users (from User Service)
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
     full_name VARCHAR(255) NOT NULL,
-    username VARCHAR(255) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'offline',
     avatar_url TEXT,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    bg_photo_url TEXT,
+    bio TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    profileVisibility BOOLEAN DEFAULT true,
+    showNotifications BOOLEAN DEFAULT true
   );
 
   -- Messages
@@ -41,24 +46,29 @@ db.exec(`
   );
 `);
 
-const relationshipsInsert = db.prepare(`
-  INSERT INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
-`);
+// const relationshipsInsert = db.prepare(`
+//   INSERT INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
+// `);
 
-const userInsert = db.prepare(`
-  INSERT OR IGNORE INTO users (id, full_name, username, status) VALUES (?, ?, ?, ?)
-`);
+// const userInsert = db.prepare(`
+//   INSERT OR IGNORE INTO users (id, full_name, avatar_url, bg_photo_url, bio, profileVisibility, showNotifications) VALUES (?, ?, ?, ?, ?, ?, ?)
+// `);
 
-const messageInsert = db.prepare(`
-  INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
-`);
+// const messageInsert = db.prepare(`
+//   INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
+// `);
 
-userInsert.run(1, "Mehdi Serghini", "meserghi", "online");
-userInsert.run(2, "King Ana", "king", "online");
+// // Seed data - wrapped in try-catch to avoid duplicate errors
+// try {
+//   userInsert.run(1, "Mehdi Serghini", null, null, "Developer and enthusiast", 1, 1);
+//   userInsert.run(2, "King Ana", null, null, "King of the chat", 1, 1);
 
-relationshipsInsert.run(1, 2, 'friend');
+//   relationshipsInsert.run(1, 2, 'friend');
 
-messageInsert.run(1, 2, "hey, king!");
-messageInsert.run(2, 1, "hey, Mehdi!");
-messageInsert.run(2, 1, "how are you?");
-messageInsert.run(1, 2, "I'm fine");
+//   messageInsert.run(1, 2, "hey, king!");
+//   messageInsert.run(2, 1, "hey, Mehdi!");
+//   messageInsert.run(2, 1, "how are you?");
+//   messageInsert.run(1, 2, "I'm fine");
+// } catch (error) {
+//   // Seed data already exists, skip
+// }

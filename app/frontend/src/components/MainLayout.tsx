@@ -24,10 +24,10 @@ export default function MainLayout({ menuOpen, setMenuOpen}: MainLayoutProps) {
           <SideMenu open={menuOpen} onClose={handleMenuClose} />
 
          
-          <div className="mt-16 xl:mt-0 flex-1 flex flex-col md:ml-20 overflow-y-auto md:no-scrollbar">
+          <div className="mt-16 xl:mt-0 flex-1 flex flex-col md:ml-20 ">
 
             <HeaderBar onMenuToggle={handleMenuToggle} />
-            <main className="p-4">
+            <main className="pb-0">
               <Outlet />
             </main>
 

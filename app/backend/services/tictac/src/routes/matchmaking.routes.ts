@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { MatchmakingService } from '../services/matchmaking.service.js';
 
 export async function matchmakingRoutes(fastify: FastifyInstance) {
-  // Join matchmaking queue
+  
+
   fastify.post('/matchmaking/join', async (request: FastifyRequest<{
     Body: { userId: string; username: string; socketId: string }
   }>, reply: FastifyReply) => {
@@ -29,7 +30,6 @@ export async function matchmakingRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Leave matchmaking queue
   fastify.post('/matchmaking/leave', async (request: FastifyRequest<{
     Body: { userId: string }
   }>, reply: FastifyReply) => {
@@ -52,7 +52,6 @@ export async function matchmakingRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get queue status
   fastify.get('/matchmaking/status', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const status = MatchmakingService.getQueueStatus();
@@ -63,7 +62,6 @@ export async function matchmakingRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Check if user is in queue
   fastify.get('/matchmaking/check/:userId', async (request: FastifyRequest<{
     Params: { userId: string }
   }>, reply: FastifyReply) => {

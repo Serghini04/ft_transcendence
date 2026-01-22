@@ -20,12 +20,12 @@ export function setupSocketServer(app: FastifyInstance) {
       return;
     }
 
-    console.log("🔔 Notification Service: User connected:", userId);
+    console.log("Notification Service: User connected:", userId);
 
     socket.join(`user:${userId}`);
 
     socket.on("disconnect", () => {
-      console.log("❌ User disconnected from notifications:", userId);
+      console.log("User disconnected from notifications:", userId);
     });
   });
 }

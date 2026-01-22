@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
 import { UseTokenStore } from "../../userAuth/zustand/useStore";
-import { toast } from "react-toastify";
+import { toastManager } from "../utils/toastManager";
 
 export type Notification = {
   id: number;
@@ -29,6 +29,7 @@ type NotificationStore = {
   markAllAsRead: () => Promise<void>;
   markAsRead: (notificationId: number) => Promise<void>;
   addNotification: (notification: Notification) => void;
+  removeNotification: (notificationId: number) => void;
 
   clearError: () => void;
 };
@@ -98,52 +99,30 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       set({ onlineUsers: new Set(ids) });
     });
 
-    socket.on("notification:new", (notification: Notification) => {
+    socket.on("notification:new", (notification: Notification & { metadata?: { senderId?: number; senderName?: string } }) => {
       get().addNotification(notification);
 
-      const getToastConfig = (type: string) => {
+      // Map notification type to toast type
+      const getNotificationType = (type: string): "message" | "friend_request" | "game" | "default" => {
         switch (type) {
           case "message":
-            return {
-              icon: "💬",
-              background: "linear-gradient(to right, #0C7368, #0A5B52)",
-            };
+            return "message";
           case "friend_request":
-            return {
-              icon: "👥",
-              background: "linear-gradient(to right, #00912E, #007A26)",
-            };
+            return "friend_request";
           case "game":
-            return {
-              icon: "🎮",
-              background: "linear-gradient(to right, #112434, #0d2234)",
-            };
+            return "game";
           default:
-            return {
-              icon: "🔔",
-              background: "linear-gradient(to right, #1A2D42, #112434)",
-            };
+            return "default";
         }
       };
 
-      const config = getToastConfig(notification.type);
-
-      toast(`${config.icon} ${notification.title}\n${notification.message}`, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        style: {
-          background: config.background,
-          color: "white",
-          fontWeight: "500",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          borderRadius: "0.5rem",
-          ["--toastify-color-progress-light" as string]: "rgba(255, 255, 255, 0.2)",
-        },
+      toastManager.show({
+        id: `notification-${notification.id}`,
+        title: notification.title,
+        message: notification.message,
+        type: getNotificationType(notification.type),
+        autoHideDuration: notification.type === 'friend_request' ? undefined : 5000,
+        metadata: notification.metadata,
       });
     });
 
@@ -185,7 +164,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   fetchNotifications: async () => {
-    const { token } = UseTokenStore.getState();
+    const { token, setToken } = UseTokenStore.getState();
     const { loginId } = get();
 
     if (!token || !loginId) return;
@@ -193,10 +172,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/notifications`, {
+      let currentToken = token;
+      let response = await fetch(`${API_URL}/api/v1/notifications`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${currentToken}`
         },
         credentials: "include",
       });
@@ -205,7 +185,30 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         throw new Error(`Failed to fetch notifications: ${response.statusText}`);
       }
 
-      const notifications: Notification[] = await response.json();
+      let data = await response.json();
+      
+      // Handle token refresh
+      if (data.code === 'TOKEN_REFRESHED' && data.accessToken) {
+        setToken(data.accessToken);
+        currentToken = data.accessToken;
+        
+        // Retry with new token
+        response = await fetch(`${API_URL}/api/v1/notifications`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${currentToken}`
+          },
+          credentials: "include",
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+        }
+        
+        data = await response.json();
+      }
+      
+      const notifications: Notification[] = Array.isArray(data) ? data : [];
       const unseenCount = notifications.filter((n) => !n.read).length;
 
       set({
@@ -298,6 +301,19 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set({
       notifications: [notification, ...notifications],
       unseenNotifications: notification.read ? unseenNotifications : unseenNotifications + 1,
+    });
+  },
+
+  removeNotification: (notificationId: number) => {
+    const { notifications, unseenNotifications } = get();
+    const notification = notifications.find((n) => n.id === notificationId);
+    const updatedNotifications = notifications.filter((n) => n.id !== notificationId);
+    
+    set({
+      notifications: updatedNotifications,
+      unseenNotifications: notification && !notification.read 
+        ? Math.max(0, unseenNotifications - 1)
+        : unseenNotifications,
     });
   },
 

@@ -40,7 +40,6 @@ Thumbs.db
 *.sln
 *.sw?
 
-<<<<<<< HEAD
 # Dependencies
 node_modules/
 package-lock.json
@@ -112,8 +111,6 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-=======
->>>>>>> 8825f8bf7a6e3cbc9b6e2f3babde3aa95ae99ad9
 # Testing
 coverage/
 .nyc_output/

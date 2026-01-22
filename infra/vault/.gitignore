@@ -1,0 +1,21 @@
+# Vault data and logs
+data/
+logs/
+*.log
+
+# Sensitive files - NEVER commit these
+unseal-keys.json
+approle-creds/
+*.pem
+*.key
+*.crt
+*.csr
+tls/
+
+# Root token
+.vault-token
+root-token.txt
+
+# Environment files
+.env
+.env.local

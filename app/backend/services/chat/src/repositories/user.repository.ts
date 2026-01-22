@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { User, UserStatus } from "../models/user";
+import { User } from "../models/user";
 
 export class userRepository {
     constructor(private db: Database.Database) {
@@ -10,9 +10,10 @@ export class userRepository {
             SELECT
                 id,
                 full_name AS fullName,
-                username AS username,
-                status,
-                avatar_url AS avatarUrl
+                avatar_url AS avatarUrl,
+                bg_photo_url AS bgPhotoUrl,
+                bio,
+                showNotifications
             FROM users
             WHERE id = ?;
         `);
@@ -20,14 +21,44 @@ export class userRepository {
         const row = stmt.get(userId) as {
             id: number;
             fullName: string;
-            username: string;
-            status: UserStatus;
             avatarUrl: string;
+            bgPhotoUrl: string;
+            bio: string;
+            showNotifications: number;
         } | undefined;
     
         if (!row)
             return null;
-        return new User(row.id, row.fullName, row.username, row.status, row.avatarUrl);
+        return new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio, !!row.showNotifications);
+    }
+
+    searchUsers(searchQuery: string, limit: number = 20): User[] {
+        const stmt = this.db.prepare(`
+            SELECT
+                id,
+                full_name AS fullName,
+                avatar_url AS avatarUrl,
+                bg_photo_url AS bgPhotoUrl,
+                bio,
+                showNotifications
+            FROM users
+            WHERE full_name LIKE ?
+            LIMIT ?;
+        `);
+    
+        const searchPattern = `%${searchQuery}%`;
+        const rows = stmt.all(searchPattern, limit) as {
+            id: number;
+            fullName: string;
+            avatarUrl: string;
+            bgPhotoUrl: string;
+            bio: string;
+            showNotifications: number;
+        }[];
+    
+        return rows.map(row => 
+            new User(row.id, row.fullName, row.avatarUrl, row.bgPhotoUrl, row.bio, !!row.showNotifications)
+        );
     }
     
 }

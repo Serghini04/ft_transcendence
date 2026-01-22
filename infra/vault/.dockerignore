@@ -1,0 +1,8 @@
+*.md
+.git
+.gitignore
+data/
+logs/
+*.log
+approle-creds/
+unseal-keys.json
