@@ -8,6 +8,7 @@ import cookie from "@fastify/cookie";
 import { gameService } from "./services/game.service";
 import { NotificationService } from "./services/notification.service";
 import { tictacService } from "./services/tictac.service";
+import { leaderboardService } from "./services/leaderboard.service";
 import { vaultClient } from "./utils/vault.client";
 let secrets: any = null;
 
@@ -63,7 +64,7 @@ app.register(tictacService);
 app.register(chatService);
 app.register(gameService);
 app.register(NotificationService);
-
+app.register(leaderboardService);
 const start = async () => {
   try {
 

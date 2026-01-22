@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { UseimageDataUrlStore, UsephotosFileStore } from "../../zustand/useStore";
 import UserProfile from "./UserProfile";
-import bgPhoto from "../../../../public/profileBG.png";
+
+const bgPhoto = "/backgroundPhoto.png";
 
 
 
@@ -20,10 +21,7 @@ export default function PhotosSide(props: params) {
   const { setBgImageFile } = UsephotosFileStore();
   useEffect(() => {
     if (props.user.bgPhotoURL) {
-      const fullUrl = props.user.bgPhotoURL.startsWith('http') 
-          ? props.user.bgPhotoURL 
-          : `${window.location.origin}/${props.user.bgPhotoURL}`;
-      setBgImageDataUrl(fullUrl);
+      setBgImageDataUrl(props.user.bgPhotoURL );
     }
   }, [props.user.bgPhotoURL]);
 

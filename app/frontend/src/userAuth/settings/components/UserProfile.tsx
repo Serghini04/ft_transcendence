@@ -9,11 +9,7 @@ export default function UserProfile(props: {profilePhoto: string}) {
 
   useEffect(() => {
       if (props.profilePhoto) {
-        // Check if it's already a full URL or a relative path
-        const fullUrl = props.profilePhoto.startsWith('http') 
-          ? props.profilePhoto 
-          : `${window.location.origin}/${props.profilePhoto}`;
-        setProfileImageDataUrl(fullUrl);
+        setProfileImageDataUrl(props.profilePhoto);
       }
     }, [props.profilePhoto]);
   const handleProfileClick = (e: React.MouseEvent) => {

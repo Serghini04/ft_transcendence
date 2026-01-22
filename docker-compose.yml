@@ -108,10 +108,6 @@ services:
     container_name: game-service
     ports:
       - "3005:3005"
-    environment:
-      - KAFKA_BROKER=kafka:9092
-    depends_on:
-      - kafka
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -120,7 +116,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-        
+    volumes:
+      - ./app/backend/services/game/src/db:/app/src/db
+
   notification-service:
     build:
       context: ./app/backend/services/notification
@@ -142,6 +140,29 @@ services:
         max-size: "10m"
         max-file: "3"
 
+
+  leaderboard-service:
+      build:
+        context: ./app/backend/services/leaderboard
+        dockerfile: dockerfile
+      image: leaderboard-service
+      container_name: leaderboard-service
+      ports:
+        - "3016:3016"
+      environment:
+        - KAFKA_BROKER=kafka:9092
+      depends_on:
+        - kafka
+      volumes:
+        - ./app/backend/services/leaderboard/src/db:/app/src/db
+      networks:
+        - ft_Transc
+      restart: unless-stopped
+      logging:
+        driver: "json-file"
+        options:
+          max-size: "10m"
+          max-file: "3"
 
   prometheus:
     build:
@@ -341,6 +362,8 @@ services:
     build:
       context: .
       dockerfile: ./infra/nginx/Dockerfile.frontend
+    volumes:
+      - uploads:/usr/share/nginx/html/uploads
     image: frontend
     container_name: frontend
     ports:
@@ -424,10 +447,12 @@ services:
     build:
       context: ./app/backend/services/userAuth
       dockerfile: Dockerfile
+    volumes:
+      - uploads:/app/uploads
+      - userauth-data:/app/data
+      - ./infra/data/user_auth:/app/db
     image: user_auth
     container_name: user_auth
-    volumes:
-      - ./infra/data/user_auth:/app/db
     ports:
       - "3004:3004"
     environment:
@@ -489,6 +514,7 @@ volumes:
   elasticsearch-data:
   kafka-data:
   tictac-data:
+  uploads:
   vault-data:
   vault-logs:
   vault-config:
