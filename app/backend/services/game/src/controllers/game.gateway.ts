@@ -34,8 +34,6 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         options = { map: "Classic", powerUps: false, speed: "Normal" },
       }: any) => {
         try {
-          console.log("debuuuuuug: joining game", userId, options);
-          
           // Check if this user recently forfeited a game (within last 30 seconds)
           const recentForfeit = recentForfeits.get(userId);
           if (recentForfeit && Date.now() - recentForfeit.timestamp < 30000) {

@@ -90,6 +90,34 @@ export default function TournamentGame() {
         navigate("/game");
         return;
       }
+
+      // Check if this match is already complete (user reloading on result screen)
+      try {
+        const response = await fetch(`http://localhost:8080/api/v1/game/tournaments/${tournamentId}/bracket`, {
+          method: "GET",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const bracketData = await response.json();
+          const match = bracketData.data.matches.find((m: any) => m.id === parseInt(matchId));
+          
+          if (match?.winner_id) {
+            console.log(`🔄 Match ${matchId} already complete (winner: ${match.winner_id}), redirecting to bracket`);
+            
+            // Store tournament ID in localStorage so the Tournament component shows the bracket
+            localStorage.setItem('currentTournamentId', tournamentId);
+            
+            // Navigate to tournament page (which will show the bracket)
+            navigate('/game/tournament');
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check match status:", err);
+        // Continue anyway - let the game socket handle it
+      }
   
       // Fetch user data
       try {
@@ -135,16 +163,7 @@ export default function TournamentGame() {
       setSocket(s);
       socketRef.current = s;
       
-      // Emit tournament match join
-      s.emit("joinTournamentMatch", { 
-        tournamentId, 
-        matchId, 
-        userId: user.id, 
-        opponentId,
-        options: { map, powerUps, speed, mode: 'tournament' } 
-      });
-      console.log("🏆 Joining tournament match:", { tournamentId, matchId, opponentId });
-  
+      
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));
 
@@ -291,6 +310,15 @@ export default function TournamentGame() {
       });
   
       s.on("disconnect", () => console.log("❌ Disconnected"));
+      
+      s.emit("joinTournamentMatch", { 
+        tournamentId, 
+        matchId, 
+        userId: user.id, 
+        opponentId,
+        options: { map, powerUps, speed, mode: 'tournament' } 
+      });
+      console.log("🏆 Joining tournament match:", { tournamentId, matchId, opponentId });
     };
   
     init();

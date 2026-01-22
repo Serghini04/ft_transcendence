@@ -131,16 +131,7 @@ export default function Online() {
       setSocket(s);
       socketRef.current = s; // Store in ref for cleanup
       
-      // Only emit joinGame for regular online mode, not for challenges
-      if (!isChallenge) {
-        s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
-        console.log("Joining game with settings:", { map, powerUps, speed });
-      } else {
-        // For challenge mode, join the specific room
-        s.emit("joinChallengeRoom", { roomId, userId: user.id });
-        console.log("Joining challenge room:", roomId);
-      }
-  
+      
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));
   
@@ -289,6 +280,15 @@ export default function Online() {
     
         return () => s.disconnect();
       });
+      
+      if (!isChallenge) {
+        s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
+        console.log("Joining game with settings:", { map, powerUps, speed });
+      } else {
+        // For challenge mode, join the specific room
+        s.emit("joinChallengeRoom", { roomId, userId: user.id });
+        console.log("Joining challenge room:", roomId);
+      }
     };
   
     init(); // Call the async function
