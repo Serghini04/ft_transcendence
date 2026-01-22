@@ -56,9 +56,19 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
           const waiting = waitingPlayers.get(configKey);
 
           if (!waiting) {
+            // Store socket with userId for checking
+            socket.data.userId = userId;
             waitingPlayers.set(configKey, socket);
             socket.emit("waiting");
           } else {
+            // Check if the waiting player is the same user
+            const waitingUserId = waiting.data.userId;
+            if (waitingUserId === userId) {
+              console.log(`⚠️ User ${userId} tried to match with themselves, keeping them in queue`);
+              socket.emit("waiting");
+              return;
+            }
+            
             waitingPlayers.delete(configKey);
             await createRoom(waiting, socket, configKey, options, namespace);
           }
