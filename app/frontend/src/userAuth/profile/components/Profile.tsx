@@ -210,7 +210,7 @@ export default function Profile()
       >
         <div className="w-full flex flex-col gap-8 pb-8 pt-4">
                 <ProfileCard user={userInfo} wins={statistic.wins} losses={statistic.losses} />
-                <Bio />
+                <Bio userId={profileUserId} bio={userInfo.bio} />
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-4 items-center justify-center">
                 <div className="">
                     <LastMatches games={gameHistory} profileUserId={profileUserId} token={token} />
