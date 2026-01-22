@@ -180,7 +180,7 @@ services:
     image: alertmanager
     container_name: alertmanager
     ports:
-      - "9093:9093"
+      - "9094:9093"
     volumes:
       - alertmanager-data:/alertmanager
       - ./infra/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
@@ -268,6 +268,7 @@ services:
       - xpack.security.enabled=false
       - xpack.security.http.ssl.enabled=false
       - xpack.security.transport.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
     volumes:
@@ -275,6 +276,11 @@ services:
     networks:
       - ft_Transc
     restart: unless-stopped
+    mem_limit: 1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
 
   logstash:
     build:

@@ -34,7 +34,6 @@ export class KafkaConsumerService {
         retries: 8,
       },
     });
-
     this.consumer = this.kafka.consumer({ groupId: KAFKA_GROUP_ID });
   }
 
@@ -134,7 +133,6 @@ export class KafkaConsumerService {
         return;
       }
 
-      // Create the user in tictac database
       const user = UserModel.create(userId, name);
       console.log(`User created in tictac service:`, user);
     } catch (error) {
@@ -146,11 +144,9 @@ export class KafkaConsumerService {
     try {
       const { userId, name } = event;
       
-      // Check if user exists
       const existingUser = UserModel.findById(userId);
       
       if (!existingUser) {
-        // If user doesn't exist, create them
         if (name) {
           const user = UserModel.create(userId, name);
           console.log(`User created (from update event) in tictac service:`, user);
@@ -160,7 +156,6 @@ export class KafkaConsumerService {
         return;
       }
 
-      // Update username if provided
       if (name && name !== existingUser.name) {
         UserModel.updateUsername(userId, name);
         console.log(`User ${userId} username updated to: ${name}`);
