@@ -117,6 +117,24 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         socketId: socket.id
       });
       
+      // Check if this user recently forfeited a tournament match (within last 30 seconds)
+      const recentForfeit = recentForfeits.get(userId);
+      if (recentForfeit && recentForfeit.gameType === 'tournament' && Date.now() - recentForfeit.timestamp < 30000) {
+        console.log(`⚠️ User ${userId} rejoined tournament after forfeit, sending game result`);
+        
+        // Send them the forfeit result
+        socket.emit("rejoinAfterForfeit", {
+          winnerId: recentForfeit.winnerId,
+          loserId: userId,
+          reason: "forfeit",
+          gameType: "tournament"
+        });
+        
+        // Clean up the forfeit record
+        recentForfeits.delete(userId);
+        return;
+      }
+      
       // Create unique room ID for this specific tournament match
       const roomId = `tournament-${tournamentId}-${matchId}`;
       console.log(`🔑 Generated roomId: ${roomId}`);
