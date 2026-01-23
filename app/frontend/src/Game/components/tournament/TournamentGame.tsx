@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useLocation, useNavigate } from "react-router-dom";
-import { UseTokenStore, UseUserStore } from "../../userAuth/zustand/useStore";
-import verifyToken from "../../globalUtils/verifyToken";
-
+import { UseTokenStore, UseUserStore } from "../../../userAuth/zustand/useStore";
+import verifyToken from "../../../globalUtils/verifyToken";
 
 interface GameState {
-  canvas: { width: number, height: number,};
+  canvas: { width: number, height: number };
   ball: { x: number; y: number, radius: number, vx: number, vy: number, speed: number, visible: boolean };
   paddles: { left: { x: number; y: number; width: number; height: number; speed: number }, right: { x: number; y: number; width: number; height: number; speed: number } };
   scores: { left: number; right: number };
-  powerUp: { found: boolean; x: number; y: number; width: number; height: number; visible: boolean; duration: number; spawnTime: number | null};
+  powerUp: { found: boolean; x: number; y: number; width: number; height: number; visible: boolean; duration: number; spawnTime: number | null };
   winner?: null;
 }
 
@@ -20,7 +19,7 @@ interface UserProfile {
   avatar: string;
 }
 
-export default function Online() {
+export default function TournamentGame() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const winnerRef = useRef<string | null>(null);
@@ -35,10 +34,8 @@ export default function Online() {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [waiting, setWaiting] = useState(true);
-  const [winner, setWinner] = useState<string | null>(null); // Store user ID, not side
+  const [winner, setWinner] = useState<string | null>(null);
   const [time, setTime] = useState(0);
-  const [restartReady, setRestartReady] = useState({ left: false, right: false });
-  const [waitingForRestart, setWaitingForRestart] = useState(false);
   const [forfeitWin, setForfeitWin] = useState(false);
   const [opponentLeftPostGame, setOpponentLeftPostGame] = useState(false);
   
@@ -46,7 +43,6 @@ export default function Online() {
   const [yourProfile, setYourProfile] = useState<UserProfile | null>(null);
   const [opponentProfile, setOpponentProfile] = useState<UserProfile | null>(null);
   const [winnerProfile, setWinnerProfile] = useState<UserProfile | null>(null);
-
 
   const [state, setState] = useState<GameState>({
     canvas: { width: 1200, height: 675 },
@@ -58,14 +54,10 @@ export default function Online() {
   });
 
   const location = useLocation();
-  type MapType = "Classic" | "Desert" | "Chemistry";
-  const { map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
-  const typedMap = ["Classic", "Desert", "Chemistry"].includes(map) ? map as MapType : "Classic";
+  const { tournamentId, matchId, opponentId, map = "Classic", powerUps = false, speed = "Normal" } = location.state || {};
 
-  // Check if this is a challenge game (roomId in URL params)
-  const searchParams = new URLSearchParams(location.search);
-  const roomId = searchParams.get('roomId');
-  const isChallenge = !!roomId;
+  type MapType = "Classic" | "Desert" | "Chemistry";
+  const typedMap = ["Classic", "Desert", "Chemistry"].includes(map) ? map as MapType : "Classic";
 
   const gameThemes: Record<MapType, { background: string; color: string }> = {
     Classic: {
@@ -84,14 +76,47 @@ export default function Online() {
 
   const theme = gameThemes[typedMap];
 
-  // Connect to Socket.IO
+  // Connect to Socket.IO for tournament match
   useEffect(() => {
     const init = async () => {
-      // Check if user is authenticated
       if (!token || !user) {
         console.error("❌ User not authenticated");
         navigate("/auth");
         return;
+      }
+
+      if (!tournamentId || !matchId || !opponentId) {
+        console.error("❌ Missing tournament context");
+        navigate("/game");
+        return;
+      }
+
+      // Check if this match is already complete (user reloading on result screen)
+      try {
+        const response = await fetch(`http://localhost:8080/api/v1/game/tournaments/${tournamentId}/bracket`, {
+          method: "GET",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const bracketData = await response.json();
+          const match = bracketData.data.matches.find((m: any) => m.id === parseInt(matchId));
+          
+          if (match?.winner_id) {
+            console.log(`🔄 Match ${matchId} already complete (winner: ${match.winner_id}), redirecting to bracket`);
+            
+            // Store tournament ID in localStorage so the Tournament component shows the bracket
+            localStorage.setItem('currentTournamentId', tournamentId);
+            
+            // Navigate to tournament page (which will show the bracket)
+            navigate('/game/tournament');
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check match status:", err);
+        // Continue anyway - let the game socket handle it
       }
   
       // Fetch user data
@@ -106,7 +131,6 @@ export default function Online() {
         const raw = await res.json();
         verifyToken(raw);
         
-        // Normalize backend response
         const data: UserProfile = {
           id: raw.id,
           name: raw.username,
@@ -115,13 +139,21 @@ export default function Online() {
         
         setYourProfile(data);
         yourProfileRef.current = data;
-        console.log("---------> : Fetched user profile:", data); // Log data, not state
+        console.log("🏆 Tournament Game - Your profile:", data);
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
-        return;
+        // Use fallback profile data - don't block the game from starting!
+        const fallbackData: UserProfile = {
+          id: user.id.toString(),
+          name: user.name || 'Player',
+          avatar: ''
+        };
+        setYourProfile(fallbackData);
+        yourProfileRef.current = fallbackData;
+        console.log("🏆 Using fallback profile:", fallbackData);
       }
       
-      // Connect to the /game namespace on the API Gateway so events reach the game service
+      // Connect to game namespace
       const s = io("http://localhost:8080/game", {
         path: "/socket.io",
         transports: ["websocket"],
@@ -129,15 +161,15 @@ export default function Online() {
         extraHeaders: { Authorization: `Bearer ${token}` },
       });
       setSocket(s);
-      socketRef.current = s; // Store in ref for cleanup
+      socketRef.current = s;
       
       
       s.on("connect", () => console.log("🔗 Connected:", s.id));
       s.on("waiting", () => setWaiting(true));
-  
-      // Handle rejoining after forfeit
+
+      // Handle rejoining after forfeit (user reloaded during match)
       s.on("rejoinAfterForfeit", ({ winnerId, loserId, reason }: { winnerId: string, loserId: string, reason: string }) => {
-        console.log("⚠️ Rejoined after forfeit - showing game result");
+        console.log("⚠️ Rejoined tournament match after forfeit - showing game result");
         
         const currentYourProfile = yourProfileRef.current;
         
@@ -156,17 +188,12 @@ export default function Online() {
           });
         }
         
-        console.log("📺 Showing forfeit result screen");
+        console.log("📺 Showing tournament forfeit result screen");
       });
 
       s.on("start", async ({ opponentId, yourId, position }: { opponentId: string, yourId: string, position: "left" | "right" }) => {
-        console.log("🚀 Match started - Position:", position);
+        console.log("🚀 Tournament match started - Position:", position);
         playerPositionRef.current = position;
-        
-        const currentYourProfile = yourProfileRef.current;
-        if (currentYourProfile && currentYourProfile.id !== yourId) {
-          console.error("⚠️ Your ID mismatch:", currentYourProfile.id, yourId);
-        }
         
         // Fetch opponent profile
         try {
@@ -188,9 +215,18 @@ export default function Online() {
           
           setOpponentProfile(opponentData);
           opponentProfileRef.current = opponentData;
-          console.log("---------> : Fetched opponent profile:", opponentData);
+          console.log("🏆 Opponent profile:", opponentData);
         } catch (err) {
           console.error("Failed to fetch opponent profile:", err);
+          // Use fallback opponent data
+          const fallbackOpponent: UserProfile = {
+            id: opponentId,
+            name: 'Opponent',
+            avatar: ''
+          };
+          setOpponentProfile(fallbackOpponent);
+          opponentProfileRef.current = fallbackOpponent;
+          console.log("🏆 Using fallback opponent profile:", fallbackOpponent);
         }
         
         setWaiting(false);
@@ -208,165 +244,156 @@ export default function Online() {
         const currentYourProfile = yourProfileRef.current;
         const currentOpponentProfile = opponentProfileRef.current;
         
-        console.log("🏁 Game Over! Winner:", winnerId === currentYourProfile?.id ? currentYourProfile : currentOpponentProfile);
+        console.log("🏁 Tournament Match Over! Winner:", winnerId === currentYourProfile?.id ? currentYourProfile : currentOpponentProfile);
 
         setWinner(winnerId);
         winnerRef.current = winnerId;
         
-        // Determine winner/loser from existing profiles
         if (currentYourProfile && currentOpponentProfile) {
           if (winnerId === currentYourProfile.id) {
             setWinnerProfile(currentYourProfile);
-            console.log("🏆 You won!");
+            console.log("🏆 You won the tournament match!");
           } else {
             setWinnerProfile(currentOpponentProfile);
             console.log("😞 You lost to", currentOpponentProfile.name);
           }
         }
-      });
 
-      s.on("restartReady", ({ leftReady, rightReady }: { leftReady: boolean, rightReady: boolean }) => {
-        setRestartReady({ left: leftReady, right: rightReady });
-        console.log("Restart ready status:", { leftReady, rightReady });
-      });
-
-      s.on("gameRestarted", () => {
-        setWinner(null);
-        winnerRef.current = null;
-        setTime(0);
-        setRestartReady({ left: false, right: false });
-        setWaitingForRestart(false);
-        setForfeitWin(false);
-        setOpponentLeftPostGame(false);
-        setWinnerProfile(null);
-        console.log("🔄 Game restarted!");
-      });
-
-      s.on("opponentLeftPostGame", () => {
-        console.log("⚠️ Opponent left after game over");
-        setOpponentLeftPostGame(true);
-        setWaitingForRestart(false);
+        // TODO: Send match result to backend
+        // This should update tournament_matches table with winner_id and scores
       });
 
       s.on("opponentDisconnected", ({ winnerId, gameActive }: { winnerId: string, reason: string, gameActive: boolean }) => {
-        console.log("⚠️ Opponent disconnected", { gameActive });
+        console.log("⚠️ Opponent disconnected from tournament match", { gameActive, winnerId });
+        
+        // If game is already over (not active), ignore the disconnect event
+        // The winner is already set, and we don't need to show "opponent left" message
+        if (!gameActive) {
+          console.log("ℹ️ Ignoring disconnect - game already finished");
+          return;
+        }
+        
+        // Game was active - opponent forfeited
         const currentYourProfile = yourProfileRef.current;
-        const currentOpponentProfile = opponentProfileRef.current;
+        
+        console.log("🎯 Handling active disconnect:", {
+          winnerId,
+          currentYourProfile,
+          match: winnerId === currentYourProfile?.id
+        });
         
         setWinner(winnerId);
         winnerRef.current = winnerId;
-        setWaitingForRestart(false);
+        setForfeitWin(true);
+        setWaiting(false); // Hide "waiting" overlay to show winner screen
         
-        // Only set forfeitWin if game was active (not after game over)
-        if (gameActive) {
-          setForfeitWin(true);
+        // Set winner profile (should be current user since opponent disconnected)
+        if (currentYourProfile && winnerId === currentYourProfile.id) {
+          setWinnerProfile(currentYourProfile);
+          console.log("🏆 You won by opponent disconnect! Profile set:", currentYourProfile);
         } else {
-          setOpponentLeftPostGame(true);
+          console.log("⚠️ Winner profile NOT set:", {
+            hasProfile: !!currentYourProfile,
+            winnerId,
+            profileId: currentYourProfile?.id
+          });
         }
+      });
+
+      s.on("opponentForfeited", ({ winnerId, message }: { winnerId: string, message: string, matchId: string, tournamentId: string }) => {
+        console.log("🏳️ Opponent forfeited tournament match", { winnerId, message });
         
-        // Set winner/loser profiles
-        if (currentYourProfile && currentOpponentProfile) {
-          if (winnerId === currentYourProfile.id) {
+        setWinner(winnerId);
+        winnerRef.current = winnerId;
+        setForfeitWin(true);
+        setWaiting(false);
+      });
+  
+      s.on("disconnect", () => console.log("❌ Disconnected"));
+      
+      s.emit("joinTournamentMatch", { 
+        tournamentId, 
+        matchId, 
+        userId: user.id, 
+        opponentId,
+        options: { map, powerUps, speed, mode: 'tournament' } 
+      });
+      console.log("🏆 Joining tournament match:", { tournamentId, matchId, opponentId });
+    };
+  
+    init();
+  
+    return () => {
+      console.log("🧹 Cleaning up tournament game socket");
+      socketRef.current?.disconnect();
+    };
+  }, [token, user, tournamentId, matchId, opponentId, navigate]);
+
+  // Poll match status while waiting - to detect if opponent forfeited from bracket
+  useEffect(() => {
+    if (!waiting || !matchId || !tournamentId) return;
+
+    const checkMatchStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/v1/game/tournaments/${tournamentId}/bracket`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const match = data.data.matches.find((m: any) => m.id === parseInt(matchId));
+        
+        if (match && match.winner_id) {
+          console.log('🏳️ Match has winner while waiting - opponent forfeited from bracket!', match);
+          
+          const currentYourProfile = yourProfileRef.current;
+          
+          setWinner(match.winner_id);
+          winnerRef.current = match.winner_id;
+          setForfeitWin(true);
+          setWaiting(false);
+          
+          // Set winner profile
+          if (currentYourProfile && match.winner_id === currentYourProfile.id) {
             setWinnerProfile(currentYourProfile);
-          } else {
-            setWinnerProfile(currentOpponentProfile);
+            console.log('🏆 You won by forfeit (detected via polling)!');
           }
         }
-      });
-
-      s.on("end", () => {
-        alert("Opponent disconnected");
-        setWaiting(true);
-    
-        return () => s.disconnect();
-      });
-      
-      if (!isChallenge) {
-        s.emit("joinGame", { userId: user.id, options: { map, powerUps, speed, mode: 'online' } });
-        console.log("Joining game with settings:", { map, powerUps, speed });
-      } else {
-        // For challenge mode, join the specific room
-        s.emit("joinChallengeRoom", { roomId, userId: user.id });
-        console.log("Joining challenge room:", roomId);
-      }
-    };
-  
-    init(); // Call the async function
-
-    // Cleanup on unmount (when user navigates away, reloads, or closes tab)
-    return () => {
-      if (socketRef.current) {
-        console.log("🚪 Component unmounting - disconnecting socket");
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, []);
-  
-
-  // Handle paddle movement - continuous movement while key is held
-  useEffect(() => {
-    // console.log("Setting up paddle movement listeners started");
-    if (!socket || waiting) return;
-
-    const keysPressed: Record<string, boolean> = {};
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        keysPressed[e.key] = true;
+      } catch (err) {
+        console.error('Failed to check match status:', err);
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        keysPressed[e.key] = false;
-      }
-    };
+    // Check immediately and then every 2 seconds
+    checkMatchStatus();
+    const interval = setInterval(checkMatchStatus, 2000);
 
-    // Send movement updates continuously while keys are held
-    const moveInterval = setInterval(() => {
-      if (keysPressed["ArrowUp"]) {
-        socket.emit("move", { direction: -1 });
-      } else if (keysPressed["ArrowDown"]) {
-        socket.emit("move", { direction: 1 });
-      }
-    }, 16);
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    
-    // console.log("Setting up paddle movement listeners ended");
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      clearInterval(moveInterval);
-    };
-  }, [socket, waiting]);
+    return () => clearInterval(interval);
+  }, [waiting, matchId, tournamentId, token]);
 
   // Timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!winnerRef.current && !waiting) setTime((t) => t + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [waiting]);
+    if (!waiting && !winner) {
+      const interval = setInterval(() => setTime((t) => t + 1), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [waiting, winner]);
 
-  useEffect(() => {
-    winnerRef.current = winner;
-  }, [winner]);
-
-  // Draw game frame
+  // Render game
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const width = canvas.width;
     const height = canvas.height;
 
-    const draw = () => {
-
+    const render = () => {
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
 
@@ -383,77 +410,81 @@ export default function Online() {
       ctx.stroke();
 
       // Draw ball
-      ctx.fillStyle = theme.color;
-      ctx.beginPath();
-      ctx.arc(state.ball.x, state.ball.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Draw paddles
-      ctx.fillStyle = theme.color;
-      ctx.beginPath();
-      ctx.roundRect(0, state.paddles.left.y, 10, 90, 8);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.roundRect(width - 10, state.paddles.right.y, 10, 90, 8);
-      ctx.fill();
-
-      // Draw power-up paddle
-      if (state.powerUp.found && state.powerUp.visible) {
-        ctx.save();
-        const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
-        ctx.globalAlpha = pulse;
-        ctx.shadowBlur = 20 * pulse;
-        ctx.shadowColor = theme.color;
-        const hueShift = (Date.now() / 15) % 360;
-        ctx.fillStyle = `hsl(${hueShift}, 80%, 60%)`;
-
+      if (state.ball.visible) {
+        ctx.fillStyle = theme.color;
         ctx.beginPath();
-        ctx.roundRect(state.powerUp.x, state.powerUp.y, state.powerUp.width, state.powerUp.height, 6);
+        ctx.arc(state.ball.x, state.ball.y, state.ball.radius, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.restore(); // restore globalAlpha, shadows, etc.
+        ctx.closePath();
       }
+
+      // Draw paddles with rounded corners
+      ctx.fillStyle = theme.color;
+      ctx.beginPath();
+      ctx.roundRect(state.paddles.left.x, state.paddles.left.y, state.paddles.left.width, state.paddles.left.height, 8);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.roundRect(state.paddles.right.x, state.paddles.right.y, state.paddles.right.width, state.paddles.right.height, 8);
+      ctx.fill();
+
+      rafRef.current = requestAnimationFrame(render);
     };
 
-    const loop = () => {
-      // console.log("Drawing frame");
-      if (!canvasRef.current) return;
-      draw();
-      if (!winnerRef.current) {
-        rafRef.current = requestAnimationFrame(loop);
-      } else {
-        if (rafRef.current) {
-          cancelAnimationFrame(rafRef.current);
-          rafRef.current = null;
-        }
-      }
-    };
-    
-    // Cancel any existing animation frame before starting new loop
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-    }
-    
-    loop();
+    render();
+
     return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [state, theme]);
+
+  // Handle paddle movement - continuous movement while key is held
+  useEffect(() => {
+    if (!socket || waiting) return;
+
+    const keysPressed: Record<string, boolean> = {};
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "w" || e.key === "s") {
+        keysPressed[e.key] = true;
       }
     };
 
-  }, [state, winner]);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "w" || e.key === "s") {
+        keysPressed[e.key] = false;
+      }
+    };
 
-  const resetGame = () => {
-    setWaitingForRestart(true)
-    socket?.emit("restart");
-  };
+    // Send movement updates continuously while keys are held (16ms = ~60fps)
+    const moveInterval = setInterval(() => {
+      if (keysPressed["ArrowUp"] || keysPressed["w"]) {
+        socket.emit("move", { direction: -1 });
+      } else if (keysPressed["ArrowDown"] || keysPressed["s"]) {
+        socket.emit("move", { direction: 1 });
+      }
+    }, 16);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      clearInterval(moveInterval);
+    };
+  }, [socket, waiting]);
 
   const formatTime = (seconds: number) => {
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${min}:${sec.toString().padStart(2, "0")}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const backToBracket = () => {
+    console.log("🔙 Navigating back to bracket with tournamentId:", tournamentId);
+    socket?.disconnect();
+    navigate("/game/tournament", { state: { openTournamentId: tournamentId } });
   };
 
   return (
@@ -481,7 +512,7 @@ export default function Online() {
                 <img 
                   src={playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar} 
                   alt={playerPositionRef.current === "left" ? yourProfile.name : opponentProfile.name} 
-                  className="h-10 rounded-full border-2 border-[#50614d80]-500"
+                  className="h-10 rounded-full border-2 border-teal-500"
                 />
                 <span className="text-[22px] font-semibold">{state.scores.left}</span>
               </>
@@ -507,7 +538,7 @@ export default function Online() {
               <img 
                 src={playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar} 
                 alt={playerPositionRef.current === "right" ? yourProfile.name : opponentProfile.name} 
-                className="h-10 rounded-full border-2 border-[#50614d80]-500" 
+                className="h-10 rounded-full border-2 border-teal-500" 
               />
             )}
           </div>
@@ -520,7 +551,7 @@ export default function Online() {
       >
         <canvas ref={canvasRef} width={state.canvas.width} height={state.canvas.height} className="w-full h-full" />
 
-        {/* Winner Overlay */}
+        {/* Winner Overlay - Tournament version (no Play Again) */}
         {winner && winnerProfile && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20 rounded-tl-4xl">
             <img
@@ -540,50 +571,12 @@ export default function Online() {
               <p className="text-gray-300 text-sm mb-4">Your opponent left the game</p>
             )}
             
-            {waitingForRestart ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="text-white text-xl font-semibold">
-                  Waiting for your opponent...
-                </div>
-                {/* <div className="text-green-400 text-sm">
-                  ✓ You are ready
-                </div> */}
-              </div>
-            ) : (forfeitWin || opponentLeftPostGame) ? (
-              <button
-                onClick={() => navigate("/game")}
-                className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-              >
-                Return to Menu
-              </button>
-            ) : (
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex gap-4">
-                  <button
-                    onClick={resetGame}
-                    className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg shadow-md"
-                  >
-                    Play Again
-                  </button>
-                  <button
-                    onClick={() => {
-                      // socket?.emit("leavePostGame");
-                      socket?.disconnect();
-                      navigate("/game");
-                    }}
-                    className="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md"
-                  >
-                    Return to Menu
-                  </button>
-                </div>
-                {((playerPositionRef.current === "left" && restartReady.right) || 
-                  (playerPositionRef.current === "right" && restartReady.left)) && (
-                  <div className="text-green-400 text-sm">
-                    ✓ Opponent is ready
-                  </div>
-                )}
-              </div>
-            )}
+            <button
+              onClick={backToBracket}
+              className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg shadow-md transition-colors"
+            >
+              Back to Bracket
+            </button>
           </div>
         )}
       </div>

@@ -15,6 +15,7 @@ import Local from "./Game/components/local";
 import Tournament from "./Game/components/tournament";
 import Online from "./Game/components/online";
 import GameSetup from "./Game/components/setup";
+import TournamentGame from "./Game/components/tournament/TournamentGame";
 import { useState } from "react";
 import GameSelection from './TicTac/GameSelection';
 import TicTac from './TicTac/TicTac';
@@ -45,6 +46,7 @@ export default function App() {
               <Route index element={<GameMenu />} />
               <Route path="setup" element={<GameSetup />} />
               <Route path="tournament" element={<Tournament />} />
+              <Route path="tournament-match" element={<TournamentGame />} />
               <Route path="ai" element={<Ai />} />
               <Route path="local" element={<Local />} />
               <Route path="online" element={<Online />} />
