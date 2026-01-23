@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
+import type { GameState } from '../types/index.js';
 import { GameService } from '../services/game.service.js';
 import { MatchmakingService } from '../services/matchmaking.service.js';
 import { GameModel } from '../models/game.model.js';
@@ -17,6 +18,14 @@ export class WebSocketHandler {
   private static userToGameMap: Map<string, string> = new Map(); // Track user's active game
 
   static setup(fastify: FastifyInstance) {
+    // Start automatic timeout monitoring
+    GameService.startTimeoutMonitoring();
+
+    // Register callback for automatic timeout notifications
+    GameService.onGameTimeout((gameId, forfeitPlayerId, game) => {
+      this.handleAutomaticForfeit(gameId, forfeitPlayerId, game);
+    });
+
     fastify.get('/ws', { websocket: true }, (socket, request) => {
 
       socket.on('message', async (data: Buffer) => {
@@ -206,6 +215,45 @@ export class WebSocketHandler {
       this.userToGameMap.delete(result.game.player1Id);
       this.userToGameMap.delete(result.game.player2Id);
     }
+  }
+
+  // Handle automatic forfeit from timeout monitoring
+  private static handleAutomaticForfeit(gameId: string, forfeitPlayerId: string, game: GameState) {
+    console.log(`Automatic forfeit triggered for game ${gameId}, player ${forfeitPlayerId}`);
+    
+    // Notify both players about the forfeit and victory
+    const winnerId = game.winner;
+    
+    // Send forfeit notification to the player who timed out
+    this.sendToUser(forfeitPlayerId, {
+      type: 'game_finished',
+      game: game,
+      reason: 'timeout',
+      result: 'forfeit',
+      message: 'You lost due to inactivity (2 minutes timeout)'
+    });
+
+    // Send victory notification to the winner
+    if (winnerId) {
+      this.sendToUser(winnerId, {
+        type: 'game_finished',
+        game: game,
+        reason: 'timeout',
+        result: 'victory',
+        message: 'You won! Your opponent forfeited due to inactivity'
+      });
+    }
+
+    // Broadcast to all connected players in the game
+    this.broadcastToGame(gameId, {
+      type: 'game_update',
+      game: game
+    });
+
+    // Clean up
+    this.gameConnections.delete(gameId);
+    this.userToGameMap.delete(game.player1Id);
+    this.userToGameMap.delete(game.player2Id);
   }
 
   private static broadcastToGame(gameId: string, message: any) {

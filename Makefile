@@ -20,7 +20,7 @@ up:
 	docker-compose up -d
 
 up-dev:
-	docker-compose up -d frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game kafka user_auth vault
+	docker-compose up -d frontend frontend-dev game-service chat-service notification-service api-gateway tictac-game kafka user_auth vault leaderboard-service
 
 up-ops:
 	docker-compose up -d prometheus grafana alertmanager node-exporter elasticsearch logstash kibana filebeat kafka-ui

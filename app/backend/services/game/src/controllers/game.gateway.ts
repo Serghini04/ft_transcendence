@@ -3,6 +3,7 @@ import { FastifyInstance } from "fastify";
 import { Socket } from "socket.io";
 import { createRoom, rooms, updateGame } from "./game.controller";
 import { saveGameResult } from "../plugins/game.db";
+import { kafkaProducerService } from "../kafka/producer";
 
 // Export these for HTTP routes to access
 export const userSocketMap = new Map<number, Socket>();
@@ -233,8 +234,7 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
               if (db) {
                 // Set score to 5-0 for forfeit win
                 const isLeftPlayerWinner = disconnectedPlayerIndex === 0 ? false : true;
-                
-                await saveGameResult(db, {
+                const gameResult = {
                   gameId: roomId,
                   mode: room.options.mode || 'online',
                   player1Id: room.playerProfiles.left.id,
@@ -243,7 +243,9 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
                   score1: isLeftPlayerWinner ? 5 : 0,
                   score2: isLeftPlayerWinner ? 0 : 5,
                   createdAt: Date.now(),
-                });
+                };
+                kafkaProducerService.publishGameFinishedEvent(gameResult);
+                await saveGameResult(db, gameResult);
                 console.log("✅ Forfeit game result saved successfully");
               } else {
                 console.error("❌ Database not available for saving forfeit game");

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { jwtDecode } from "jwt-decode";
-import bgPhoto from "../../../public/profileBG.png";
+import bgPhoto from "../../../public/backgroundPhoto.png";
 import profilePhoto from "../../../public/breakingbad1.jpg";
 
 type User = {

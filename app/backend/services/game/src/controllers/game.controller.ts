@@ -1,5 +1,6 @@
 // gameController.ts
 import { saveGameResult } from "../plugins/game.db";
+import { kafkaProducerService } from "../kafka/producer"; 
 import { Socket } from "socket.io";
 
 interface PlayerProfile {
@@ -267,9 +268,8 @@ async function handleWin(room: Room, roomId: string, namespace: any) {
       if (!db) {
         console.error("❌ Database not available for saving game result");
         console.error("namespace.fastify:", namespace.fastify);
-        // Still emit gameOver even if DB save fails
       } else {
-        await saveGameResult(db, {
+        const gameResult = {
           gameId: roomId,
           mode: room.options.mode,
           player1Id: playerProfiles.left.id,
@@ -278,7 +278,9 @@ async function handleWin(room: Room, roomId: string, namespace: any) {
           score1: scores.left,
           score2: scores.right,
           createdAt: Date.now(),
-        });
+        }
+        kafkaProducerService.publishGameFinishedEvent(gameResult);
+        await saveGameResult(db, gameResult);
         console.log("✅ Game result saved successfully");
       }
     } catch (error) {

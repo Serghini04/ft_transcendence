@@ -1,14 +1,31 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
 
-const matches = [
-  { id: 1, leftScore: 4, rightScore: 3 },
-  { id: 2, leftScore: 0, rightScore: 2 },
-  { id: 3, leftScore: 5, rightScore: 2 },
-  { id: 4, leftScore: 0, rightScore: 5 },
-  { id: 5, leftScore: 2, rightScore: 1 },
-];
+interface Game {
+  id: number;
+  game_id: string;
+  mode: string;
+  player1_id: string;
+  player2_id: string;
+  winner_id: string;
+  score1: number;
+  score2: number;
+  created_at: number;
+}
+
+interface LastMatchesProps {
+  games: Game[];
+  profileUserId: number;
+  token: string;
+}
+
+interface PlayerInfo {
+  [key: string]: {
+    name: string;
+    photoURL: string;
+  };
+}
 
 // Parent animation (stagger children)
 const containerVariants = {
@@ -39,7 +56,65 @@ const itemVariants: Variants = {
   },
 };
 
-export default function LastMatches() {
+export default function LastMatches({ games, profileUserId, token }: LastMatchesProps) {
+  const [playerInfo, setPlayerInfo] = useState<PlayerInfo>({});
+
+  useEffect(() => {
+    const fetchPlayerInfo = async (playerId: string) => {
+      if (playerInfo[playerId]) return; // Already fetched
+
+      try {
+        const res = await fetch("http://localhost:8080/api/v1/auth/profile/getProfileUser", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          credentials: "include",
+          body: JSON.stringify({ id: parseInt(playerId) })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.user) {
+          setPlayerInfo(prev => ({
+            ...prev,
+            [playerId]: {
+              name: data.user.name,
+              photoURL: data.user.photoURL || "/rasell.png"
+            }
+          }));
+        }
+      } catch (err) {
+        console.error(`Error fetching player ${playerId} info:`, err);
+      }
+    };
+
+    // Fetch info for all unique player IDs
+    const playerIds = new Set<string>();
+    games.forEach(game => {
+      playerIds.add(game.player1_id);
+      playerIds.add(game.player2_id);
+    });
+
+    playerIds.forEach(playerId => {
+      fetchPlayerInfo(playerId);
+    });
+  }, [games, token]);
+
+  if (games.length === 0) {
+    return (
+      <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 p-4 pl-[6rem] md:pl-4 xl:p-0 xl:mx-5">
+        <h2 className="text-xl font-semibold text-white mb-2">
+          Last 5 Matches
+        </h2>
+        <div className="text-gray-400 text-center py-8">
+          No matches played yet
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -51,13 +126,21 @@ export default function LastMatches() {
         Last 5 Matches
       </h2>
 
-      {matches.map((match) => {
-        const isWin = match.leftScore > match.rightScore;
-        const isLose = match.leftScore < match.rightScore;
+      {games.map((game) => {
+        const isPlayer1 = game.player1_id === String(profileUserId);
+        const userScore = isPlayer1 ? game.score1 : game.score2;
+        const opponentScore = isPlayer1 ? game.score2 : game.score1;
+        const opponentId = isPlayer1 ? game.player2_id : game.player1_id;
+        const userId = String(profileUserId);
+        const isWin = game.winner_id === String(profileUserId);
+        const isLose = game.winner_id !== String(profileUserId);
+
+        const opponentData = playerInfo[opponentId];
+        const userData = playerInfo[userId];
 
         return (
           <motion.div
-            key={match.id}
+            key={game.id}
             variants={itemVariants}
             whileHover={{ scale: 1.03, y: -2 }}
             className={`
@@ -81,34 +164,34 @@ export default function LastMatches() {
               }}
             />
 
-            {/* Left player */}
+            {/* Left player (User) */}
             <div className="relative z-10 flex items-center gap-4">
               <img
-                src="/rasell.png"
-                alt="player left"
+                src={`${userData?.photoURL.startsWith('http') ? userData?.photoURL : `${window.location.origin}/${userData?.photoURL}`}`}
+                alt={userData?.name || "user"}
                 className="w-12 h-12 rounded-full border-2 border-white object-cover"
               />
               <span className="text-2xl font-bold text-white">
-                {match.leftScore}
+                {userScore}
               </span>
             </div>
 
             {/* Center */}
             <div className="relative z-10 flex flex-col items-center gap-1">
               <span className="text-teal-400 text-sm font-semibold tracking-wide">
-                Ping Pong
+                {game.mode || "Ping Pong"}
               </span>
               <span className="text-white font-semibold text-lg">vs</span>
             </div>
 
-            {/* Right player */}
+            {/* Right player (Opponent) */}
             <div className="relative z-10 flex items-center gap-4">
               <span className="text-2xl font-bold text-white">
-                {match.rightScore}
+                {opponentScore}
               </span>
               <img
-                src="/leclerc.jpg"
-                alt="player right"
+                src={`${opponentData?.photoURL.startsWith('http') ? opponentData?.photoURL : `${window.location.origin}/${opponentData?.photoURL}`}`}
+                alt={opponentData?.name || "opponent"}
                 className="w-12 h-12 rounded-full border-2 border-white object-cover"
               />
             </div>
@@ -118,11 +201,6 @@ export default function LastMatches() {
     </motion.div>
   );
 }
-
-
-
-
-// import React from "react";
 // import { motion } from "framer-motion";
 
 // const matches = [

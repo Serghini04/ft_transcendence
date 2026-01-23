@@ -3,7 +3,7 @@ import Input from "./Input";
 import LSButton from "./LSButton";
 import { useState } from "react";
 import {UseErrorStore, UseOtpStore, UseShowOtpInputStore, UseUserStore} from "../../zustand/useStore";
-import bgPhoto from "../../../../public/profileBG.png";
+import bgPhoto from "../../../../public/backgroundPhoto.png";
 import profilePhoto from "../../../../public/breakingbad1.jpg";
 
 export default function SignuoSettings()

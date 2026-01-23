@@ -8,11 +8,73 @@ import type { GameFinishedEvent } from '../kafka/producer.js';
 
 export class GameService {
   private static moveHistory: Map<string, Move[]> = new Map();
+  private static lastMoveTime: Map<string, number> = new Map(); 
+  private static readonly INACTIVITY_TIMEOUT = 120000;
+  private static timeoutChecker: NodeJS.Timeout | null = null;
+  private static gameTimeoutCallbacks: Map<string, (gameId: string, forfeitPlayerId: string, game: GameState) => void> = new Map();
+
+  static startTimeoutMonitoring() {
+    if (this.timeoutChecker)
+      return;
+
+    this.timeoutChecker = setInterval(() => {
+      this.checkForTimeouts();
+    }, 10000);
+
+    console.log('Game timeout monitoring started');
+  }
+
+  static stopTimeoutMonitoring() {
+    if (this.timeoutChecker) {
+      clearInterval(this.timeoutChecker);
+      this.timeoutChecker = null;
+      console.log('Game timeout monitoring stopped');
+    }
+  }
+
+
+  static onGameTimeout(callback: (gameId: string, forfeitPlayerId: string, game: GameState) => void) {
+    const callbackId = nanoid();
+    this.gameTimeoutCallbacks.set(callbackId, callback);
+    return callbackId;
+  }
+
+  private static async checkForTimeouts() {
+    const currentTime = Date.now();
+
+    for (const [gameId, lastMove] of this.lastMoveTime.entries()) {
+      const timeSinceLastMove = currentTime - lastMove;
+
+      if (timeSinceLastMove > this.INACTIVITY_TIMEOUT) {
+        const game = GameModel.findById(gameId);
+        
+        if (game && game.status === 'active') {
+          const forfeitPlayerId = game.currentTurn === 'X' ? game.player1Id : game.player2Id;
+          
+          console.log(`Game ${gameId} timed out. Player ${forfeitPlayerId} forfeited due to inactivity.`);
+          
+          const result = await this.forfeitGame(gameId, forfeitPlayerId);
+          
+          if (result.success && result.game) {
+            // Notify all registered callbacks (WebSocket handler)
+            for (const callback of this.gameTimeoutCallbacks.values()) {
+              try {
+                callback(gameId, forfeitPlayerId, result.game);
+              } catch (error) {
+                console.error('Error in timeout callback:', error);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   static createGame(player1Id: string, player2Id: string): GameState {
     const gameId = nanoid();
     const game = GameModel.create(gameId, player1Id, player2Id);
     this.moveHistory.set(gameId, []);
+    this.lastMoveTime.set(gameId, Date.now());
     return game;
   }
 
@@ -21,10 +83,6 @@ export class GameService {
     game?: GameState;
     error?: string;
   }> {
-    if (position < 0 || position > 8) {
-      return { success: false, error: 'Invalid position' };
-    }
-
     const game = GameModel.findById(gameId);
     if (!game) {
       return { success: false, error: 'Game not found' };
@@ -32,6 +90,10 @@ export class GameService {
 
     if (game.status !== 'active') {
       return { success: false, error: 'Game is not active' };
+    }
+
+    if (position < 0 || position > 8) {
+      return { success: false, error: 'Invalid position' };
     }
 
     const isPlayer1 = game.player1Id === playerId;
@@ -50,6 +112,8 @@ export class GameService {
     if (game.board[position] !== '') {
       return { success: false, error: 'Position already taken' };
     }
+
+    this.lastMoveTime.set(gameId, Date.now());
 
     game.board[position] = playerSymbol;
     const moves = this.moveHistory.get(gameId) || [];
@@ -73,12 +137,12 @@ export class GameService {
       
       const duration = game.finishedAt - game.startedAt;
       
-      // Publish to Kafka BEFORE saving to database
       await this.publishGameFinished(game, moves.length, duration, 'win');
       
       GameHistoryModel.create(game, moves.length, duration);
       
       this.moveHistory.delete(gameId);
+      this.lastMoveTime.delete(gameId);
     } else if (this.isBoardFull(game.board)) {
       game.status = 'finished';
       game.winner = null;
@@ -87,12 +151,12 @@ export class GameService {
       
       const duration = game.finishedAt - game.startedAt;
       
-      // Publish to Kafka BEFORE saving to database
       await this.publishGameFinished(game, moves.length, duration, 'draw');
       
       GameHistoryModel.create(game, moves.length, duration);
       
       this.moveHistory.delete(gameId);
+      this.lastMoveTime.delete(gameId);
     } else {
       game.currentTurn = game.currentTurn === 'X' ? 'O' : 'X';
     }
@@ -101,6 +165,7 @@ export class GameService {
 
     return { success: true, game };
   }
+
   private static checkWinner(board: ('X' | 'O' | '')[]): 'X' | 'O' | null {
     const winningCombinations = [
       [0, 1, 2],
@@ -188,7 +253,6 @@ export class GameService {
       await kafkaProducer.publishGameFinished(event);
     } catch (error) {
       console.error('Failed to publish game finished event:', error);
-      // Don't throw - we don't want to break game flow if Kafka is down
     }
   }
 
@@ -223,12 +287,12 @@ export class GameService {
     const moves = this.moveHistory.get(gameId) || [];
     const duration = game.finishedAt - game.startedAt;
     
-    // Publish to Kafka BEFORE saving to database
     await this.publishGameFinished(game, moves.length, duration, 'forfeit');
     
     GameHistoryModel.create(game, moves.length, duration);
 
     this.moveHistory.delete(gameId);
+    this.lastMoveTime.delete(gameId);
 
     GameModel.update(game);
 

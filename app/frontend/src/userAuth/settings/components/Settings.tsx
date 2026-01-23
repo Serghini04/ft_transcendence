@@ -4,7 +4,7 @@ import ModifyUserInformation from "./ModifyUserInformation";
 import PhotosSide from "./PhotosSide";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import verifyToken from "../../../globalUtils/verifyToken";
-import bgPhoto from "../../../../public/profileBG.png";
+import bgPhoto from "../../../../public/backgroundPhoto.png";
 import profilePhoto from "../../../../public/breakingbad1.jpg";
 
 export default function Settings() {
@@ -66,7 +66,7 @@ fetchUserData();
       shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_0_#27445E]
       overflow-y-auto
       overflow-x-hidden
-      scrollbar-none
+      hide-scrollbar
     "
   >
     <div className="flex-shrink-0">
