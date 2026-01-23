@@ -2,6 +2,8 @@ import { useGoogleLogin } from "@react-oauth/google";
 import {UseErrorStore, UseTokenStore, UseUserStore} from "../../zustand/useStore";
 import { useNavigate } from "react-router-dom";
 import googleIcone from "../../../assets/images/google.png";
+import bgPhoto from "../../../../public/backgroundPhoto.png";
+import profilePhoto from "../../../../public/breakingbad1.jpg";
 
 export default function GoogleButton(props :any) {
 	const {setErrorMsg} = UseErrorStore();
@@ -12,12 +14,12 @@ export default function GoogleButton(props :any) {
 
 
 	const login = useGoogleLogin({
-		onSuccess: async (tokenResponse) => {
+		onSuccess: async (tokenResponse : any) => {
 			try {
 				const res = await fetch(`http://localhost:8080${props.route}`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ accessToken: tokenResponse.access_token }),
+					body: JSON.stringify({ accessToken: tokenResponse.access_token, photoURL: profilePhoto, bgPhotoURL: bgPhoto, bio: "Hello, I am using PingPong App!" }),
 					credentials: "include"
 				});
 

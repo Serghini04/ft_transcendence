@@ -32,12 +32,12 @@ const start = async () => {
   try {
     // Start HTTP server
     await app.listen({ port: 3016, host: "0.0.0.0" });
-    app.log.info("🏆 Leaderboard Service running at http://0.0.0.0:3016");
+    app.log.info("Leaderboard Service running at http://0.0.0.0:3016");
 
     // Start Kafka consumer (non-blocking)
     kafkaConsumerService.startConsuming().catch((err) => {
       app.log.error("Failed to start Kafka consumer:", err);
-      app.log.warn("⚠️ Leaderboard service running without Kafka - will retry connection in background");
+      app.log.warn("Leaderboard service running without Kafka - will retry connection in background");
     });
   } catch (err) {
     app.log.error(err);

@@ -1,5 +1,11 @@
 import { FastifyInstance } from "fastify";
-import { getLeaderboard, getPlayerStats, getPlayerGames } from "../db";
+import { 
+  getLeaderboard, 
+  getPlayerStats, 
+  getPlayerGames,
+  getTicTacToeLeaderboard,
+  getTicTacToePlayerStats
+} from "../db";
 
 async function fetchUserInfo(userId: string, token: string) {
   try {
@@ -65,5 +71,41 @@ export async function leaderboardRoutes(app: FastifyInstance) {
     
     const games = getPlayerGames(userId, Number(limit));
     return { games, count: games.length };
+  });
+
+  // ==================== TicTacToe Routes ====================
+
+  // Get TicTacToe leaderboard
+  app.get("/api/v1/leaderboard/tictactoe", async (request, reply) => {
+    const { limit = 100 } = request.query as { limit?: number };
+    const token = request.headers.authorization?.split(" ")[1];
+    
+    const leaderboard = getTicTacToeLeaderboard(Number(limit));
+    
+    // Fetch usernames for all players
+    const leaderboardWithUsernames = await Promise.all(
+      leaderboard.map(async (player: any) => {
+        const username = token ? await fetchUserInfo(player.user_id, token) : `User${player.user_id}`;
+        return {
+          ...player,
+          username,
+        };
+      })
+    );
+    
+    return { leaderboard: leaderboardWithUsernames };
+  });
+
+  // Get TicTacToe player stats
+  app.get("/api/v1/leaderboard/tictactoe/player/:userId", async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    request.log.info(` ---------> Fetching TicTacToe stats for user: ${userId}`);
+    const stats = getTicTacToePlayerStats(userId);
+    
+    if (!stats) {
+      return reply.status(404).send({ error: "Player not found" });
+    }
+    
+    return stats;
   });
 }

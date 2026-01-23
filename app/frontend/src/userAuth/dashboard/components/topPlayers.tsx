@@ -54,7 +54,7 @@ export default function TopPlayersTable() {
 
   if (loading) {
     return (
-      <div className="w-full">
+      <div className="w-full xl:w-[25vw]">
         <div className="w-full h-full rounded-2xl bg-[rgba(68,78,106,0.3)] border border-white/10 shadow-xl backdrop-blur-md">
           <div className="px-6 py-3 border-b border-white/10">
             <h2 className="text-white text-lg font-semibold">Top Players</h2>

@@ -4,17 +4,18 @@ interface ActivityProps {
     played?: number;
     wins?: number;
     losses?: number;
+    ticTacToePlayed?: number;
+    ticTacToeWins?: number;
 }
 
-export default function Activity({played = 0, wins = 0, losses = 0}: ActivityProps) {
-    const ticTacToeMatchesPlayed = 0;
+export default function Activity({played, wins, ticTacToePlayed, ticTacToeWins}: ActivityProps) {
+    const ticTacToeMatchesPlayed = ticTacToePlayed;
     const pingPongMatchesPlayed = played;
-    const ticTacToeGamesWon = 0;
+    const ticTacToeGamesWon = ticTacToeWins;
     const pingPongGamesWon = wins;
-    const challengesSent = 0;
-    const challengesReceived = 0;
+    // console.log("Activity Component Props: XXXXXXXXXXXXXXXXXXXXXXXXX", { played, wins, tictactoeplayed, tictactoewins });
     return (
-        <div className="w-full h-50">
+        <div className="w-full h-50 xl:w-[35vw]">
             <div className="rounded-xl p-4 backdrop-blur-md shadow-xl bg-[rgba(68,78,106,0.3)]">
                 <div className="mb-4">
                     <p className="text-sm">Today's Activity</p>

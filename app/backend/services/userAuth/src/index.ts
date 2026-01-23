@@ -118,7 +118,7 @@ const client = new OAuth2Client("917057465162-k81haa2us30sg6ddker0bu9gk4qigb9r.a
 
 app.post("/api/v1/auth/googleSignup", async (request, reply) => {
   try{
-    const {accessToken} = request.body as {accessToken: string};
+    const {accessToken, photoURL, bgPhotoURL} = request.body as {accessToken: string, photoURL: string, bgPhotoURL: string};
 
   
     
@@ -131,35 +131,36 @@ app.post("/api/v1/auth/googleSignup", async (request, reply) => {
 
     const email = ticket.email;
     let name = ticket.email?.split('@')[0];
-
+    
     if (!email) {
       return reply.status(400).send({ error: "Invalid Google token" });
     }
-
+    
     let isNameExist = db.prepare("SELECT * FROM users WHERE name = (?)").get(name);
     if (isNameExist)
-    {
-      for (let i = 0; isNameExist; i++)
       {
-        name = (name ?? "") + Math.floor(Math.random() * 1000);
-        isNameExist = db.prepare("SELECT * FROM users WHERE name = (?)").get(name);
-      }
-    }
-    const isEmailExist = db.prepare("SELECT * FROM users WHERE email = (?)").get(email);
-    if (isEmailExist)
-      return reply.status(401).send({ error: "email previously used" }); 
-    else
-      db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)").run(name, email, "GOOGLE_USER");
-
-    //save user info for sending back to client
-    const row = db.prepare("SELECT * FROM users WHERE name = ?").get(name) as User;
-    const userInfo = {
-      id: row.id,
-      name: row.name,
-      email: row.email
-    }
-
-    //jwt token generation
+        for (let i = 0; isNameExist; i++)
+          {
+            name = (name ?? "") + Math.floor(Math.random() * 1000);
+            isNameExist = db.prepare("SELECT * FROM users WHERE name = (?)").get(name);
+          }
+        }
+        const isEmailExist = db.prepare("SELECT * FROM users WHERE email = (?)").get(email);
+        if (isEmailExist)
+          return reply.status(401).send({ error: "email previously used" }); 
+        else
+          db.prepare("INSERT INTO users (name, email, password, photoURL, bgPhotoURL, bio) VALUES (?, ?, ?, ?, ?, ?)").run(name, email, "GOOGLE_USER", photoURL, bgPhotoURL, "Hello, I am using PingPong App!");
+        
+        //save user info for sending back to client
+        const row = db.prepare("SELECT * FROM users WHERE name = ?").get(name) as User;
+        const userInfo = {
+          id: row.id,
+          name: row.name,
+          email: row.email
+        }
+        
+        
+        //jwt token generation
     const getJwtParams = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User;
     const AccessToken = generateJwtAccessToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
     const RefreshToken = generateJwtRefreshToken({id: getJwtParams.id, name: getJwtParams.name, email: getJwtParams.email});
@@ -184,7 +185,7 @@ app.post("/api/v1/auth/googleSignup", async (request, reply) => {
   }
   catch(err){
     console.error(err);
-    reply.status(401).send("Invalid Google token");
+    reply.status(401).send({ error: "Invalid Google token" });
   }
 })
 
@@ -422,7 +423,7 @@ app.post("/api/v1/auth/signup", async (request, reply) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       //stor in db
       const expiry = Date.now() + 10 * 60 * 1000; 
-      db.prepare("INSERT INTO temp_users (name, email, password, expiry, photoURL, bgPhotoURL, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(name, email, hashedPassword, expiry, photoURL, bgPhotoURL, "");
+      db.prepare("INSERT INTO temp_users (name, email, password, expiry, photoURL, bgPhotoURL, bio) VALUES (?, ?, ?, ?, ?, ?, ?)").run(name, email, hashedPassword, expiry, photoURL, bgPhotoURL, "Hello, I am using PingPong App!");
 
       //save user info for sending back to client
       const row = db.prepare("SELECT * FROM temp_users WHERE email = ?").get(email) as User;

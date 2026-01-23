@@ -44,7 +44,7 @@ export default function LaunchTheGame({ wins = 0, losses = 0 }: LaunchTheGamePro
   
   return (
     <div
-      className="relative w-full flex flex-col gap-4"
+      className="relative w-full xl:w-[55vw] flex flex-col gap-4"
     >
       <div className="absolute -top-2 -left-2 z-10">
         <div className="relative w-20 h-20 rounded-full bg-[#0F172A] flex items-center justify-center shadow-xl">

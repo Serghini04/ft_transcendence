@@ -34,105 +34,67 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
 
   useEffect(() => {
     async function fetchWeeklyWins() {
-      if (!token || !user.id) {
-        console.log("⚠️ Missing token or user.id", { token: !!token, userId: user.id });
-        return;
-      }
+  if (!token || !user.id) return;
 
-      try {
-        console.log("🔄 Fetching games for user:", user.id);
-        const res = await fetch(`http://localhost:8080/api/v1/leaderboard/player/${user.id}/games?limit=100`, {
-          method: "GET",
-          headers: { 
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          credentials: "include",
-        });
-        
-        const data = await res.json();
-        
-        console.log("📊 Fetched games response:", { 
-          ok: res.ok, 
-          status: res.status,
-          data: data,
-          gamesCount: data.games?.length || 0 
-        });
-        
-        if (res.ok && data.games && Array.isArray(data.games)) {
-          // Initialize wins counter for each day (PingPong and TicTacToe separately)
-          const pingPongWinsPerDay = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
-          const ticTacWinsPerDay = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
-          
-          // Process games from the last 7 days
-          const now = new Date();
-          const sevenDaysAgo = new Date(now);
-          sevenDaysAgo.setDate(now.getDate() - 7);
-          
-          console.log("🎮 Processing games. User ID:", user.id, "Type:", typeof user.id);
-          
-          data.games.forEach((game: GameData) => {
-            const gameDate = new Date(game.created_at);
-            
-            console.log("🎲 Game:", {
-              id: game.id,
-              winner_id: game.winner_id,
-              winner_type: typeof game.winner_id,
-              user_id: user.id,
-              user_id_type: typeof user.id,
-              match: game.winner_id == user.id,
-              strict_match: game.winner_id === user.id,
-              date: gameDate,
-              within_7_days: gameDate >= sevenDaysAgo
-            });
-            
-            // Only count games from the last 7 days
-            if (gameDate >= sevenDaysAgo) {
-              // Check if current user won (use loose comparison to handle string/number mismatch)
-              if (game.winner_id == user.id) {
-                const dayOfWeek = gameDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-                
-                console.log("✅ User won! Day:", dayOfWeek, "Game type:", game.game_type, "ID:", game.id);
-                
-                // Check game type and increment appropriate counter
-                if (game.game_type === 'tictactoe' || String(game.id).includes('tictac')) {
-                  ticTacWinsPerDay[dayOfWeek]++;
-                } else {
-                  // Default to PingPong
-                  pingPongWinsPerDay[dayOfWeek]++;
-                }
-              }
-            }
-          });
-          
-          // Update weekly data with actual wins for both games
-          const newWeeklyData = [
-            { day: "Sun", pingPongWins: pingPongWinsPerDay[0], ticTacWins: ticTacWinsPerDay[0] },
-            { day: "Mon", pingPongWins: pingPongWinsPerDay[1], ticTacWins: ticTacWinsPerDay[1] },
-            { day: "Tue", pingPongWins: pingPongWinsPerDay[2], ticTacWins: ticTacWinsPerDay[2] },
-            { day: "Wed", pingPongWins: pingPongWinsPerDay[3], ticTacWins: ticTacWinsPerDay[3] },
-            { day: "Thu", pingPongWins: pingPongWinsPerDay[4], ticTacWins: ticTacWinsPerDay[4] },
-            { day: "Fri", pingPongWins: pingPongWinsPerDay[5], ticTacWins: ticTacWinsPerDay[5] },
-            { day: "Sat", pingPongWins: pingPongWinsPerDay[6], ticTacWins: ticTacWinsPerDay[6] },
-          ];
-          
-          console.log("📊 Weekly data processed:", newWeeklyData);
-          console.log("🎯 PingPong wins:", pingPongWinsPerDay);
-          console.log("🎯 TicTacToe wins:", ticTacWinsPerDay);
-          
-          setWeeklyData(newWeeklyData);
-        } else {
-          console.log("❌ No games data or response not ok", { 
-            responseOk: res.ok,
-            hasGames: !!data.games,
-            isArray: Array.isArray(data.games),
-            data 
-          });
-        }
-      } catch (err) {
-        console.error("❌ Error fetching weekly wins:", err);
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    const [pingPongRes, ticTacRes] = await Promise.all([
+      fetch(
+        `http://localhost:8080/api/v1/leaderboard/player/${user.id}/games?limit=100`,
+        { headers, credentials: "include" }
+      ),
+      fetch(
+        `http://localhost:8080/api/v1/leaderboard/tictactoe/player/${user.id}`,
+        { headers, credentials: "include" }
+      ),
+    ]);
+
+    const pingPongData = await pingPongRes.json();
+    const ticTacData = await ticTacRes.json();
+
+    const pingPongWinsPerDay = [0, 0, 0, 0, 0, 0, 0];
+    const ticTacWinsPerDay  = [0, 0, 0, 0, 0, 0, 0];
+
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    // 🟠 PingPong
+    pingPongData.games?.forEach((game: GameData) => {
+      const date = new Date(game.created_at);
+      if (date >= sevenDaysAgo && game.winner_id == user.id) {
+        pingPongWinsPerDay[date.getDay()]++;
       }
-    }
+    });
+
+    // 🔵 TicTacToe
+    ticTacData.games?.forEach((game: GameData) => {
+      const date = new Date(game.created_at);
+      if (date >= sevenDaysAgo && game.winner_id == user.id) {
+        ticTacWinsPerDay[date.getDay()]++;
+      }
+    });
+    console.log("🟦 TIC TAC RAW DATA:", ticTacData);
+    console.log("🟦 TIC TAC WINS PER DAY:", ticTacWinsPerDay);
+
+    setWeeklyData([
+      { day: "Sun", pingPongWins: pingPongWinsPerDay[0], ticTacWins: ticTacWinsPerDay[0] },
+      { day: "Mon", pingPongWins: pingPongWinsPerDay[1], ticTacWins: ticTacWinsPerDay[1] },
+      { day: "Tue", pingPongWins: pingPongWinsPerDay[2], ticTacWins: ticTacWinsPerDay[2] },
+      { day: "Wed", pingPongWins: pingPongWinsPerDay[3], ticTacWins: ticTacWinsPerDay[3] },
+      { day: "Thu", pingPongWins: pingPongWinsPerDay[4], ticTacWins: ticTacWinsPerDay[4] },
+      { day: "Fri", pingPongWins: pingPongWinsPerDay[5], ticTacWins: ticTacWinsPerDay[5] },
+      { day: "Sat", pingPongWins: pingPongWinsPerDay[6], ticTacWins: ticTacWinsPerDay[6] },
+    ]);
+      console.log("------------------->", weeklyData);
+  } catch (err) {
+    console.error("❌ Weekly stats error:", err);
+  }
+}
     
     fetchWeeklyWins();
   }, [user.id, token]);
@@ -143,7 +105,7 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
   console.log("📊 Rendering WeeklyLevel - maxWins:", maxWins, "data:", weeklyData);
 
   return (
-    <div className="w-full xl:h-6 xl:mt-[-6.2rem]">
+    <div className="w-full xl:h-6 xl:mt-[-6.2rem] xl:w-[35vw]">
       <div className="rounded-2xl p-6 bg-[rgba(68,78,106,0.3)] border border-white/10 shadow-xl backdrop-blur-md">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-white text-lg font-semibold xl:mb-76">Weekly Level</h2>

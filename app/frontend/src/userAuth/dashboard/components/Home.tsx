@@ -20,38 +20,59 @@ export default function Home() {
     total_score: 0,
     goals_conceded: 0
   });
+  
+  const [ticTacToeStats, setTicTacToeStats] = useState({
+    total_games: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0
+  });
 
   useEffect(() => {
-    async function fetchPingPongStats() {
+    async function fetchStats() {
       if (!token || !user.id) {
         console.log("Waiting for token or user ID...");
         return;
       }
 
       try {
-        const res = await authenticatedFetch(`http://localhost:8080/api/v1/leaderboard/player/${user.id}`);
+        // Fetch PingPong stats
+        const pingPongRes = await authenticatedFetch(`/api/v1/leaderboard/player/${user.id}`);
+        const pingPongData = await pingPongRes.json();
         
-        const data = await res.json();
-        
-        if (res.ok) {
+        if (pingPongRes.ok) {
           setPingPongStats({
-            total_games: data.total_games || 0,
-            wins: data.wins || 0,
-            losses: data.losses || 0,
-            total_score: data.total_score || 0,
-            goals_conceded: data.goals_conceded || 0
+            total_games: pingPongData.total_games || 0,
+            wins: pingPongData.wins || 0,
+            losses: pingPongData.losses || 0,
+            total_score: pingPongData.total_score || 0,
+            goals_conceded: pingPongData.goals_conceded || 0
           });
-          console.log("Ping Pong Stats:", data);
+          console.log("Ping Pong Stats:", pingPongData);
+        }
+        
+        // Fetch TicTacToe stats
+        const ticTacToeRes = await authenticatedFetch(`/api/v1/leaderboard/tictactoe/player/${user.id}`);
+        const ticTacToeData = await ticTacToeRes.json();
+        
+        if (ticTacToeRes.ok) {
+          setTicTacToeStats({
+            total_games: ticTacToeData.total_games || 0,
+            wins: ticTacToeData.wins || 0,
+            losses: ticTacToeData.losses || 0,
+            draws: ticTacToeData.draws || 0
+          });
+          console.log("TicTacToe Stats:", ticTacToeData);
         }
       } catch (err) {
-        console.error("Error fetching ping pong statistics:", err);
+        console.error("Error fetching statistics:", err);
       }
     }
     
-    fetchPingPongStats();
+    fetchStats();
     
     // Poll for updates every 5 seconds
-    const interval = setInterval(fetchPingPongStats, 5000);
+    const interval = setInterval(fetchStats, 5000);
     
     return () => clearInterval(interval);
   }, [user.id, token]);
@@ -109,7 +130,8 @@ export default function Home() {
           <Activity 
             played={pingPongStats.total_games}
             wins={pingPongStats.wins}
-            losses={pingPongStats.losses}
+            ticTacToePlayed={ticTacToeStats.total_games}
+            ticTacToeWins={ticTacToeStats.wins}
           />
           
           {/* Row 2 Left - Top Players and Monthly Wins side by side */}
