@@ -12,7 +12,7 @@ export default function SwitchBetweenLoginAndSignin()
 	const {setErrorMsg} = UseErrorStore();
 	const { otpFlag } = UseShowOtpInputStore();
 	return (
-		<>
+<>
 			<div className="flex flex-col items-center justify-center w-full">
 			{otpFlag && (
 				<div className="flex flex-col items-center justify-center">
@@ -24,7 +24,7 @@ export default function SwitchBetweenLoginAndSignin()
 				<> 
 				<div className="relative flex justify-center items-center rounded-full h-[3vw] w-[12.7vw] bg-[rgba(10,17,25,90%)]">
 					<motion.div
-						transition={{ type: "spring", stiffness: 180, damping: 25 }}
+						{...({ transition: { type: "spring", stiffness: 180, damping: 25 } } as any)}
 						className="absolute top-[0.25vw] left-[0.25vw] h-[2.5vw] w-[6vw] rounded-full bg-primary border-[#DDDDDD] border-[0.13vw]"
 						animate={{
 							x: isSignup ? "6.2vw" : "0vw",
@@ -36,23 +36,23 @@ export default function SwitchBetweenLoginAndSignin()
 
 				<AnimatePresence mode="wait">
 					{isSignup ? (
-						<motion.div
+<motion.div
 							key="signup"
-							initial={{ opacity: 0, x: 20 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, x: 20 }}
-							transition={{ duration: 0.3 }}
+							{...({ initial: { opacity: 0, x: 20 } } as any)}
+							{...({ animate: { opacity: 1, x: 0 } } as any)}
+							{...({ exit: { opacity: 0, x: 20 } } as any)}
+							{...({ transition: { duration: 0.3 } } as any)}
 							className="mt-[2vw] w-full flex flex-col items-center justify-center gap-[0.8vw] md:gap-[1.2] xl:gap-[2vw]"
 							>
 								<SignupArea />
 						</motion.div>
 					) : (
-						<motion.div
+<motion.div
 							key="login"
-							initial={{ opacity: 0, x: -20 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, x: -20 }}
-							transition={{ duration: 0.3 }}
+							{...({ initial: { opacity: 0, x: -20 } } as any)}
+							{...({ animate: { opacity: 1, x: 0 } } as any)}
+							{...({ exit: { opacity: 0, x: -20 } } as any)}
+							{...({ transition: { duration: 0.3 } } as any)}
 							className="mt-[2vw] w-full flex flex-col items-center justify-center gap-[0.8vw] md:gap-[1.2] xl:gap-[2vw]"
 							>
 								<LoginArea />

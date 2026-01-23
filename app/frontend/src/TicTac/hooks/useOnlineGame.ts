@@ -18,7 +18,6 @@ export function useOnlineGame(user: User | null) {
     wsService.connect(user.id)
       .then(() => {
         setIsConnected(true);
-        console.log('Connected to game server');
       })
       .catch((err) => {
         console.error('Failed to connect:', err);
@@ -27,7 +26,6 @@ export function useOnlineGame(user: User | null) {
 
     // Set up message handlers
     const handleMatchFound = (message: WSMessage) => {
-      console.log('Match found:', message);
       setCurrentGame(message.game);
       setOpponent(message.opponent);
       setIsSearching(false);
@@ -39,30 +37,26 @@ export function useOnlineGame(user: User | null) {
     };
 
     const handleGameUpdate = (message: WSMessage) => {
-      console.log('Game update:', message);
       setCurrentGame(message.game);
     };
 
     const handleGameFinished = (message: WSMessage) => {
-      console.log('Game finished:', message);
       setCurrentGame(message.game);
     };
 
-    const handleMatchmakingJoined = (message: WSMessage) => {
-      console.log('Joined matchmaking:', message);
+    const handleMatchmakingJoined = () => {
       setIsSearching(true);
     };
 
-    const handleMatchmakingLeft = (message: WSMessage) => {
-      console.log('Left matchmaking:', message);
+    const handleMatchmakingLeft = () => {
       setIsSearching(false);
     };
 
     const handleError = (message: WSMessage) => {
       const errorMsg = message.error || message.message || 'An error occurred';
-      
-      // Ignore 'already in queue' errors - they're not real errors
-      if (errorMsg.includes('Already in matchmaking queue')) {
+      // Don't treat queue refresh/already-in-queue as an error
+      if (errorMsg.includes('Already in matchmaking queue') || 
+          errorMsg.includes('Refreshed matchmaking queue position')) {
         return;
       }
       
@@ -81,7 +75,6 @@ export function useOnlineGame(user: User | null) {
     wsService.on('forfeit_error', handleError);
     wsService.on('error', handleError);
 
-    // Check for active game
     TicTacAPI.getActiveGame(user.id)
       .then((game) => {
         if (game) {
@@ -108,7 +101,7 @@ export function useOnlineGame(user: User | null) {
   }, [user]);
 
   const findMatch = () => {
-    if (!user || !isConnected || isSearching) return;
+    if (!user || !isConnected) return;
     
     setError(null);
     setIsSearching(true);

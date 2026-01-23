@@ -217,6 +217,24 @@ app.get("/api/v1/game/history/:userId/:opponentId", async (request, reply) => {
   }
 });
 
+const connectKafkaWithRetry = async (retries = 10, delay = 2000) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await kafkaProducerService.connect();
+      app.log.info("✅ Kafka producer connected successfully");
+      return;
+    } catch (err: any) {
+      app.log.warn(`⚠️ Kafka connection failed (attempt ${attempt}/${retries}), retrying in ${delay}ms...`);
+      if (attempt === retries) {
+        app.log.error("❌ Failed to connect to Kafka after max retries. Service will continue without Kafka.");
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay = Math.min(delay * 1.5, 10000); // Exponential backoff, max 10s
+    }
+  }
+};
+
 const start = async () => {
   try {
     // Seed test users if they don't exist (will be replaced by Kafka consumer in production)
@@ -248,6 +266,9 @@ const start = async () => {
     
     await app.listen({ port: 3005, host: "0.0.0.0" });
     app.log.info("🎮 Game Service running at http://0.0.0.0:3005");
+
+    // Try to connect to Kafka in background with retry logic (non-blocking)
+    connectKafkaWithRetry();
   } catch (err) {
     app.log.error(err);
     process.exit(1);

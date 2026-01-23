@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
+import { useNotificationStore } from "../../notification/store/useNotificationStroe";
 import { toast } from "react-toastify";
 import { UseTokenStore } from "../../userAuth/zustand/useStore";
 import { useNavigate } from "react-router-dom";
@@ -10,16 +11,22 @@ type Contact = {
   user: {
     id: number;
     fullName: string;
-    username: string;
-    status: string;
     avatarUrl: string;
+    bgPhotoUrl: string;
+    bio: string;
   };
   unseenMessages: number;
   blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
 
-export default function ContactsList({ closeSidebar }: any) {
-  const { contacts, selectedContact, setSelectedContact, setMessages, loginId, onlineUsers, unseenMessageCounts, fetchContacts } = useChatStore();
+interface ContactsListProps {
+  closeSidebar: () => void;
+  menuOpen: boolean;
+}
+
+export default function ContactsList({ closeSidebar, menuOpen }: ContactsListProps) {
+  const { contacts, selectedContact, setSelectedContact, setMessages, loginId, unseenMessageCounts, fetchContacts } = useChatStore();
+  const onlineUsers = useNotificationStore((s) => s.onlineUsers);
   const { token} = UseTokenStore();
   const navigate = useNavigate();
 

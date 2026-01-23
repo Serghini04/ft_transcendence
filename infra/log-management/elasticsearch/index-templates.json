@@ -1,0 +1,93 @@
+{
+  "index_patterns": ["logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.lifecycle.name": "logs-policy",
+      "index.lifecycle.rollover_alias": "logs",
+      "index.codec": "best_compression",
+      "index.refresh_interval": "30s",
+      "index.max_result_window": 10000
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "service_name": {
+          "type": "keyword"
+        },
+        "service_type": {
+          "type": "keyword"
+        },
+        "log_level": {
+          "type": "keyword"
+        },
+        "message": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "log_message": {
+          "type": "text"
+        },
+        "error": {
+          "properties": {
+            "message": {
+              "type": "text"
+            },
+            "stack_trace": {
+              "type": "text"
+            },
+            "type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "http": {
+          "properties": {
+            "method": {
+              "type": "keyword"
+            },
+            "status_code": {
+              "type": "integer"
+            },
+            "path": {
+              "type": "keyword"
+            },
+            "response_time_ms": {
+              "type": "float"
+            }
+          }
+        },
+        "client_ip": {
+          "type": "ip"
+        },
+        "user_id": {
+          "type": "keyword"
+        },
+        "tags": {
+          "type": "keyword"
+        },
+        "geoip": {
+          "properties": {
+            "location": {
+              "type": "geo_point"
+            }
+          }
+        }
+      }
+    }
+  },
+  "priority": 500,
+  "version": 1,
+  "_meta": {
+    "description": "Template for microservices logs"
+  }
+}

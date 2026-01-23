@@ -1,5 +1,5 @@
-node_modules
-dist
+**/node_modules
+**/dist
 *.log
 .env
 .env.local
@@ -8,7 +8,7 @@ dist
 README.md
 .vscode
 .idea
-coverage
+**/coverage
 .nyc_output
 *.md
 .DS_Store

@@ -9,9 +9,6 @@ interface GoalStatsProps {
 }
 
 export default function GoalStats({ scored, conceded, matches }: GoalStatsProps) {
-  scored = 15;
-  conceded = 8;
-  matches = 10;
   const avgScored = matches > 0 ? (scored / matches).toFixed(1) : "0";
   // const avgConceded = matches > 0 ? (conceded / matches).toFixed(1) : "0";
 

@@ -17,10 +17,10 @@
 }
 
 
-html, body {
+/* html, body {
   height: 100%;
   overflow: hidden;
-}
+} */
 
 :root {
 	--height-tt: 200px;
@@ -34,7 +34,7 @@ html, body {
   html,
   body {
     height: 100%;
-    overflow: hidden;
+    overflow: auto;
   }
 }
 
@@ -64,10 +64,6 @@ html, body {
   animation-delay: 0.4s;
 }
 
-/* body {
-  overflow: hidden;
-  overflow-y: auto;
-} */
 
 @keyframes typing {
   0%, 60%, 100% {
@@ -126,3 +122,13 @@ select option:checked {
   background: linear-gradient(to right, #14b8a6, #06b6d4);
   color: #ffffff;
 }
+.hide-scrollbar {
+  -ms-overflow-style: none;     
+  scrollbar-width: none;        
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;               
+}
+
+

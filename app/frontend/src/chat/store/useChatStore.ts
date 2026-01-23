@@ -6,14 +6,15 @@ import { showToast } from '../hooks/useChatToast';
 type ContactUser = {
     id: number;
     fullName: string;
-    username: string;
-    status: string;
     avatarUrl: string;
+    bgPhotoUrl: string;
+    bio: string;
 };
 
 type Contact = {
     id: number;
     user: ContactUser;
+    avatarUrl: string;
     unseenMessages: number;
     blockStatus: 'blocked_by_me' | 'blocked_by_them' | 'none';
 };
@@ -362,12 +363,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
         get().addMessage(optimisticMessage);
 
-        console.log("Sending message:", {
-            id: messageId,
-            to: receiverId,
-            message: text
-        });
-
         socket.emit("message:send", {
             id: messageId,
             to: receiverId,
@@ -549,9 +544,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
                 },
                 credentials: 'include',
             });
-            
             if (response.ok) {
-                const contacts = await response.json();
+                const data = await response.json();
+                const contacts = Array.isArray(data) ? data.map((contact: any) => ({
+                    ...contact,
+                    avatarUrl: contact.avatarUrl || contact.user?.avatarUrl || ''
+                })) : [];
                 set({ contacts });
                 get().initializeUnseenCounts(contacts);
                 

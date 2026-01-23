@@ -3,6 +3,7 @@ import { FastifyInstance } from "fastify";
 import { Socket } from "socket.io";
 import { createRoom, createTournamentRoom, rooms, updateGame } from "./game.controller";
 import { saveGameResult } from "../plugins/game.db";
+import { kafkaProducerService } from "../kafka/producer";
 
 // Export these for HTTP routes to access
 export const userSocketMap = new Map<number, Socket>();
@@ -390,6 +391,8 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
                   score2,
                   createdAt: Date.now(),
                 });
+                kafkaProducerService.publishGameFinishedEvent(gameResult);
+                await saveGameResult(db, gameResult);
                 console.log("✅ Forfeit game result saved successfully");
                 
                 // If this is a tournament match, update tournament_matches table and advance winner

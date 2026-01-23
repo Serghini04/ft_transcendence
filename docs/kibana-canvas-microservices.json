@@ -1,0 +1,206 @@
+{
+  "id": "workpad-ft-transcendence",
+  "name": "ft_transcendence - Microservices Dashboard",
+  "width": 1920,
+  "height": 1080,
+  "css": ".canvasPage { background-color: #1a1a2e; }",
+  "page": 0,
+  "pages": [
+    {
+      "id": "page-1",
+      "style": {
+        "background": "#1a1a2e"
+      },
+      "transition": {},
+      "elements": [
+        {
+          "id": "header-title",
+          "position": {
+            "left": 40,
+            "top": 20,
+            "width": 800,
+            "height": 80,
+            "angle": 0,
+            "parent": null,
+            "z": 1
+          },
+          "expression": "markdown \"# 🚀 ft_transcendence Microservices\\n### Real-Time Monitoring Dashboard\" \n| render",
+          "filter": null
+        },
+        {
+          "id": "total-logs-metric",
+          "position": {
+            "left": 40,
+            "top": 120,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 2
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(*) as total FROM logs\"\n| math \"total\"\n| metric \"Total Logs\"\n  metricFont={font family=\"Arial\" size=48 align=\"center\" color=\"#00d9ff\"}\n  labelFont={font family=\"Arial\" size=18 align=\"center\" color=\"#ffffff\"}\n| render",
+          "filter": null
+        },
+        {
+          "id": "error-count-metric",
+          "position": {
+            "left": 340,
+            "top": 120,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 3
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(*) as errors FROM logs WHERE log_level = 'ERROR'\"\n| math \"errors\"\n| metric \"Errors\"\n  metricFont={font family=\"Arial\" size=48 align=\"center\" color=\"#ff4757\"}\n  labelFont={font family=\"Arial\" size=18 align=\"center\" color=\"#ffffff\"}\n| render",
+          "filter": null
+        },
+        {
+          "id": "services-count-metric",
+          "position": {
+            "left": 640,
+            "top": 120,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 4
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(DISTINCT service_name) as services FROM logs\"\n| math \"services\"\n| metric \"Active Services\"\n  metricFont={font family=\"Arial\" size=48 align=\"center\" color=\"#5f27cd\"}\n  labelFont={font family=\"Arial\" size=18 align=\"center\" color=\"#ffffff\"}\n| render",
+          "filter": null
+        },
+        {
+          "id": "service-logs-bar",
+          "position": {
+            "left": 40,
+            "top": 320,
+            "width": 600,
+            "height": 350,
+            "angle": 0,
+            "parent": null,
+            "z": 5
+          },
+          "expression": "filters\n| essql query=\"SELECT service_name, COUNT(*) as count FROM logs GROUP BY service_name ORDER BY count DESC LIMIT 10\"\n| pointseries x=\"service_name\" y=\"count\" color=\"service_name\"\n| plot defaultStyle={seriesStyle bars=0.8 horizontalBars=false}\n  legend=false\n  font={font family=\"Arial\" size=14 color=\"#ffffff\"}\n  palette={palette \"#00d9ff\" \"#5f27cd\" \"#ff6348\" \"#ffa502\" \"#1e90ff\" \"#2ed573\" \"#ff4757\" \"#3742fa\" \"#ff6348\" \"#ffd32a\"}\n| render css=\".chart { background: #16213e; border-radius: 8px; padding: 10px; }\"",
+          "filter": null
+        },
+        {
+          "id": "log-levels-pie",
+          "position": {
+            "left": 660,
+            "top": 320,
+            "width": 560,
+            "height": 350,
+            "angle": 0,
+            "parent": null,
+            "z": 6
+          },
+          "expression": "filters\n| essql query=\"SELECT log_level, COUNT(*) as count FROM logs GROUP BY log_level\"\n| pointseries color=\"log_level\" size=\"count\"\n| pie hole=40\n  labels=true\n  legend=\"nw\"\n  font={font family=\"Arial\" size=14 color=\"#ffffff\"}\n  palette={palette \"#ff4757\" \"#ffa502\" \"#2ed573\" \"#00d9ff\" \"#5f27cd\"}\n| render css=\".chart { background: #16213e; border-radius: 8px; padding: 10px; }\"",
+          "filter": null
+        },
+        {
+          "id": "timeline-chart",
+          "position": {
+            "left": 40,
+            "top": 690,
+            "width": 1180,
+            "height": 350,
+            "angle": 0,
+            "parent": null,
+            "z": 7
+          },
+          "expression": "filters\n| essql query=\"SELECT DATE_TRUNC('minute', @timestamp) as time, service_name, COUNT(*) as count FROM logs GROUP BY time, service_name ORDER BY time\"\n| pointseries x=\"time\" y=\"count\" color=\"service_name\"\n| plot defaultStyle={seriesStyle lines=3 fill=false}\n  legend=\"ne\"\n  yaxis=true\n  xaxis=true\n  font={font family=\"Arial\" size=14 color=\"#ffffff\"}\n  palette={palette \"#00d9ff\" \"#5f27cd\" \"#ff6348\" \"#ffa502\" \"#1e90ff\" \"#2ed573\" \"#ff4757\" \"#3742fa\"}\n| render css=\".chart { background: #16213e; border-radius: 8px; padding: 10px; }\"",
+          "filter": null
+        },
+        {
+          "id": "api-gateway-status",
+          "position": {
+            "left": 1240,
+            "top": 120,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 8
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(*) as count FROM logs WHERE service_name = 'api-gateway' AND log_level = 'ERROR'\"\n| math \"count\"\n| metric \"API Gateway\\nErrors\"\n  metricFont={font family=\"Arial\" size=36 align=\"center\" color=\"#ffa502\"}\n  labelFont={font family=\"Arial\" size=16 align=\"center\" color=\"#ffffff\"}\n| render css=\".metric { background: #16213e; border-radius: 8px; padding: 20px; border: 2px solid #00d9ff; }\"",
+          "filter": null
+        },
+        {
+          "id": "chat-service-status",
+          "position": {
+            "left": 1540,
+            "top": 120,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 9
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(*) as count FROM logs WHERE service_name = 'chat-service'\"\n| math \"count\"\n| metric \"Chat Service\\nLogs\"\n  metricFont={font family=\"Arial\" size=36 align=\"center\" color=\"#2ed573\"}\n  labelFont={font family=\"Arial\" size=16 align=\"center\" color=\"#ffffff\"}\n| render css=\".metric { background: #16213e; border-radius: 8px; padding: 20px; border: 2px solid #5f27cd; }\"",
+          "filter": null
+        },
+        {
+          "id": "game-service-status",
+          "position": {
+            "left": 1240,
+            "top": 320,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 10
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(*) as count FROM logs WHERE service_name = 'game-service'\"\n| math \"count\"\n| metric \"Game Service\\nLogs\"\n  metricFont={font family=\"Arial\" size=36 align=\"center\" color=\"#3742fa\"}\n  labelFont={font family=\"Arial\" size=16 align=\"center\" color=\"#ffffff\"}\n| render css=\".metric { background: #16213e; border-radius: 8px; padding: 20px; border: 2px solid #ff6348; }\"",
+          "filter": null
+        },
+        {
+          "id": "user-auth-status",
+          "position": {
+            "left": 1540,
+            "top": 320,
+            "width": 280,
+            "height": 180,
+            "angle": 0,
+            "parent": null,
+            "z": 11
+          },
+          "expression": "filters\n| essql query=\"SELECT COUNT(*) as count FROM logs WHERE service_name = 'user_auth'\"\n| math \"count\"\n| metric \"User Auth\\nLogs\"\n  metricFont={font family=\"Arial\" size=36 align=\"center\" color=\"#ffd32a\"}\n  labelFont={font family=\"Arial\" size=16 align=\"center\" color=\"#ffffff\"}\n| render css=\".metric { background: #16213e; border-radius: 8px; padding: 20px; border: 2px solid #ffa502; }\"",
+          "filter": null
+        },
+        {
+          "id": "recent-errors-table",
+          "position": {
+            "left": 1240,
+            "top": 520,
+            "width": 580,
+            "height": 520,
+            "angle": 0,
+            "parent": null,
+            "z": 12
+          },
+          "expression": "filters\n| essql query=\"SELECT @timestamp, service_name, message FROM logs WHERE log_level = 'ERROR' ORDER BY @timestamp DESC LIMIT 10\"\n| table\n  font={font family=\"Arial\" size=12 color=\"#ffffff\"}\n| render css=\".datatable { background: #16213e; border-radius: 8px; padding: 10px; } .datatable th { background: #ff4757; color: white; } .datatable td { border-bottom: 1px solid #2d3561; }\"",
+          "filter": null
+        },
+        {
+          "id": "footer-info",
+          "position": {
+            "left": 40,
+            "top": 1050,
+            "width": 1180,
+            "height": 30,
+            "angle": 0,
+            "parent": null,
+            "z": 13
+          },
+          "expression": "markdown \"Last Updated: {now()} | Auto-refresh: 30s | ft_transcendence Microservices Platform\"\n| render css=\".markdown { color: #70809e; font-size: 12px; text-align: center; }\"",
+          "filter": null
+        }
+      ],
+      "groups": []
+    }
+  ],
+  "variables": [],
+  "isWriteable": true,
+  "@created": "2025-12-30T10:00:00.000Z",
+  "@timestamp": "2025-12-30T10:00:00.000Z"
+}

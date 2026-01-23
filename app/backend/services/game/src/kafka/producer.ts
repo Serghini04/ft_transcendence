@@ -3,12 +3,27 @@ import { Kafka, Producer } from "kafkajs";
 const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
 const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || "game-service";
 
+
+// to check about id or gameid after
+export interface GameFinishedEvent {
+  gameId: string;
+  mode: string;
+  player1Id: string;
+  player2Id: string;
+  winnerId: string;
+  score1: number;
+  score2: number;
+  createdAt: number;
+}
+
+
 export interface NotificationEvent {
   userId: number;
   title: string;
   message: string;
   type: string;
   timestamp: string;
+  showNotifications?: boolean;
 }
 
 export class KafkaProducerService {
@@ -92,6 +107,29 @@ export class KafkaProducerService {
       timestamp: timestamp instanceof Date ? timestamp.toISOString() : timestamp,
     };
     await this.publishNotification(event);
+  }
+
+  async publishGameFinishedEvent(event: GameFinishedEvent): Promise<void> {
+    if (!this.isConnected)
+      return;
+
+    try {
+      await this.producer.send({
+        topic: "game-events",
+        messages: [
+          {
+            key: event.gameId,
+            value: JSON.stringify(event),
+            headers: {
+              "event-type": "game.finished",
+            },
+          },
+        ],
+      });
+      console.log(`✅ Game finished event published: ${event.gameId}`);
+    } catch (error) {
+      console.error(`❌ Failed to publish game finished event: ${event.gameId}`, error);
+    }
   }
 }
 

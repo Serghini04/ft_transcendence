@@ -2,6 +2,7 @@ import db from '../config/database.js';
 import type { DBGame, GameState } from '../types/index.js';
 
 export class GameModel {
+
   static create(id: string, player1Id: string, player2Id: string): GameState {
     const board = Array(9).fill('');
     const now = Date.now();
@@ -31,7 +32,8 @@ export class GameModel {
     const stmt = db.prepare('SELECT * FROM games WHERE id = ?');
     const game = stmt.get(id) as DBGame | undefined;
     
-    if (!game) return undefined;
+    if (!game)
+      return undefined;
     
     return this.dbGameToGameState(game);
   }

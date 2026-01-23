@@ -15,6 +15,12 @@ interface NotificationPanelProps {
 export function NotificationPanel({ onClose }: NotificationPanelProps) {
   const { notifications, markAsRead, markAllAsRead, unseenNotifications } = useNotificationStore();
 
+  useEffect(() => {
+    if (unseenNotifications > 0) {
+      markAllAsRead();
+    }
+  }, []);
+
   return createPortal(
     <>
       <div 
@@ -37,19 +43,9 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {unseenNotifications > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-xs text-[#0C7368] hover:text-[#0A5B52] transition-colors font-medium"
-              >
-                Clear all
-              </button>
-            )}
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
-              <X size={18} />
-            </button>
-          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+            <X size={18} />
+          </button>
         </div>
 
         {/* Notifications List */}
@@ -57,7 +53,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-500">
               <CheckCheck size={40} className="mb-2 opacity-40" />
-              <p className="text-sm">All caught up! 🎉</p>
+              <p className="text-sm">All caught up!</p>
             </div>
           ) : (
             <div>
@@ -78,8 +74,8 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 }
 
 interface NotificationItemProps {
-  notification: Notification;
-  onMarkAsRead: (id: number) => void;
+  notification: Notification & { metadata?: { senderId?: number; senderName?: string } };
+  onMarkAsRead: (notificationId: number) => void;
 }
 
 function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
@@ -148,9 +144,10 @@ function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps)
         
         // Navigate to tournament bracket
         if (notification.metadata.tournamentId) {
-          navigate('/game/tournament', { 
-            state: { openTournamentId: notification.metadata.tournamentId } 
-          });
+          localStorage.setItem('currentTournamentId', String(notification.metadata.tournamentId));
+          
+          // Navigate to tournament bracket
+          navigate('/game/tournament');
         }
       }
     } catch (error: any) {

@@ -57,11 +57,11 @@ export class WebSocketService {
         this.ws = new WebSocket(WS_URL);
 
         this.ws.onopen = () => {
-          console.log('[WS] Connected to:', WS_URL);
+          
           this.reconnectAttempts = 0;
           
           // Register user
-          console.log('[WS] Registering user:', userId);
+          
           this.send({
             type: 'register',
             data: { userId }
@@ -72,9 +72,8 @@ export class WebSocketService {
 
         this.ws.onmessage = (event) => {
           try {
-            console.log('[WS] Received raw message:', event.data);
             const message: WSMessage = JSON.parse(event.data);
-            console.log('[WS] Parsed message:', message);
+            
             this.handleMessage(message);
           } catch (error) {
             console.error('[WS] Failed to parse message:', error, event.data);
@@ -87,7 +86,6 @@ export class WebSocketService {
         };
 
         this.ws.onclose = () => {
-          console.log('WebSocket disconnected');
           this.attemptReconnect();
         };
       } catch (error) {
@@ -106,7 +104,6 @@ export class WebSocketService {
 
   send(message: WSMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('[WS] Sending message:', message);
       this.ws.send(JSON.stringify(message));
     } else {
       console.error('[WS] Cannot send - WebSocket not connected. ReadyState:', this.ws?.readyState);
@@ -140,7 +137,6 @@ export class WebSocketService {
   private attemptReconnect(): void {
     if (this.reconnectAttempts < this.maxReconnectAttempts && this.userId) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
       
       setTimeout(() => {
         this.connect(this.userId!);
@@ -168,7 +164,7 @@ export class WebSocketService {
   }
 
   joinMatchmaking(userId: string, username: string): void {
-    console.log('[WS] Joining matchmaking:', { userId, username });
+   
     this.send({
       type: 'join_matchmaking',
       data: { userId, username }

@@ -1,12 +1,14 @@
 import { CircleX, RotateCcw, Sword, UserX, UserCheck } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
+import { useNotificationStore } from "../../notification/store/useNotificationStroe";
 import { useState, useEffect } from "react";
 import { UseUserStore, UseTokenStore } from "../../userAuth/zustand/useStore";
 import { useChatToast } from "../hooks/useChatToast";
 
 
 export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHistory} : any) {
-    const {selectedContact, onlineUsers, blockUser, unblockUser} = useChatStore();
+    const {selectedContact, blockUser, unblockUser} = useChatStore();
+    const onlineUsers = useNotificationStore((s) => s.onlineUsers);
     const { user } = UseUserStore();
     const { token } = UseTokenStore();
     const { showSuccessToast, showErrorToast } = useChatToast();
@@ -83,15 +85,21 @@ export default function HistoryPanel({historyPanelId, isHistoryOpen, toggleHisto
           {/* Avatar Section */}
           <div className="flex flex-col mt-16 items-center space-y-3">
             <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-600">
-              <img
-                src="/user.png"
-                alt="User avatar"
-                className="w-full h-full object-cover"
-              />
+              {selectedContact?.avatarUrl ? (
+                <img
+                  src={selectedContact.avatarUrl}
+                  alt={`${selectedContact.user.fullName}'s Avatar`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold text-4xl">
+                  {selectedContact?.user.fullName?.[0] || '?'}
+                </div>
+              )}
             </div>
             <div className="text-center">
               <h2 className="text-xl font-semibold">{selectedContact?.user.fullName}</h2>
-              <h3 className="text-gray-400 text-sm">{selectedContact?.user.username}</h3>
+              <h3 className="text-gray-400 text-sm">{selectedContact?.user.bio || 'No bio available'}</h3>
             </div>
           </div>
 

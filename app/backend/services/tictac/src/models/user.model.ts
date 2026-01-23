@@ -2,18 +2,18 @@ import db from '../config/database.js';
 import type { DBUser, UserStats } from '../types/index.js';
 
 export class UserModel {
-  static create(id: string, username: string): DBUser {
+  static create(userId: string, name: string): DBUser {
     const stmt = db.prepare(`
       INSERT INTO users (id, username, rating, created_at)
       VALUES (?, ?, 1000, ?)
     `);
     
     const now = Date.now();
-    stmt.run(id, username, now);
+    stmt.run(userId, name, now);
     
     return {
-      id,
-      username,
+      userId,
+      name,
       rating: 1000,
       created_at: now
     };
@@ -34,6 +34,16 @@ export class UserModel {
     stmt.run(newRating, id);
   }
 
+  static updateUsername(id: string, username: string): void {
+    const stmt = db.prepare('UPDATE users SET username = ? WHERE id = ?');
+    stmt.run(username, id);
+  }
+
+  static deleteById(id: string): void {
+    const stmt = db.prepare('DELETE FROM users WHERE id = ?');
+    stmt.run(id);
+  }
+  
   static getStats(userId: string): UserStats | null {
     const user = this.findById(userId);
     if (!user) return null;
@@ -58,8 +68,8 @@ export class UserModel {
     const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
 
     return {
-      userId: user.id,
-      username: user.username,
+      userId: user.userId,
+      username: user.name,
       totalGames,
       wins,
       losses,
