@@ -265,10 +265,10 @@ export class ChatRepository {
       const [user1_id, user2_id] = senderId < receiverId ? [senderId, receiverId] : [receiverId, senderId];
 
       const stmt = this.db.prepare(`
-        INSERT INTO relationships (user1_id, user2_id, type)
-        VALUES (?, ?, 'pending')
+        INSERT INTO relationships (user1_id, user2_id, type, sender_id)
+        VALUES (?, ?, 'pending', ?)
       `);
-      const result = stmt.run(user1_id, user2_id);
+      const result = stmt.run(user1_id, user2_id, senderId);
 
       if (result.changes > 0) {
         return { success: true, message: 'Friend request sent' };
@@ -317,17 +317,13 @@ export class ChatRepository {
   }
 
   getPendingRequests(userId: number): { incoming: User[], outgoing: User[] } {
-    // Incoming requests (where userId is user2 or user1 but not the one who initiated)
+    // Incoming requests (where userId is the receiver, not the sender)
     const incomingStmt = this.db.prepare(`
       SELECT u.id, u.full_name, u.avatar_url, u.bg_photo_url, u.bio
       FROM relationships r
-      JOIN users u ON (
-        CASE 
-          WHEN r.user1_id = ? THEN r.user2_id
-          ELSE r.user1_id
-        END = u.id
-      )
-      WHERE ((r.user1_id = ? AND r.user1_id < r.user2_id) OR (r.user2_id = ? AND r.user1_id > r.user2_id))
+      JOIN users u ON r.sender_id = u.id
+      WHERE (r.user1_id = ? OR r.user2_id = ?)
+      AND r.sender_id != ?
       AND r.type = 'pending'
     `);
 
@@ -349,11 +345,12 @@ export class ChatRepository {
           ELSE r.user1_id
         END = u.id
       )
-      WHERE ((r.user1_id = ? AND r.user1_id > r.user2_id) OR (r.user2_id = ? AND r.user1_id < r.user2_id))
+      WHERE (r.user1_id = ? OR r.user2_id = ?)
+      AND r.sender_id = ?
       AND r.type = 'pending'
     `);
 
-    const outgoingRows = outgoingStmt.all(userId, userId, userId) as {
+    const outgoingRows = outgoingStmt.all(userId, userId, userId, userId) as {
       id: number;
       full_name: string;
       avatar_url: string;
@@ -415,7 +412,7 @@ export class ChatRepository {
     relationshipId?: number;
   } {
     const stmt = this.db.prepare(`
-      SELECT id, type, user1_id, user2_id
+      SELECT id, type, user1_id, user2_id, sender_id
       FROM relationships 
       WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?))
     `);
@@ -425,6 +422,7 @@ export class ChatRepository {
       type: string;
       user1_id: number;
       user2_id: number;
+      sender_id: number;
     } | undefined;
 
     if (!result) {
@@ -440,9 +438,8 @@ export class ChatRepository {
     }
 
     if (result.type === 'pending') {
-      // Determine who sent the request based on user ID ordering
-      const isSender = (result.user1_id < result.user2_id && result.user1_id === userId) ||
-                       (result.user1_id > result.user2_id && result.user2_id === userId);
+      // Determine who sent the request based on sender_id
+      const isSender = result.sender_id === userId;
       
       return { 
         status: isSender ? 'pending_sent' : 'pending_received',
