@@ -66,50 +66,125 @@ export default function TopPlayersTable() {
   }
 
   return (
-     <div className="w-full">
-        <div className="w-full h-full rounded-2xl bg-[rgba(68,78,106,0.3)] border border-white/10 shadow-xl backdrop-blur-md">
-        <div className="px-6 py-3 border-b border-white/10">
-            <h2 className="text-white text-lg font-semibold">Top Players</h2>
-        </div>
-
-        <div className="grid grid-cols-4 px-6 py-2 text-sm text-white/60">
-            <span>#</span>
-            <span>Name</span>
-            <span className="text-center">Games Played</span>
-            <span className="text-center">Win Rate</span>
-        </div>
-
-        <div className="divide-y divide-white/10">
-            {players.length === 0 ? (
-              <div className="px-6 py-8 text-center text-white/60">No players found</div>
-            ) : (
-              players.map((player, index) => {
-                const winRate = player.total_games > 0 
-                  ? Math.round((player.wins / player.total_games) * 100) 
-                  : 0;
-                const color = colorPalette[index % colorPalette.length];
-                
-                return (
-                  <div
-                    key={player.user_id}
-                    className="grid grid-cols-4 items-center px-6 py-2 text-white"
-                  >
-                    <span className="text-white/80">{String(index + 1).padStart(2, "0")}</span>
-                    <span className="font-medium">{player.username}</span>
-                    <span className="text-center font-semibold">{player.total_games}</span>
-                    <span className="flex justify-center">
-                      <span
-                        className={`px-3 py-1 rounded-md text-sm font-semibold border border-${color}-400/40 bg-${color}-400/10 text-${color}-400`}
-                      >
-                        {winRate}%
-                      </span>
-                    </span>
-                  </div>
-                );
-              })
-            )}
-        </div>
-        </div>
+     <div
+  className="
+    w-full
+    xl:w-[33vw]
+    xl:max-w-[90vw]
+    xl:min-h-[clamp(12vw,15vw,20vw)]
+    h-full
+  "
+> 
+  <div
+    className="
+      w-full h-full
+      rounded-2xl
+      xl:rounded-[1.5vw]
+      bg-[rgba(68,78,106,0.3)]
+      border border-white/10
+      shadow-xl
+      backdrop-blur-md
+    "
+  >
+    {/* HEADER */}
+    <div
+      className="
+        px-6 py-3
+        xl:px-[2.2vw] xl:py-[1vw]
+        border-b border-white/10
+      "
+    >
+      <h2 className="text-white text-lg xl:text-[1.4vw] font-semibold">
+        Top Players
+      </h2>
     </div>
+
+    {/* TABLE HEADER */}
+    <div
+      className="
+        grid grid-cols-4
+        px-6 py-2
+        xl:px-[2.2vw] xl:py-[0.8vw]
+        text-sm xl:text-[0.95vw]
+        text-white/60
+      "
+    >
+      <span>#</span>
+      <span>Name</span>
+      <span className="text-center">Games Played</span>
+      <span className="text-center">Win Rate</span>
+    </div>
+
+    {/* TABLE BODY */}
+    <div className="divide-y divide-white/10">
+      {players.length === 0 ? (
+        <div
+          className="
+            px-6 py-8
+            xl:px-[2.2vw] xl:py-[2vw]
+            text-center
+            text-white/60
+            xl:text-[1vw]
+          "
+        >
+          No players found
+        </div>
+      ) : (
+        players.map((player, index) => {
+          const winRate =
+            player.total_games > 0
+              ? Math.round((player.wins / player.total_games) * 100)
+              : 0;
+
+          const color = colorPalette[index % colorPalette.length];
+
+          return (
+            <div
+              key={player.user_id}
+              className="
+                grid grid-cols-4 items-center
+                px-6 py-2
+                xl:px-[2.2vw] xl:py-[0.8vw]
+                text-white
+                xl:text-[1vw]
+              "
+            >
+              <span className="text-white/80">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+
+              <span className="font-medium">
+                {player.username}
+              </span>
+
+              <span className="text-center font-semibold">
+                {player.total_games}
+              </span>
+
+              <span className="flex justify-center">
+                <span
+                  className={`
+                    px-3 py-1
+                    xl:px-[1vw] xl:py-[0.4vw]
+                    rounded-md
+                    xl:rounded-[0.5vw]
+                    text-sm xl:text-[0.9vw]
+                    font-semibold
+                    border border-${color}-400/40
+                    bg-${color}-400/10
+                    text-${color}-400
+                  `}
+                >
+                  {winRate}%
+                </span>
+              </span>
+            </div>
+          );
+        })
+      )}
+    </div>
+  </div>
+</div>
+
   );
 }

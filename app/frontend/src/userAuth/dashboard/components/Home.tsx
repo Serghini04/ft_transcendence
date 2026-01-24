@@ -97,15 +97,14 @@ export default function Home() {
   // }, [token, navigate]);
   
     return (
-      <div
-      className="
+  <div
+    className="
       fixed
-      flex
       flex-col
       inset-0
       bg-[rgba(15,26,36,0.5)]
-      mt-30
-      pt-8
+      mt-20
+      pt-4
       md:ml-30 ml-0
       md:border-l-2 border-t-2
       border-[#27445E]
@@ -114,43 +113,38 @@ export default function Home() {
       overflow-y-auto
       overflow-x-hidden
       scrollbar-none
-     
-    "
-      >
-      <div className="w-full flex flex-col gap-8 pb-8 pt-4 px-4 md:px-6 items-center xl:items-start">
-        {/* Two Column Grid Layout - 35% left, 65% right on XL screens */}
-        <div className="grid grid-cols-1 xl:grid-cols-[63%_35%] gap-12 w-full xl:w-auto max-w-full xl:max-w-none">
-          {/* Row 1 Left - Hero Section */}
-          <LaunchTheGame 
-            wins={pingPongStats.wins}
-            losses={pingPongStats.losses}
-          />
-          
-          {/* Row 1 Right - Activity */}
+  "
+  >
+    <div className="w-full flex flex-col gap-[2vw] pt-[1vw] px-[1vw] md:px-[1.5vw] xl:pr-[3vw] items-center xl:items-start">
+      
+      {/* Two Column Grid Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-[auto_35%] gap-[3vw] xl:gap-[0.01vw] xl:mr-[3vw] w-full xl:w-auto max-w-full xl:max-w-none">
+        
+        {/* Row 1 Left - Hero Section */}
+        <LaunchTheGame 
+          wins={pingPongStats.wins}
+          losses={pingPongStats.losses}
+        />
+        
+        {/* Row 1 Right - Activity */}
+        <div className="-ml-[20px]">
           <Activity 
             played={pingPongStats.total_games}
             wins={pingPongStats.wins}
             ticTacToePlayed={ticTacToeStats.total_games}
             ticTacToeWins={ticTacToeStats.wins}
           />
-          
-          {/* Row 2 Left - Top Players and Monthly Wins side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-[70%_28%] gap-5 xl:row-start-2">
-            <TopPlayers />
-            <MonthlyWinsGauge wins={pingPongStats.wins} totalGames={pingPongStats.total_games} />
-          </div>
-          
-          {/* Row 2 Right - Weekly Level */}
-          <div className="xl:row-start-2">
-            <WeeklyLevel 
-              played={pingPongStats.total_games}
-              wins={pingPongStats.wins}
-              losses={pingPongStats.losses}
-            />
-          </div>
-          
-          {/* Row 3 Left - Progression History */}
-          <div className="xl:row-start-3">
+        </div>
+        
+        {/* Row 2 Left - Top Players and Monthly Wins */}
+        <div className="grid grid-cols-1 lg:grid-cols-[66%_28%] gap-16 xl:gap-[0.7vw] xl:row-start-2 xl:mt-[-5vw] self-start justify-start items-stretch">
+          <TopPlayers />
+          <MonthlyWinsGauge 
+            wins={pingPongStats.wins} 
+            totalGames={pingPongStats.total_games} 
+          />
+          {/* ProgressionHistory under TopPlayers/MonthlyWins */}
+          <div className=" lg:col-span-2 self-start xl:mt-[1vw]">
             <ProgressionHistory 
               scored={pingPongStats.total_score}
               conceded={pingPongStats.goals_conceded}
@@ -158,7 +152,19 @@ export default function Home() {
             />
           </div>
         </div>
+        
+        {/* Row 2 Right - Weekly Level */}
+        <div className="xl:row-start-2 -ml-[20px]">
+          <WeeklyLevel 
+            played={pingPongStats.total_games}
+            wins={pingPongStats.wins}
+            losses={pingPongStats.losses}
+          />
+        </div>
+
       </div>
-      </div>
-    );
+    </div>
+  </div>
+);
+
 }

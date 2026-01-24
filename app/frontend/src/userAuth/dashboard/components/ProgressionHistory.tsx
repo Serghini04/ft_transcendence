@@ -147,102 +147,158 @@ export default function ProgressionHistory({ scored = 0, conceded = 0, totalGame
   };
 
   return (
-    <div className="w-full">
-      <div className="rounded-2xl p-6 bg-[rgba(68,78,106,0.3)] shadow-xl backdrop-blur-md">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white text-lg font-semibold">Goals Stats</h2>
-          <div className="text-right">
-            <p className="text-amber-400 text-sm">Scored: <span className="font-semibold">{scored}</span></p>
-            <p className="text-cyan-400 text-sm">Conceded: <span className="font-semibold">{conceded}</span></p>
-          </div>
-        </div>
-        
-        <div className="relative">
-          <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
-            {/* Grid lines */}
-            {[0, 25, 50, 75, 100].map((value) => (
-              <g key={value}>
-                <line
-                  x1={padding.left}
-                  y1={getY(value)}
-                  x2={width - padding.right}
-                  y2={getY(value)}
-                  stroke="#374151"
-                  strokeWidth="1"
-                  strokeDasharray="2,2"
-                  opacity="0.3"
-                />
-                <text
-                  x={padding.left - 10}
-                  y={getY(value)}
-                  textAnchor="end"
-                  fill="#9CA3AF"
-                  fontSize="10"
-                  dominantBaseline="middle"
-                >
-                  {value}
-                </text>
-              </g>
-            ))}
+    <div
+  className="
+    w-full
+    xl:w-[50vw]
+    xl:max-w-[90vw]
+    xl:min-h-[clamp(12vw,22vw,32vw)]
+    self-start
+    mb-10
+  "
+>
+  <div
+    className="
+      rounded-2xl
+      xl:rounded-[1.5vw]
+      p-6
+      xl:p-[2.2vw]
+      bg-[rgba(68,78,106,0.3)]
+      shadow-xl
+      border border-white/10
+      backdrop-blur-md
+      w-full
+      self-start
 
-            {/* Line 1 - Yellow/Amber */}
-            <path
-              d={createPath('scored')}
-              fill="none"
-              stroke="#FCD34D"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
+    "
+  >
+    {/* HEADER */}
+    <div
+      className="
+        flex justify-between items-center
+        mb-6
+        xl:mb-[2vw]
+      "
+    >
+      <h2
+        className="
+          text-white
+          text-lg
+          xl:text-[1.4vw]
+          font-semibold
+        "
+      >
+        Goals Stats
+      </h2>
 
-            {/* Line 2 - Cyan */}
-            <path
-              d={createPath('conceded')}
-              fill="none"
-              stroke="#22D3EE"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-
-            {/* Data points */}
-            {dailyData.map((point, index) => {
-              const x = padding.left + index * xStep;
-              return (
-                <g key={index}>
-                  <circle
-                    cx={x}
-                    cy={getY(point.scored)}
-                    r="3"
-                    fill="#FCD34D"
-                  />
-                  <circle
-                    cx={x}
-                    cy={getY(point.conceded)}
-                    r="3"
-                    fill="#22D3EE"
-                  />
-                </g>
-              );
-            })}
-
-            {/* X-axis labels */}
-            {dailyData.map((point, index) => {
-              const x = padding.left + index * xStep;
-              return (
-                <text
-                  key={index}
-                  x={x}
-                  y={height - 5}
-                  textAnchor="middle"
-                  fill="#9CA3AF"
-                  fontSize="10"
-                >
-                  {point.day}
-                </text>
-              );
-            })}
-          </svg>
-        </div>
+      <div className="text-right">
+        <p className="text-amber-400 text-sm xl:text-[0.95vw]">
+          Scored: <span className="font-semibold">{scored}</span>
+        </p>
+        <p className="text-cyan-400 text-sm xl:text-[0.95vw]">
+          Conceded: <span className="font-semibold">{conceded}</span>
+        </p>
       </div>
     </div>
+
+    {/* CHART */}
+    <div className="relative w-full">
+      <svg
+        className="
+          w-full
+          h-[220px]
+          xl:h-[14vw]
+        "
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* GRID */}
+        {[0, 25, 50, 75, 100].map((value) => (
+          <g key={value}>
+            <line
+              x1={padding.left}
+              y1={getY(value)}
+              x2={width - padding.right}
+              y2={getY(value)}
+              stroke="#374151"
+              strokeWidth="1"
+              strokeDasharray="2,2"
+              opacity="0.3"
+            />
+            <text
+              x={padding.left - 10}
+              y={getY(value)}
+              textAnchor="end"
+              fill="#9CA3AF"
+              dominantBaseline="middle"
+              fontSize={width * 0.018} // 1.2% of SVG width
+            >
+              {value}
+            </text>
+          </g>
+        ))}
+
+        {/* SCORED */}
+        <path
+          d={createPath("scored")}
+          fill="none"
+          stroke="#FCD34D"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+
+        {/* CONCEDED */}
+        <path
+          d={createPath("conceded")}
+          fill="none"
+          stroke="#22D3EE"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+
+        {/* POINTS */}
+        {dailyData.map((point, index) => {
+          const x = padding.left + index * xStep;
+          return (
+            <g key={index}>
+              <circle
+                cx={x}
+                cy={getY(point.scored)}
+                r="3"
+                className="xl:r-[0.3vw]"
+                fill="#FCD34D"
+              />
+              <circle
+                cx={x}
+                cy={getY(point.conceded)}
+                r="3"
+                className="xl:r-[0.3vw]"
+                fill="#22D3EE"
+              />
+            </g>
+          );
+        })}
+
+        {/* X LABELS */}
+        {dailyData.map((point, index) => {
+          const x = padding.left + index * xStep;
+          return (
+            <text
+              key={index}
+              x={x}
+              y={height - 5}
+              textAnchor="middle"
+              fill="#9CA3AF"
+              fontSize={width * 0.018} // same scaling
+            >
+              {point.day}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
+  </div>
+</div>
+
   );
 }
