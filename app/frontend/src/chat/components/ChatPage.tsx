@@ -22,7 +22,7 @@ export default function ChatPage({ menuOpen }: ChatPageProps) {
 
   useEffect(() => {
     async function check() {
-      console.error("token", token);
+      // console.error("token", token);
       const result = await isValidToken(token);
       if (!result.valid)
       {

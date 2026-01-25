@@ -29,6 +29,12 @@ services:
       - ft_Transc
     volumes:
       - kafka-data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -70,7 +76,8 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -91,6 +98,9 @@ services:
     environment:
       - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
       - VAULT_TOKEN=${VAULT_TOKEN:-dev-root-token}
+    depends_on:
+      vault:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -130,7 +140,8 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -152,7 +163,8 @@ services:
       environment:
         - KAFKA_BROKER=kafka:9092
       depends_on:
-        - kafka
+        kafka:
+          condition: service_healthy
       volumes:
         - ./app/backend/services/leaderboard/src/db:/app/src/db
       networks:
@@ -457,13 +469,18 @@ services:
       - "3004:3004"
     environment:
       NODE_ENV: production
-      JWT_SECRET: ${JWT_SECRET:-breakingPong_123!@}
-      JWT_REFRESH: ${JWT_REFRESH:-breakingPong_Refresh_123!@}
-      COOKIE_SECRET: ${COOKIE_SECRET:-superSecretCookieKey!@}
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      VAULT_TOKEN: ${VAULT_TOKEN:-dev-root-token}
+      JWT_SECRET: ${JWT_SECRET:-changeme}
+      JWT_REFRESH: ${JWT_REFRESH:-changeme}
+      COOKIE_SECRET: ${COOKIE_SECRET:-changeme}
     networks:
       - ft_Transc
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
+      vault:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -480,7 +497,7 @@ services:
     ports:
       - "8200:8200"
     environment:
-      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_ADDR=http://127.0.0.1:8200
       - VAULT_API_ADDR=http://vault:8200
       - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
@@ -488,6 +505,7 @@ services:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
       - ./infra/vault/scripts:/vault/scripts:ro
+      - ./.env.vault:/vault/secrets/.env.vault:ro
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -495,8 +513,8 @@ services:
       test: ["CMD", "vault", "status"]
       interval: 10s
       timeout: 3s
-      start_period: 10s
-      retries: 3
+      start_period: 15s
+      retries: 5
     logging:
       driver: "json-file"
       options:

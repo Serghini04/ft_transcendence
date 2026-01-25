@@ -25,12 +25,9 @@ RUN chmod +x /vault/scripts/*.sh
 
 EXPOSE 8200
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
     CMD vault status || exit 1
 
 USER vault
 
-ENTRYPOINT ["vault"]
-
-# Dev mode - auto-initialized and unsealed
-CMD ["server", "-dev", "-dev-root-token-id=dev-root-token", "-dev-listen-address=0.0.0.0:8200"]
+ENTRYPOINT ["/bin/bash", "/vault/scripts/entrypoint.sh"]
