@@ -71,6 +71,12 @@ fclean: stop-all
 	@docker volume ls -q -f name=trancsendence | grep -v '^$$' | xargs docker volume rm 2>/dev/null || true
 	@docker network ls -q -f name=ft_transc | grep -v '^$$' | xargs docker network rm 2>/dev/null || true
 	@docker builder prune -f
+	@echo "Cleaning SQLite databases..."
+	@rm -f infra/data/user_auth/*.db infra/data/user_auth/*.sqlite infra/data/user_auth/*.sqlite3
+	@rm -f infra/data/game/*.db infra/data/game/*.sqlite infra/data/game/*.sqlite3
+	@rm -f infra/data/chat/*.db infra/data/chat/*.sqlite infra/data/chat/*.sqlite3
+	@rm -f infra/data/leaderboard/*.db infra/data/leaderboard/*.sqlite infra/data/leaderboard/*.sqlite3
+	@echo "All SQLite databases cleaned!"
 
 re: fclean build up
 

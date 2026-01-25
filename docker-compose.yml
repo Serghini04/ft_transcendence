@@ -171,7 +171,7 @@ services:
         kafka:
           condition: service_healthy
       volumes:
-        - ./app/backend/services/leaderboard/src/db:/app/src/db
+        - ./infra/data/leaderboard:/app/data
       networks:
         - ft_Transc
       restart: unless-stopped

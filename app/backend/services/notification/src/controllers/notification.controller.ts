@@ -5,11 +5,11 @@ async function getUserNotifications(req: FastifyRequest, res: FastifyReply) {
   const notificationRepo = new NotificationRepository(req.server.db);
   const userId = req.headers["x-user-id"] as string;
 
-  req.log.info(`📥 Getting notifications for user: ${userId}`);
+  req.log.info(`Getting notifications for user: ${userId}`);
 
   const notifications = await notificationRepo.getUserNotifications(userId);
   
-  req.log.info(`📥 Found ${notifications.length} notifications for user ${userId}`);
+  req.log.info(`Found ${notifications.length} notifications for user ${userId}`);
 
   return res.code(200).send(notifications);
 }
@@ -53,7 +53,7 @@ async function createNotification(
 ) {
   const { userId, title, message, type, metadata } = req.body;
 
-  req.log.info(`📨 Creating notification for user: ${userId}, title: ${title}`);
+  req.log.info(`Creating notification for user: ${userId}, title: ${title}`);
 
   if (!userId || !title || !message || !type) {
     return res.code(400).send({
@@ -71,7 +71,7 @@ async function createNotification(
       metadata
     );
 
-    req.log.info(`✅ Notification created successfully: ID=${notification.id}, userId=${notification.userId}`);
+    req.log.info(`Notification created successfully: ID=${notification.id}, userId=${notification.userId}`);
 
     // Send real-time notification via Socket.IO
     if (req.server.io) {
@@ -87,9 +87,9 @@ async function createNotification(
         userSocketIds.forEach(socketId => {
           notificationNS.to(socketId).emit("notification:new", notification);
         });
-        req.log.info(`📡 Real-time notification sent to user ${userId} (${userSocketIds.size} socket(s))`);
+        req.log.info(`Real-time notification sent to user ${userId} (${userSocketIds.size} socket(s))`);
       } else {
-        req.log.info(`📴 User ${userId} is offline - notification stored for later retrieval`);
+        req.log.info(`User ${userId} is offline - notification stored for later retrieval`);
       }
     }
 
@@ -111,7 +111,7 @@ async function updateNotificationMetadata(
     status: string;
   };
 
-  req.log.info(`📝 Received update-metadata request: userId=${userId}, invitationId=${invitationId}, status=${status}`);
+  req.log.info(`Received update-metadata request: userId=${userId}, invitationId=${invitationId}, status=${status}`);
 
   if (!userId || !invitationId || !status) {
     return res.code(400).send({
@@ -123,10 +123,10 @@ async function updateNotificationMetadata(
     const notificationRepo = new NotificationRepository(req.server.db);
     const updated = notificationRepo.updateNotificationMetadata(userId, invitationId, status);
 
-    req.log.info(`📝 Update result: ${updated ? 'SUCCESS' : 'NO ROWS UPDATED'}`);
+    req.log.info(`Update result: ${updated ? 'SUCCESS' : 'NO ROWS UPDATED'}`);
 
     if (updated) {
-      req.log.info(`✅ Updated notification metadata for invitation ${invitationId} to status: ${status}`);
+      req.log.info(`Updated notification metadata for invitation ${invitationId} to status: ${status}`);
       
       // Emit update via Socket.IO
       if (req.server.io) {
