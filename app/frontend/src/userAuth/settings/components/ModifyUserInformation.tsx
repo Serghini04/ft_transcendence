@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Input from "./Input";
 import { BioInput } from "./BioInput";
 import { UseBioStore, UseimageDataUrlStore, UsephotosFileStore, UseSettingsErrorStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { toast } from "react-toastify";
+import { verifyToken } from "../../../globalUtils/verifyToken";
 
 interface params {
     user :{
@@ -50,6 +52,7 @@ export default function ModifyUserInformation(props: params) {
         });
         const data_one = await res_one.json();
         console.log(data_one.photoURL, data_one.bgPhotoURL);
+        verifyToken(data_one);
 
         const finalPhotoURL = data_one.photoURL || profileImageDataUrl;
         const finalBgPhotoURL = data_one.bgPhotoURL || BgImageDataUrl;
@@ -108,6 +111,11 @@ export default function ModifyUserInformation(props: params) {
             setNewPasswordErrorMsg("");
             setConfirmPasswordErrorMsg("");
         }
+        if (data.code === "USER_DATA_UPDATED_SUCCESS")
+            toast.success("User data updated successfully!");
+        else if (data.code && data.code !== "USER_DATA_UPDATED_SUCCESS")
+            toast.error("Error updating user data.");
+        verifyToken(data);
     }
     return (
         <div className="grid grid-cols-1 place-content-center lg:place-items-center lg:grid-cols-2 lg:pl-0  gap-8 w-full pt-16 md:pt-20 lg:pt-12 lg:mt-[7vw] xl:mt-[4vw]">

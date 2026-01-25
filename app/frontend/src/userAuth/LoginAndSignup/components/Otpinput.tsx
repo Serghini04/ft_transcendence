@@ -1,6 +1,7 @@
 import { useRef, useState, KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { UseOtpStore, UseShowOtpInputStore, UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { toast } from "react-toastify";
 
 export default function OtpInput() {
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
@@ -46,7 +47,7 @@ export default function OtpInput() {
         }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.error || "OTP verification failed");
+      toast.error("OTP verification failed. Please try again.");
     }
   };
   

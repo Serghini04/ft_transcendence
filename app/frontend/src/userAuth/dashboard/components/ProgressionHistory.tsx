@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import { authenticatedFetch } from "../../../globalUtils/authenticatedFetch";
+import verifyToken from "../../../globalUtils/verifyToken";
 
 interface DailyStats {
   day: string;
@@ -68,6 +69,7 @@ export default function ProgressionHistory({ scored = 0, conceded = 0, totalGame
             { day: "Sat", scored: 0, conceded: 0 },
             { day: "Sun", scored: 0, conceded: 0 },
           ];
+          verifyToken(data);
           
           const now = new Date();
           const sevenDaysAgo = new Date(now);

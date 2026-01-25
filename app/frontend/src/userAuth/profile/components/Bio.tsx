@@ -4,6 +4,7 @@ import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
 import { useNavigate } from "react-router-dom";
 import { useChatToast } from "../../../chat/hooks/useChatToast";
 import { UserX, UserCheck, ShieldBan, UserPlus, Clock, CheckCircle, XCircle } from "lucide-react";
+import verifyToken from "../../../globalUtils/verifyToken";
 
 interface BioProps {
   userId: number;
@@ -41,6 +42,7 @@ export default function Bio({ userId, bio }: BioProps) {
       if (res.ok) {
         const data = await res.json();
         setFriendshipStatus(data.status);
+        verifyToken(data);
       }
     } catch (err) {
       console.error("Failed to fetch friendship status:", err);
@@ -61,6 +63,7 @@ export default function Bio({ userId, bio }: BioProps) {
         if (contact) {
           setBlockStatus(contact.blockStatus || 'none');
         }
+        verifyToken(contacts);
       }
     } catch (err) {
       console.error("Failed to fetch block status:", err);
@@ -82,6 +85,7 @@ export default function Bio({ userId, bio }: BioProps) {
       } else {
         const data = await res.json();
         showErrorToast(data.message || "Failed to send friend request");
+        verifyToken(data);
       }
     } catch (err) {
       console.error("Failed to send friend request:", err);
@@ -117,6 +121,7 @@ export default function Bio({ userId, bio }: BioProps) {
         } else {
           setFriendshipStatus('friend');
         }
+        verifyToken(data);
       }
     } catch (err) {
       console.error("Failed to accept friend request:", err);
@@ -137,6 +142,7 @@ export default function Bio({ userId, bio }: BioProps) {
       
       if (res.ok) {
         const data = await res.json();
+        verifyToken(data);
         // Check if response is token refresh
         if (data.code === 'TOKEN_REFRESHED' && data.accessToken) {
           UseTokenStore.getState().setToken(data.accessToken);
@@ -175,6 +181,7 @@ export default function Bio({ userId, bio }: BioProps) {
         setBlockStatus('blocked_by_me');
         setFriendshipStatus('blocked');
         showSuccessToast(data.message || 'User blocked successfully');
+        verifyToken(data);
       } else {
         const data = await res.json();
         showErrorToast(data.error || 'Failed to block user');
@@ -201,6 +208,7 @@ export default function Bio({ userId, bio }: BioProps) {
         setBlockStatus('none');
         setFriendshipStatus('friend');
         showSuccessToast(data.message || 'User unblocked successfully');
+        verifyToken(data);
         // Refresh statuses after unblock
         await fetchFriendshipStatus();
       } else {
@@ -287,51 +295,115 @@ export default function Bio({ userId, bio }: BioProps) {
     }
   };
 
-  return (
-    <div className="w-full flex flex-col md:flex-row items-center justify-between mx-auto gap-4 p-4 pl-[6rem] md:pl-4">
-      <motion.h1
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, ease: "easeOut" }}
-        className="text-center text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-wide"
-      >
-        <span className="bg-gradient-to-r from-cyan-400 via-blue-300 to-primary bg-clip-text text-transparent animate-pulse">
-          {bio || "No matter how much the bed gets worn, another Messi will never be born"}
-        </span>
-      </motion.h1>
+  const containerClass = [
+    "w-full",
+    "flex",
+    "flex-col",
+    "md:flex-row",
+    "items-center",
+    "mx-auto",
+    "gap-4",
+    "p-4",
+    "md:pl-4",
+    "xl:p-[1.2vw]",
+    "xl:gap-[1vw]",
+    isOwnProfile ? "justify-center" : "justify-between pl-[6rem] xl:pl-[3.5vw]",
+  ].join(" ");
 
-      {!isOwnProfile && (
-        <div className="flex flex-wrap gap-3 mt-4 lg:text-lg md:text-base sm:text-sm text-xs">
-          {/* Don't show friend button if user is blocked by me */}
-          {blockStatus !== 'blocked_by_me' && renderFriendButton()}
-          
-          {/* Only show Block/Unblock button if: 
-              1. They are friends (can block them)
-              2. OR already blocked by me (can unblock)
-          */}
-          {((friendshipStatus === 'friend' && blockStatus === 'none') || blockStatus === 'blocked_by_me') && blockStatus !== 'blocked_by_them' && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={blockStatus === 'blocked_by_me' ? handleUnblockUser : handleBlockUser}
-              disabled={isBlocking}
-              className="w-full inline-flex items-center justify-center gap-2 whitespace-nowrap min-w-[140px] px-5 py-2.5 rounded-xl bg-[#A33B2E] hover:bg-[#8E3125] text-white font-semibold shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {blockStatus === 'blocked_by_me' ? (
-                <>
-                  <UserCheck size={16} />
-                  <span>Unblock</span>
-                </>
-              ) : (
-                <>
-                  <UserX size={16} />
-                  <span>Block</span>
-                </>
-              )}
-            </motion.button>
-          )}
-        </div>
-      )}
+  return (
+    <div className={containerClass}>
+  <motion.h1
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 1, ease: "easeOut" }}
+    className="
+      text-center
+      text-3xl
+      sm:text-4xl
+      md:text-5xl
+      xl:text-[2.6vw]
+      font-extrabold
+      tracking-wide
+    "
+  >
+    <span className="
+      bg-gradient-to-r
+      from-cyan-400
+      via-blue-300
+      to-primary
+      bg-clip-text
+      text-transparent
+      animate-pulse
+    ">
+      {bio || "No matter how much the bed gets worn, another Messi will never be born"}
+    </span>
+  </motion.h1>
+
+  {!isOwnProfile && (
+    <div className="
+      flex
+      flex-wrap
+      gap-3
+      mt-4
+      text-xs
+      sm:text-sm
+      md:text-base
+      lg:text-lg
+      xl:text-[1vw]
+      xl:gap-[0.8vw]
+      xl:mt-[1vw]
+    ">
+      {/* Don't show friend button if user is blocked by me */}
+      {blockStatus !== 'blocked_by_me' && renderFriendButton()}
+
+      {((friendshipStatus === 'friend' && blockStatus === 'none') || blockStatus === 'blocked_by_me') &&
+        blockStatus !== 'blocked_by_them' && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={blockStatus === 'blocked_by_me' ? handleUnblockUser : handleBlockUser}
+            disabled={isBlocking}
+            className="
+              w-full
+              inline-flex
+              items-center
+              justify-center
+              gap-2
+              whitespace-nowrap
+              min-w-[140px]
+              px-5
+              py-2.5
+              rounded-xl
+              bg-[#A33B2E]
+              hover:bg-[#8E3125]
+              text-white
+              font-semibold
+              shadow-lg
+              transition
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+              xl:min-w-[10vw]
+              xl:px-[1.4vw]
+              xl:py-[0.7vw]
+              xl:rounded-[0.9vw]
+            "
+          >
+            {blockStatus === 'blocked_by_me' ? (
+              <>
+                <UserCheck size={16} />
+                <span>Unblock</span>
+              </>
+            ) : (
+              <>
+                <UserX size={16} />
+                <span>Block</span>
+              </>
+            )}
+          </motion.button>
+        )}
     </div>
+  )}
+</div>
+
   );
 }

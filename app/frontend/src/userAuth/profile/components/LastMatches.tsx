@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
+import { verifyToken } from "../../../globalUtils/verifyToken";
 
 interface Game {
   id: number;
@@ -85,6 +86,7 @@ export default function LastMatches({ games, profileUserId, token }: LastMatches
             }
           }));
         }
+        verifyToken(data);
       } catch (err) {
         console.error(`Error fetching player ${playerId} info:`, err);
       }
@@ -117,88 +119,162 @@ export default function LastMatches({ games, profileUserId, token }: LastMatches
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="w-full max-w-2xl mx-auto flex flex-col gap-4 p-4 pl-[6rem] md:pl-4 xl:p-0 xl:mx-5"
-    >
-      <h2 className="text-xl font-semibold text-white mb-2">
-        Last 5 Matches
-      </h2>
+  variants={containerVariants}
+  initial="hidden"
+  animate="visible"
+  className="
+    w-full
+    max-w-2xl
+    mx-auto
+    flex
+    flex-col
+    gap-4
+    p-4
+    pl-[6rem]
+    md:pl-4
+    xl:p-0
+    xl:mx-[1.5vw]
+    xl:gap-[1vw]
+    xl:max-w-[38vw]
+  "
+>
+  <h2 className="
+    text-xl
+    font-semibold
+    text-white
+    mb-2
+    xl:text-[1.4vw]
+    xl:mb-[0.8vw]
+  ">
+    Last 5 Matches
+  </h2>
 
-      {games.map((game) => {
-        const isPlayer1 = game.player1_id === String(profileUserId);
-        const userScore = isPlayer1 ? game.score1 : game.score2;
-        const opponentScore = isPlayer1 ? game.score2 : game.score1;
-        const opponentId = isPlayer1 ? game.player2_id : game.player1_id;
-        const userId = String(profileUserId);
-        const isWin = game.winner_id === String(profileUserId);
-        const isLose = game.winner_id !== String(profileUserId);
+  {games.map((game) => {
+    const isPlayer1 = game.player1_id === String(profileUserId);
+    const userScore = isPlayer1 ? game.score1 : game.score2;
+    const opponentScore = isPlayer1 ? game.score2 : game.score1;
+    const opponentId = isPlayer1 ? game.player2_id : game.player1_id;
+    const userId = String(profileUserId);
+    const isWin = game.winner_id === String(profileUserId);
+    const isLose = game.winner_id !== String(profileUserId);
 
-        const opponentData = playerInfo[opponentId];
-        const userData = playerInfo[userId];
+    const opponentData = playerInfo[opponentId];
+    const userData = playerInfo[userId];
 
-        return (
-          <motion.div
-            key={game.id}
-            variants={itemVariants}
-            whileHover={{ scale: 1.03, y: -2 }}
-            className={`
-              relative flex items-center justify-between px-6 py-4 rounded-2xl
-              bg-black/60 shadow-md overflow-hidden
+    return (
+      <motion.div
+        key={game.id}
+        variants={itemVariants}
+        whileHover={{ scale: 1.03, y: -2 }}
+        className="
+          relative
+          flex
+          items-center
+          justify-between
+          px-6
+          py-4
+          rounded-2xl
+          bg-black/60
+          shadow-md
+          overflow-hidden
+          border-2
+          border-primary
+          xl:px-[1.6vw]
+          xl:py-[1vw]
+          xl:rounded-[1.2vw]
+        "
+      >
+        {/* Animated glow */}
+        <motion.div
+          className="absolute inset-0 rounded-2xl pointer-events-none"
+          animate={{ opacity: [0.2, 0.55, 0.2] }}
+          transition={{ duration: 2.8, repeat: Infinity }}
+          style={{
+            background: isWin
+              ? "radial-gradient(circle at top, rgba(34,197,94,0.35), transparent 70%)"
+              : isLose
+              ? "radial-gradient(circle at top, rgba(239,68,68,0.35), transparent 70%)"
+              : "radial-gradient(circle at top, rgba(156,163,175,0.3), transparent 70%)",
+          }}
+        />
+
+        {/* Left player (User) */}
+        <div className="relative z-10 flex items-center gap-4 xl:gap-[1vw]">
+          <img
+            src={`${userData?.photoURL.startsWith('http') ? userData?.photoURL : `${window.location.origin}/${userData?.photoURL}`}`}
+            alt={userData?.name || "user"}
+            className="
+              w-12
+              h-12
+              rounded-full
               border-2
-              border-primary
-            `}
-          >
-            {/* Animated glow */}
-            <motion.div
-              className="absolute inset-0 rounded-2xl pointer-events-none"
-              animate={{ opacity: [0.2, 0.55, 0.2] }}
-              transition={{ duration: 2.8, repeat: Infinity }}
-              style={{
-                background: isWin
-                  ? "radial-gradient(circle at top, rgba(34,197,94,0.35), transparent 70%)"
-                  : isLose
-                  ? "radial-gradient(circle at top, rgba(239,68,68,0.35), transparent 70%)"
-                  : "radial-gradient(circle at top, rgba(156,163,175,0.3), transparent 70%)",
-              }}
-            />
+              border-white
+              object-cover
+              xl:w-[2.6vw]
+              xl:h-[2.6vw]
+            "
+          />
+          <span className="
+            text-2xl
+            font-bold
+            text-white
+            xl:text-[1.6vw]
+          ">
+            {userScore}
+          </span>
+        </div>
 
-            {/* Left player (User) */}
-            <div className="relative z-10 flex items-center gap-4">
-              <img
-                src={`${userData?.photoURL.startsWith('http') ? userData?.photoURL : `${window.location.origin}/${userData?.photoURL}`}`}
-                alt={userData?.name || "user"}
-                className="w-12 h-12 rounded-full border-2 border-white object-cover"
-              />
-              <span className="text-2xl font-bold text-white">
-                {userScore}
-              </span>
-            </div>
+        {/* Center */}
+        <div className="relative z-10 flex flex-col items-center gap-1 xl:gap-[0.4vw]">
+          <span className="
+            text-teal-400
+            text-sm
+            font-semibold
+            tracking-wide
+            xl:text-[0.9vw]
+          ">
+            {game.mode || "Ping Pong"}
+          </span>
+          <span className="
+            text-white
+            font-semibold
+            text-lg
+            xl:text-[1.1vw]
+          ">
+            vs
+          </span>
+        </div>
 
-            {/* Center */}
-            <div className="relative z-10 flex flex-col items-center gap-1">
-              <span className="text-teal-400 text-sm font-semibold tracking-wide">
-                {game.mode || "Ping Pong"}
-              </span>
-              <span className="text-white font-semibold text-lg">vs</span>
-            </div>
+        {/* Right player (Opponent) */}
+        <div className="relative z-10 flex items-center gap-4 xl:gap-[1vw]">
+          <span className="
+            text-2xl
+            font-bold
+            text-white
+            xl:text-[1.6vw]
+          ">
+            {opponentScore}
+          </span>
+          <img
+            src={`${opponentData?.photoURL.startsWith('http') ? opponentData?.photoURL : `${window.location.origin}/${opponentData?.photoURL}`}`}
+            alt={opponentData?.name || "opponent"}
+            className="
+              w-12
+              h-12
+              rounded-full
+              border-2
+              border-white
+              object-cover
+              xl:w-[2.6vw]
+              xl:h-[2.6vw]
+            "
+          />
+        </div>
+      </motion.div>
+    );
+  })}
+</motion.div>
 
-            {/* Right player (Opponent) */}
-            <div className="relative z-10 flex items-center gap-4">
-              <span className="text-2xl font-bold text-white">
-                {opponentScore}
-              </span>
-              <img
-                src={`${opponentData?.photoURL.startsWith('http') ? opponentData?.photoURL : `${window.location.origin}/${opponentData?.photoURL}`}`}
-                alt={opponentData?.name || "opponent"}
-                className="w-12 h-12 rounded-full border-2 border-white object-cover"
-              />
-            </div>
-          </motion.div>
-        );
-      })}
-    </motion.div>
   );
 }
 // import { motion } from "framer-motion";

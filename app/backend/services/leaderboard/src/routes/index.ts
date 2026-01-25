@@ -7,6 +7,46 @@ import {
   getTicTacToePlayerStats
 } from "../db";
 
+interface PlayerStats {
+  user_id: string;
+  total_games: number;
+  wins: number;
+  losses: number;
+  total_score: number;
+  goals_conceded: number;
+  win_streak: number;
+  best_streak: number;
+  last_game_at: number;
+}
+
+interface TicTacToePlayerStats {
+  user_id: string;
+  total_games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
+const EMPTY_TICTACTOE_STATS: TicTacToePlayerStats = {
+  user_id: "",
+  total_games: 0,
+  wins: 0,
+  losses: 0,
+  draws: 0,
+};
+
+const EMPTY_STATS: PlayerStats = {
+  user_id: "",
+  total_games: 0,
+  wins: 0,
+  losses: 0,
+  total_score: 0,
+  goals_conceded: 0,
+  win_streak: 0,
+  best_streak: 0,
+  last_game_at: 0,
+};
+
 async function fetchUserInfo(userId: string, token: string) {
   try {
     const response = await fetch(`http://user_auth:3004/api/v1/auth/profile/getProfileUser`, {
@@ -54,12 +94,9 @@ export async function leaderboardRoutes(app: FastifyInstance) {
   // Get player stats
   app.get("/api/v1/leaderboard/player/:userId", async (request, reply) => {
     const { userId } = request.params as { userId: string };
-    request.log.info(` ---------> Fetching stats for user: ${userId}`);
     const stats = getPlayerStats(userId);
-    
-    if (!stats) {
-      return reply.status(404).send({ error: "Player not found" });
-    }
+    if (!stats)
+      return EMPTY_STATS;
     
     return stats;
   });
@@ -99,11 +136,10 @@ export async function leaderboardRoutes(app: FastifyInstance) {
   // Get TicTacToe player stats
   app.get("/api/v1/leaderboard/tictactoe/player/:userId", async (request, reply) => {
     const { userId } = request.params as { userId: string };
-    request.log.info(` ---------> Fetching TicTacToe stats for user: ${userId}`);
     const stats = getTicTacToePlayerStats(userId);
     
     if (!stats) {
-      return reply.status(404).send({ error: "Player not found" });
+      return EMPTY_TICTACTOE_STATS;
     }
     
     return stats;

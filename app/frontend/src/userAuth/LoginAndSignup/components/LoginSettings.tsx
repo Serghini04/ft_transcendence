@@ -51,25 +51,6 @@ export default function LoginSettings()
 		});
 
 	};
-
-	const forgotPassword = async () => {
-		const res = await fetch("http://localhost:8080/api/v1/auth/forgotPassword", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ username: username }),
-			credentials: "include"
-		})
-		
-		const data = await res.json();
-		if (data.code === "PASSWORD_CHANFED_SUCCESS")
-		{
-			alert("A new password has been sent to your email.");
-		}
-		else
-		{
-			alert("Error in changing password: " + data.error);
-		}
-	}
 		
 	return (
 		<div className="flex flex-col items-center mt-[2.4vw]  w-[20vw] md:mt-[1.2vw]">
@@ -87,7 +68,6 @@ export default function LoginSettings()
 					<EyeClosed size={"0.8vw"} color="#d2d2d2" strokeWidth={3} />
 				</Input>
 				<p className="absolute top-[15.3vw] text-red-500 text-[0.7vw] mt-[0.7vw] md:mt-[0.2vw] lg:mt-[0.3vw] xl:mt-[-0.9vw] ml-[0.5vw]">{errormsg}</p>
-				<p className="absolute top-[16vw] xl:top-[14.5vw] left-[16vw] text-white font-outfit text-[0.8vw] hover:text-[#D2D2D2]" onClick={forgotPassword}>Forgotten password</p>
 				<div className="flex justify-center mt-[1vw]">
 					<LSButton  text="Login"/>
 				</div>

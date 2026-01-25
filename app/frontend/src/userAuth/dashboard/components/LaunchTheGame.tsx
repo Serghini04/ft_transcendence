@@ -173,18 +173,18 @@ export default function LaunchTheGame({ wins = 0, losses = 0 }: LaunchTheGamePro
     </div>
 
     {/* IMAGE */}
-    {/* <img
+    <img
       src={watlerPhoto}
       alt="photo"
       className="
         hidden xl:block
         absolute
         xl:left-[26vw]
-        xl:top-[-3vw]
+        xl:top-[-3.5vw]
         xl:w-[32vw]
         xl:h-[36vw]
       "
-    /> */}
+    />
   </div>
 </div>
 

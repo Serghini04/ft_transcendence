@@ -9,6 +9,7 @@ import MonthlyWinsGauge from "./MonthlyWinsGauge";
 import ProgressionHistory from "./ProgressionHistory";
 import WeeklyLevel from "./WeeklyLevel";
 import { authenticatedFetch } from "../../../globalUtils/authenticatedFetch";
+import { verifyToken } from "../../../globalUtils/verifyToken";
 
 export default function Home() {
   const { token } = UseTokenStore();
@@ -30,15 +31,11 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchStats() {
-      if (!token || !user.id) {
-        console.log("Waiting for token or user ID...");
-        return;
-      }
-
       try {
         // Fetch PingPong stats
         const pingPongRes = await authenticatedFetch(`/api/v1/leaderboard/player/${user.id}`);
         const pingPongData = await pingPongRes.json();
+        verifyToken(pingPongData);
         
         if (pingPongRes.ok) {
           setPingPongStats({
@@ -64,6 +61,7 @@ export default function Home() {
           });
           console.log("TicTacToe Stats:", ticTacToeData);
         }
+        verifyToken(ticTacToeData);
       } catch (err) {
         console.error("Error fetching statistics:", err);
       }

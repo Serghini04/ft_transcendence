@@ -32,7 +32,6 @@ export default function Settings() {
           body: JSON.stringify({ id: user.id })
         });
     const data = await res.json();
-    console.log("USER DATA SETTINGS: ", data);
     verifyToken(data);
     setUserInfo({
       name: data.user.name,
@@ -43,7 +42,6 @@ export default function Settings() {
       showNotifications: Boolean(data.user.showNotifications),
       bio: data.user.bio
     });
-    console.log("USER INFO IN SETTINGS: ", userInfo);
   } catch (err) {
     console.error("Error fetching user data:", err);
   }

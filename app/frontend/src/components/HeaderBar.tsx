@@ -6,6 +6,7 @@ import { UseTokenStore } from "../userAuth/zustand/useStore";
 import { useNotificationStore } from "../notification/store/useNotificationStroe";
 import { NotificationBell } from "../notification/components/NotificationBell";
 import { useNavigate } from "react-router-dom";
+import verifyToken from "../globalUtils/verifyToken";
 
 type SearchUser = {
   id: number;
@@ -75,6 +76,7 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
 
         if (res.ok) {
           const data = await res.json();
+          verifyToken(data);
           
           // Handle token refresh
           if (data.code === 'TOKEN_REFRESHED' && data.accessToken) {
@@ -93,6 +95,7 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
             
             if (res.ok) {
               const retryData = await res.json();
+              verifyToken(retryData);
               const users = Array.isArray(retryData) ? retryData : [];
               setSearchResults(users);
               setShowResults(true);

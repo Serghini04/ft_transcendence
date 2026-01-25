@@ -50,11 +50,7 @@ export default function Profile()
       
       useEffect(() => {
         async function fetchUserStatistic() {
-          // Don't fetch if token is not available
-          if (!token || !profileUserId) {
-            console.log("Waiting for token or profileUserId...");
-            return;
-          }
+
 
           try {
             const res = await fetch(`http://localhost:8080/api/v1/leaderboard/player/${profileUserId}`, {
@@ -67,6 +63,7 @@ export default function Profile()
             });
             
             const data = await res.json();
+            verifyToken(data);
             
             if (!res.ok) {
               if (res.status === 404) {
@@ -78,7 +75,6 @@ export default function Profile()
               }
               return;
             }
-            
             setStatistic({
               played: data.total_games || 0,
               wins: data.wins || 0,
@@ -96,11 +92,6 @@ export default function Profile()
 
       useEffect(() => {
         async function fetchGameHistory() {
-          // Don't fetch if token is not available
-          if (!token || !profileUserId) {
-            console.log("Waiting for token or profileUserId...");
-            return;
-          }
 
           try {
             const res = await fetch(`http://localhost:8080/api/v1/leaderboard/player/${profileUserId}/games?limit=5`, {
@@ -113,6 +104,7 @@ export default function Profile()
             });
             
             const data = await res.json();
+            verifyToken(data);
             
             if (!res.ok) {
               if (res.status === 404) {
@@ -151,6 +143,7 @@ export default function Profile()
               body: JSON.stringify({ id: profileUserId })
             });
         const data = await res.json();
+        verifyToken(data);
         
         // Handle invalid user ID from backend
         if (!res.ok || data.code === "INVALID_USER_ID") {
@@ -161,7 +154,6 @@ export default function Profile()
         }
         
         console.log("USER DATA SETTINGS: ", data);
-        verifyToken(data);
         setUserInfo({
           name: data.user.name,
           email: data.user.email,

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import verifyToken from "../../../globalUtils/verifyToken";
 
 interface WeeklyLevelProps {
   played?: number;
@@ -55,6 +56,8 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
 
     const pingPongData = await pingPongRes.json();
     const ticTacData = await ticTacRes.json();
+    verifyToken(pingPongData);
+    verifyToken(ticTacData);
 
     const pingPongWinsPerDay = [0, 0, 0, 0, 0, 0, 0];
     const ticTacWinsPerDay  = [0, 0, 0, 0, 0, 0, 0];
