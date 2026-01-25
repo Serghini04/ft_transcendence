@@ -23,9 +23,9 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
     return;
   }
   // Skip tictac game routes - they handle their own auth
-  if (req.url.startsWith("/api/") && !req.url.startsWith("/api/v1/")) {
-    return;
-  }
+  // if (req.url.startsWith("/api/") && !req.url.startsWith("/api/v1/")) {
+  //   return;
+  // }
   const authHeader = req.headers.authorization;
   const accessToken = authHeader?.split(" ")[1];
 
