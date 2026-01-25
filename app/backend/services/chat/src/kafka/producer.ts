@@ -132,6 +132,110 @@ export class KafkaProducerService {
     
     console.log(`Friend request notification published for user ${recipientId} from ${senderName}`);
   }
+
+  async publishRelationshipCreated(relationshipData: {
+    user1_id: number;
+    user2_id: number;
+    type: 'friend' | 'blocked' | 'pending';
+    blocked_by_user_id?: number;
+  }): Promise<void> {
+    if (!this.isConnected) {
+      console.error("Cannot publish relationship: Producer not connected");
+      return;
+    }
+
+    try {
+      console.log("Publishing relationship created to Kafka topic 'relationships':", relationshipData);
+      await this.producer.send({
+        topic: "relationships",
+        messages: [
+          {
+            key: `${relationshipData.user1_id}-${relationshipData.user2_id}`,
+            value: JSON.stringify({
+              action: 'created',
+              ...relationshipData,
+              timestamp: new Date().toISOString()
+            }),
+            headers: {
+              "event-type": "relationship.created",
+            },
+          },
+        ],
+      });
+      console.log(`Relationship created event published successfully`);
+    } catch (error) {
+      console.error("Failed to publish relationship created event:", error);
+      throw error;
+    }
+  }
+
+  async publishRelationshipUpdated(relationshipData: {
+    user1_id: number;
+    user2_id: number;
+    type: 'friend' | 'blocked' | 'pending';
+    blocked_by_user_id?: number;
+  }): Promise<void> {
+    if (!this.isConnected) {
+      console.error("Cannot publish relationship: Producer not connected");
+      return;
+    }
+
+    try {
+      console.log("Publishing relationship updated to Kafka topic 'relationships':", relationshipData);
+      await this.producer.send({
+        topic: "relationships",
+        messages: [
+          {
+            key: `${relationshipData.user1_id}-${relationshipData.user2_id}`,
+            value: JSON.stringify({
+              action: 'updated',
+              ...relationshipData,
+              timestamp: new Date().toISOString()
+            }),
+            headers: {
+              "event-type": "relationship.updated",
+            },
+          },
+        ],
+      });
+      console.log(`Relationship updated event published successfully`);
+    } catch (error) {
+      console.error("Failed to publish relationship updated event:", error);
+      throw error;
+    }
+  }
+
+  async publishRelationshipDeleted(user1_id: number, user2_id: number): Promise<void> {
+    if (!this.isConnected) {
+      console.error("Cannot publish relationship: Producer not connected");
+      return;
+    }
+
+    try {
+      console.log("Publishing relationship deleted to Kafka topic 'relationships':", { user1_id, user2_id });
+      await this.producer.send({
+        topic: "relationships",
+        messages: [
+          {
+            key: `${user1_id}-${user2_id}`,
+            value: JSON.stringify({
+              action: 'deleted',
+              user1_id,
+              user2_id,
+              timestamp: new Date().toISOString()
+            }),
+            headers: {
+              "event-type": "relationship.deleted",
+            },
+          },
+        ],
+      });
+      console.log(`Relationship deleted event published successfully`);
+    } catch (error) {
+      console.error("Failed to publish relationship deleted event:", error);
+      throw error;
+    }
+  }
 }
 
 export const kafkaProducerService = new KafkaProducerService();

@@ -47,6 +47,35 @@ export class KafkaConsumerService {
     }
   }
 
+  async connectWithRetry(maxRetries: number = 10, initialDelay: number = 2000): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.connect();
+        console.log(`✅ Kafka connected successfully on attempt ${attempt}`);
+        return;
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const delay = initialDelay * Math.pow(2, attempt - 1);
+        
+        console.log(
+          `⚠️ Kafka connection attempt ${attempt}/${maxRetries} failed: ${error.message}`
+        );
+        
+        if (isLastAttempt) {
+          console.error("❌ Max Kafka connection retries reached. Service will continue without Kafka.");
+          throw error;
+        }
+        
+        console.log(`🔄 Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async disconnect(): Promise<void> {
     if (!this.isConnected) return;
 
@@ -60,23 +89,19 @@ export class KafkaConsumerService {
   }
 
   async startConsuming(): Promise<void> {
-    const maxRetries = 10;
-    let retryCount = 0;
+    try {
+      if (!this.isConnected) {
+        await this.connectWithRetry();
+      }
 
-    const tryConnect = async (): Promise<void> => {
-      try {
-        if (!this.isConnected) {
-          await this.connect();
-        }
+      await this.consumer.subscribe({
+        topic: "game-events",
+        fromBeginning: true,  // Read all messages from the beginning
+      });
 
-        await this.consumer.subscribe({
-          topic: "game-events",
-          fromBeginning: true,  // Read all messages from the beginning
-        });
+      console.log("📡 Listening for game events...");
 
-        console.log("📡 Listening for game events...");
-
-        await this.consumer.run({
+      await this.consumer.run({
           eachMessage: async ({ topic, partition, message }: EachMessagePayload) => {
             try {
               const eventType = message.headers?.["event-type"]?.toString();
@@ -135,20 +160,10 @@ export class KafkaConsumerService {
             }
           },
         });
-      } catch (error) {
-        retryCount++;
-        if (retryCount <= maxRetries) {
-          const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-          console.log(`⚠️ Kafka connection failed, retrying in ${retryDelay}ms (attempt ${retryCount}/${maxRetries})`);
-          setTimeout(() => tryConnect(), retryDelay);
-        } else {
-          console.error("❌ Max retries reached, Kafka consumer will not be available");
-          throw error;
-        }
-      }
-    };
-
-    await tryConnect();
+    } catch (error) {
+      console.error("❌ Failed to start consuming:", error);
+      throw error;
+    }
   }
 }
 

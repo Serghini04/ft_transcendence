@@ -48,13 +48,13 @@ db.exec(`
   );
 `);
 
-const relationshipsInsert = db.prepare(`
-  INSERT INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
-`);
+// const relationshipsInsert = db.prepare(`
+//   INSERT INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
+// `);
 
-const userInsert = db.prepare(`
-  INSERT OR IGNORE INTO users (id, full_name, avatar_url, bg_photo_url, bio, profileVisibility, showNotifications) VALUES (?, ?, ?, ?, ?, ?, ?)
-`);
+// const userInsert = db.prepare(`
+//   INSERT OR IGNORE INTO users (id, full_name, avatar_url, bg_photo_url, bio, profileVisibility, showNotifications) VALUES (?, ?, ?, ?, ?, ?, ?)
+// `);
 
 // const messageInsert = db.prepare(`
 //   INSERT INTO messages (sender_id, received_id, text) VALUES (?, ?, ?)
@@ -71,12 +71,12 @@ const userInsert = db.prepare(`
 // messageInsert.run(1, 2, "I'm fine");
 
 // Seed users (will be synced from Kafka in production)
-userInsert.run(1, "User 1", "", "", "Bio for User 1", 1, 1);
-userInsert.run(2, "User 2", "", "", "Bio for User 2", 1, 1);
-userInsert.run(3, "User 3", "", "", "Bio for User 3", 1, 1);
-userInsert.run(4, "User 4", "", "", "Bio for User 4", 1, 1);
+// userInsert.run(1, "User 1", "", "", "Bio for User 1", 1, 1);
+// userInsert.run(2, "User 2", "", "", "Bio for User 2", 1, 1);
+// userInsert.run(3, "User 3", "", "", "Bio for User 3", 1, 1);
+// userInsert.run(4, "User 4", "", "", "Bio for User 4", 1, 1);
 
-// Make user1 friends with all other users
-relationshipsInsert.run(1, 2, 'friend');
-relationshipsInsert.run(1, 3, 'friend');
-relationshipsInsert.run(1, 4, 'friend');
+// // Make user1 friends with all other users
+// relationshipsInsert.run(1, 2, 'friend');
+// relationshipsInsert.run(1, 3, 'friend');
+// relationshipsInsert.run(1, 4, 'friend');
