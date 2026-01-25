@@ -16,7 +16,6 @@ interface ChatPageProps {
 
 export default function ChatPage({ menuOpen }: ChatPageProps) {
   const { userId } = UseTokenStore();
-  const { connectSocket, disconnectSocket } = useChatStore();
   const navigate = useNavigate();
   const { token, setToken } = UseTokenStore();
 
@@ -39,11 +38,7 @@ export default function ChatPage({ menuOpen }: ChatPageProps) {
     check();
   }, [token, navigate]);
 
-  useEffect(() => {
-    if (userId)
-      connectSocket(Number(userId));
-    return () => disconnectSocket();
-  }, [userId, connectSocket, disconnectSocket]);
+  // Socket connection now handled in HeaderBar for global online status
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
