@@ -374,12 +374,18 @@ export const leaveTournament = async (
         DELETE FROM tournament_participants 
         WHERE tournament_id = ? AND user_id = ?
       `);
-
       const result = deleteParticipant.run(tournamentId, userId);
 
       if (result.changes === 0) {
         return reply.status(400).send({ error: 'You are not a participant in this tournament' });
       }
+
+      // Manual cleanup: delete any invitation for this user in this tournament
+      const deleteInvitation = db.prepare(`
+        DELETE FROM tournament_invitations
+        WHERE tournament_id = ? AND invitee_id = ?
+      `);
+      deleteInvitation.run(tournamentId, userId);
 
       // Update tournament current_players count
       const updateTournament = db.prepare(`
@@ -387,7 +393,6 @@ export const leaveTournament = async (
         SET current_players = current_players - 1 
         WHERE id = ?
       `);
-
       updateTournament.run(tournamentId);
 
       // Return updated tournament
@@ -679,18 +684,53 @@ export const inviteFriendsToTournament = async (
         continue;
       }
 
-      // Check if invitation already exists
+      // Check if invitation already exists (any status)
       const existingInvite = db.prepare(`
         SELECT * FROM tournament_invitations 
-        WHERE tournament_id = ? AND invitee_id = ? AND status = 'pending'
+        WHERE tournament_id = ? AND invitee_id = ?
       `).get(tournamentId, friendId);
 
       if (existingInvite) {
-        alreadyInvited.push(friendId);
-        continue;
+        if (existingInvite.status === 'pending') {
+          alreadyInvited.push(friendId);
+          continue;
+        } else if (existingInvite.status === 'declined') {
+          // Update status back to 'pending' and reset responded_at
+          db.prepare(`
+            UPDATE tournament_invitations 
+            SET status = 'pending', responded_at = NULL, created_at = ?
+            WHERE id = ?
+          `).run(Date.now(), existingInvite.id);
+
+          sentInvitations.push(friendId);
+
+          // Send notification to friend via notification service
+          const inviter = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as { name: string } | undefined;
+          const inviterName = inviter?.name || 'Someone';
+
+          request.log.info(`📨 Re-sending notification to user ${friendId} for tournament ${tournament.name}`);
+          const notificationSent = await sendNotification(
+            friendId,
+            'Tournament Invitation',
+            `${inviterName} invited you to join ${tournament.name}`,
+            'tournament_invite',
+            { 
+              invitationId: Number(existingInvite.id),
+              tournamentId, 
+              inviterName, 
+              tournamentName: tournament.name 
+            }
+          );
+          request.log.info(`📨 Notification sent: ${notificationSent ? 'SUCCESS' : 'FAILED'}`);
+          continue;
+        } else {
+          // If status is 'accepted' or something else, treat as already joined
+          alreadyJoined.push(friendId);
+          continue;
+        }
       }
 
-      // Create invitation
+      // Create new invitation
       const insertInvitation = db.prepare(`
         INSERT INTO tournament_invitations (
           tournament_id, inviter_id, invitee_id, status, created_at
@@ -708,11 +748,11 @@ export const inviteFriendsToTournament = async (
       const invitationId = result.lastInsertRowid;
 
       sentInvitations.push(friendId);
-      
+
       // Send notification to friend via notification service
       const inviter = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as { name: string } | undefined;
       const inviterName = inviter?.name || 'Someone';
-      
+
       request.log.info(`📨 Sending notification to user ${friendId} for tournament ${tournament.name}`);
       const notificationSent = await sendNotification(
         friendId,
