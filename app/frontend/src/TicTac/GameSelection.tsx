@@ -1,11 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { Users, User} from "lucide-react";
 
-interface GameSelectionProps {
+interface OutletContextType {
   isSidebarOpen?: boolean;
 }
 
-const GameSelection = ({ isSidebarOpen }: GameSelectionProps) => {
+const GameSelection = () => {
+  const { isSidebarOpen } = useOutletContext<OutletContextType>();
   
   return (
    <div
@@ -19,6 +20,7 @@ const GameSelection = ({ isSidebarOpen }: GameSelectionProps) => {
          items-center
          justify-center
           transition-all
+          pt-50
           md:mt-30
           xl:ml-10
            
