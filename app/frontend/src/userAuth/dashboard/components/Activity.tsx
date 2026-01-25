@@ -1,4 +1,4 @@
-import { Gamepad2, Trophy, Users } from "lucide-react";
+import { Gamepad2, Trophy, Volleyball } from "lucide-react";
 
 interface ActivityProps {
     played?: number;
@@ -6,13 +6,15 @@ interface ActivityProps {
     losses?: number;
     ticTacToePlayed?: number;
     ticTacToeWins?: number;
+    goals?: number;
 }
 
-export default function Activity({played, wins, ticTacToePlayed, ticTacToeWins}: ActivityProps) {
+export default function Activity({played, wins, ticTacToePlayed, ticTacToeWins, goals}: ActivityProps) {
     const ticTacToeMatchesPlayed = ticTacToePlayed;
     const pingPongMatchesPlayed = played;
     const ticTacToeGamesWon = ticTacToeWins;
     const pingPongGamesWon = wins;
+    const pingPongGoals = goals ?? 0;
     // console.log("Activity Component Props: XXXXXXXXXXXXXXXXXXXXXXXXX", { played, wins, tictactoeplayed, tictactoewins });
     return (
         <div className="w-full h-50 xl:w-[35vw] xl:min-h-[clamp(20vw,25vw,30vw)] xl:mr-[-4]">
@@ -54,12 +56,12 @@ export default function Activity({played, wins, ticTacToePlayed, ticTacToeWins}:
           </p>
         </div>
 
-        {/* New Users */}
+        {/* PingPong Goals */}
         <div className="p-3 xl:p-[1vw] bg-[#171821] rounded-md xl:rounded-[0.6vw]">
-          <Users className="mb-2 w-6 h-6 xl:w-[1.8vw] xl:h-[1.8vw]" />
-          <p className="text-xs xl:text-[0.9vw]">New Users</p>
-          <p className="flex gap-1 xl:gap-[0.5vw] text-xs xl:text-[0.8vw]">
-            <span className="text-white">Challenges Sent/Received</span>
+          <Volleyball className="mb-2 w-6 h-6 xl:w-[1.8vw] xl:h-[1.8vw]" />
+          <p className="text-xs xl:text-[0.9vw]">PingPong Goals</p>
+          <p className="flex gap-1 xl:gap-[0.5vw] text-sm xl:text-[0.9vw]">
+            <span className="text-amber-300">{pingPongGoals}</span>
           </p>
         </div>
 

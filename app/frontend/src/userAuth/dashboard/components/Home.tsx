@@ -131,6 +131,7 @@ export default function Home() {
             wins={pingPongStats.wins}
             ticTacToePlayed={ticTacToeStats.total_games}
             ticTacToeWins={ticTacToeStats.wins}
+            goals={pingPongStats.total_score}
           />
         </div>
         

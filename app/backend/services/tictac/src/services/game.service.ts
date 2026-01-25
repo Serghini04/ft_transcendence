@@ -5,6 +5,7 @@ import { UserModel } from '../models/user.model.js';
 import { nanoid } from 'nanoid';
 import { getKafkaProducer } from '../kafka/producer.js';
 import type { GameFinishedEvent } from '../kafka/producer.js';
+import { mapToNumericUserId } from '../utils/userIdMapper.js';
 
 export class GameService {
   private static moveHistory: Map<string, Move[]> = new Map();
@@ -172,11 +173,28 @@ export class GameService {
     try {
       const kafkaProducer = getKafkaProducer();
       
+      // Map TicTacToe user IDs to numeric user IDs from main database
+      const numericPlayer1Id = mapToNumericUserId(game.player1Id);
+      const numericPlayer2Id = mapToNumericUserId(game.player2Id);
+      
+      // Skip publishing if we can't map both players
+      if (!numericPlayer1Id || !numericPlayer2Id) {
+        console.error(`⚠️ Cannot publish game ${game.id}: Failed to map user IDs`, {
+          player1Id: game.player1Id,
+          player2Id: game.player2Id,
+          numericPlayer1Id,
+          numericPlayer2Id
+        });
+        return;
+      }
+      
+      const numericWinnerId = game.winner ? mapToNumericUserId(game.winner) : null;
+      
       const event: GameFinishedEvent = {
         gameId: game.id,
-        player1Id: game.player1Id,
-        player2Id: game.player2Id,
-        winnerId: game.winner,
+        player1Id: String(numericPlayer1Id),
+        player2Id: String(numericPlayer2Id),
+        winnerId: numericWinnerId ? String(numericWinnerId) : null,
         winnerSymbol: game.winnerSymbol,
         isDraw: game.winner === null && game.winnerSymbol === null,
         moves,
