@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useOutletContext } from "react-router-dom";
 import HeaderBar from "./HeaderBar";
 import SideMenu from "./SideMenu";
 
@@ -28,7 +28,7 @@ export default function MainLayout({ menuOpen, setMenuOpen}: MainLayoutProps) {
 
             <HeaderBar onMenuToggle={handleMenuToggle} />
             <main className="pb-0">
-              <Outlet />
+              <Outlet context={{ isSidebarOpen: menuOpen }} />
             </main>
 
           </div>

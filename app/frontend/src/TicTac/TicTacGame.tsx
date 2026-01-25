@@ -220,24 +220,6 @@ const isPlayersTurn = isOnline ? currentGame?.currentTurn === playerSymbol : tru
       >
     
       <div className="flex flex-col items-center justify-center max-h-screen text-white p-4 pb-24 ">
-        {/* Animated background */}
-        {/* <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full mix-blend-screen animate-pulse"
-              style={{
-                width: `${300 + i * 100}px`,
-                height: `${300 + i * 100}px`,
-                background: `radial-gradient(circle, rgba(34,211,238,${0.05 + i * 0.02}) 0%, transparent 70%)`,
-                left: `${30 * i}%`,
-                top: `${20 * i}%`,
-                animationDelay: `${i}s`,
-                animationDuration: `${3 + i}s`
-              }}
-            />
-          ))}
-        </div> */}
 
         <div className="relative z-10 w-full max-w-md hide-scrollbar">
           <div className="backdrop-blur-xl p-8 rounded-3xl border-2 border-cyan-400/30  overflow-hidden " >
@@ -362,25 +344,23 @@ const isPlayersTurn = isOnline ? currentGame?.currentTurn === playerSymbol : tru
   return (
     // her
   <div
-        className={`
-          relative
-          flex justify-center
-          bg-[rgba(18,19,20,0.5)]
-          shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
-          transition-all
-          
-          mask-t-from-40%
-          min-h-screen
-          overflow-y-auto hide-scrollbar
+  className={`
+    h-[calc(100vh-120px)]
+    relative
+    bg-[rgba(15,26,36,0.5)]
+    md:rounded-tl-4xl
+    shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
+  flex
+  items-center
+  justify-center
+    transition-all
+    md:mt-30
+    xl:ml-10
+    
+    overflow-y-auto hide-scrollbar
 
-          px-3 sm:px-6 md:px-10
-          pt-6 sm:pt-8 md:pt-10
-
-          md:rounded-tl-4xl
-          xl:ml-10
-          mt-7
-        ${isSidebarOpen ? "ml-20" : "ml-0"}
-      `}
+    ${isSidebarOpen ? "ml-20" : "ml-0"}
+`}
       >
   
 
