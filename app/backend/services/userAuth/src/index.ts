@@ -19,10 +19,9 @@ import multipart, { MultipartFile } from "@fastify/multipart"
 import { pipeline } from "stream/promises";
 import { promiseHooks } from "v8";
 import { UserEvent, kafkaProducerService } from "./kafka/producer.js";
+import { vaultClient } from "./utils/vault.client.js";
 
-// ...existing code...
-
-
+let secrets: any = null;
 interface User {
   id: number;
   name: string;
@@ -35,10 +34,31 @@ interface User {
   bio?: string;
 }
 
-
+// Initialize fastify app first
 const app = fastify();
+
+// Load secrets from Vault
+console.log('Loading secrets from Vault...');
+secrets = await vaultClient.loadSecrets();
+console.log('Secrets loaded successfully from Vault:', {
+  hasJwtSecret: !!secrets.JWT_SECRET,
+  hasJwtRefresh: !!secrets.JWT_REFRESH,
+  hasCookieSecret: !!secrets.COOKIE_SECRET,
+  hasInternalSecret: !!secrets.INTERNAL_SECRET_KEY,
+  hasEmailUser: !!secrets.EMAIL_USER,
+  hasEmailPassword: !!secrets.EMAIL_PASSWORD,
+});
+    
+app.log.info({
+  hasJwtSecret: !!secrets.JWT_SECRET,
+  hasJwtRefresh: !!secrets.JWT_REFRESH,
+  hasCookieSecret: !!secrets.COOKIE_SECRET,
+  hasInternalSecret: !!secrets.INTERNAL_SECRET_KEY,
+}, "Secrets loaded from Vault");
+
+export { secrets };
 await app.register(cookie, {
-  secret: process.env.COOKIE_SECRET,
+  secret: secrets.COOKIE_SECRET,
 });
 
 await app.register(cors, {

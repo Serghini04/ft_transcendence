@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import "fastify";
+import { secrets } from "./index.js";
 
 dotenv.config();
 
@@ -23,24 +24,24 @@ interface UserPayload {
 
 
 export function generateJwtAccessToken({id, name, email}: {id: number; name:string; email: string}){
-    if (!process.env.JWT_SECRET) {
+    if (!secrets.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined");
     }
-    const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_SECRET, { expiresIn: "15m" })
+    const token = jwt.sign({ id: id, name: name, email: email }, secrets.JWT_SECRET, { expiresIn: "15m" })
     return token;
 }
 
 export function generateJwtRefreshToken({id, name, email}: {id: number; name:string; email: string}){
-  if (!process.env.JWT_REFRESH) {
+  if (!secrets.JWT_REFRESH) {
     throw new Error("JWT_REFRESH is not defined");
   }
-  const token = jwt.sign({ id: id, name: name, email: email }, process.env.JWT_REFRESH, { expiresIn: "7d" })
+  const token = jwt.sign({ id: id, name: name, email: email }, secrets.JWT_REFRESH, { expiresIn: "7d" })
   return token;
 }
 
 
 export function verifyRefreshToken(token: string) {
-  return jwt.verify(token, process.env.JWT_REFRESH!) as UserPayload;
+  return jwt.verify(token, secrets.JWT_REFRESH!) as UserPayload;
 }
 
 // export async function authenticateToken(req: FastifyRequest, reply: FastifyReply) {
@@ -52,7 +53,7 @@ export function verifyRefreshToken(token: string) {
 //   }
 
 //   try {
-//     const decoded = jwt.verify(accessToken, process.env.JWT_SECRET!) as UserPayload;
+//     const decoded = jwt.verify(accessToken, secrets.JWT_SECRET!) as UserPayload;
 //     req.user = decoded;
 //     return; // Access allowed
 //   } catch (err) {
@@ -66,7 +67,7 @@ export function verifyRefreshToken(token: string) {
 //       try {
 //         const decodedRefresh = jwt.verify(
 //           refreshToken,
-//           process.env.JWT_REFRESH!
+//           secrets.JWT_REFRESH!
 //         ) as UserPayload;
 
 //         const newAccessToken = generateJwtAccessToken({

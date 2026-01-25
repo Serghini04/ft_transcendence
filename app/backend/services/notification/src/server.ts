@@ -40,10 +40,11 @@ const start = async () => {
   
   await app.listen({ port: PORT, host: "0.0.0.0" });
   console.log(`Notification Service running on port ${PORT}`);
-
   const kafkaConsumer = new KafkaConsumerService(app.db, app.io);
-  await kafkaConsumer.connect();
-  console.log("Kafka consumer initialized and listening to 'notifications' topic");
+  kafkaConsumer.connectWithRetry().catch((error) => {
+    console.error("Failed to connect to Kafka after all retries:", error.message);
+    console.log("Service will continue running without Kafka integration.");
+  });
 };
 
 start().catch((err) => {

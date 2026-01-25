@@ -18,7 +18,7 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
-      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      CLUSTER_ID: ${CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -50,9 +50,9 @@ services:
     ports:
       - "9099:3022"
     environment:
-      - SERVER_PORT=3022
+      - SERVER_PORT=${KAFKA_UI_SERVER_PORT:-3022}
       - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=${KAFKA_BROKER:-kafka:9092}
     depends_on:
       - kafka
     networks:
@@ -74,7 +74,7 @@ services:
     ports:
       - "3003:3003"
     environment:
-      - KAFKA_BROKER=kafka:9092
+      - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
     depends_on:
       kafka:
         condition: service_healthy
@@ -98,6 +98,9 @@ services:
     environment:
       - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
       - VAULT_TOKEN=${VAULT_TOKEN:-dev-root-token}
+    depends_on:
+      vault:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -116,7 +119,7 @@ services:
     ports:
       - "3005:3005"
     environment:
-      - KAFKA_BROKER=kafka:9092
+      - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
     volumes:
       - ./infra/data/game:/app/src/db
     depends_on:
@@ -140,7 +143,7 @@ services:
     ports:
       - "3006:3006"
     environment:
-      - KAFKA_BROKER=kafka:9092
+      - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
     depends_on:
       kafka:
         condition: service_healthy
@@ -163,9 +166,10 @@ services:
       ports:
         - "3016:3016"
       environment:
-        - KAFKA_BROKER=kafka:9092
+        - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
       depends_on:
-        - kafka
+        kafka:
+          condition: service_healthy
       volumes:
         - ./app/backend/services/leaderboard/src/db:/app/src/db
       networks:
@@ -270,9 +274,9 @@ services:
       - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
       - ./infra/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
     environment:
-      - GF_SECURITY_ADMIN_USER=(hidriouc)
-      - GF_SECURITY_ADMIN_PASSWORD=(hidriouc)
-      - GF_SECURITY_SECRET_KEY=SW2YcwTIb9zpOOhoPsMm
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_SECRET_KEY=${GF_SECURITY_SECRET_KEY:-changeme}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=false
     depends_on:
@@ -440,15 +444,15 @@ services:
     ports:
       - "0.0.0.0:3030:3030"
     environment:
-      - PORT=3030
-      - HOST=0.0.0.0
-      - NODE_ENV=production
+      - PORT=${TICTAC_PORT:-3030}
+      - HOST=${TICTAC_HOST:-0.0.0.0}
+      - NODE_ENV=${NODE_ENV:-production}
       - DATABASE_PATH=/app/data/tictac.db
-      - RATE_LIMIT_MAX=100
-      - RATE_LIMIT_TIMEWINDOW=60000
-      - MATCHMAKING_TIMEOUT=60000
-      - SKILL_RANGE=100
-      - CORS_ORIGIN=http://localhost:5173,http://localhost:8888,http://10.32.138.11:5173,http://10.32.138.11:8888
+      - RATE_LIMIT_MAX=${TICTAC_RATE_LIMIT_MAX:-100}
+      - RATE_LIMIT_TIMEWINDOW=${TICTAC_RATE_LIMIT_TIMEWINDOW:-60000}
+      - MATCHMAKING_TIMEOUT=${TICTAC_MATCHMAKING_TIMEOUT:-60000}
+      - SKILL_RANGE=${TICTAC_SKILL_RANGE:-100}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:8888}
     volumes:
       - tictac-data:/app/data
     networks:
@@ -479,14 +483,19 @@ services:
     ports:
       - "3004:3004"
     environment:
-      NODE_ENV: production
-      JWT_SECRET: ${JWT_SECRET:-breakingPong_123!@}
-      JWT_REFRESH: ${JWT_REFRESH:-breakingPong_Refresh_123!@}
-      COOKIE_SECRET: ${COOKIE_SECRET:-superSecretCookieKey!@}
+      NODE_ENV: ${NODE_ENV:-production}
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      VAULT_TOKEN: ${VAULT_TOKEN:-dev-root-token}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH: ${JWT_REFRESH}
+      COOKIE_SECRET: ${COOKIE_SECRET}
     networks:
       - ft_Transc
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
+      vault:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -503,14 +512,15 @@ services:
     ports:
       - "8200:8200"
     environment:
-      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_ADDR=http://127.0.0.1:8200
       - VAULT_API_ADDR=http://vault:8200
-      - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
+      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_DEV_ROOT_TOKEN_ID:-dev-root-token}
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
     volumes:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
       - ./infra/vault/scripts:/vault/scripts:ro
+      - ./.env.vault:/vault/secrets/.env.vault:ro
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -518,8 +528,8 @@ services:
       test: ["CMD", "vault", "status"]
       interval: 10s
       timeout: 3s
-      start_period: 10s
-      retries: 3
+      start_period: 15s
+      retries: 5
     logging:
       driver: "json-file"
       options:
