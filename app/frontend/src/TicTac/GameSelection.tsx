@@ -1,5 +1,9 @@
 import { Link, useOutletContext } from "react-router-dom";
 import { Users, User} from "lucide-react";
+import isValidToken from "../globalUtils/isValidToken";
+import { UseTokenStore } from "../userAuth/zustand/useStore";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 interface OutletContextType {
   isSidebarOpen?: boolean;
@@ -8,6 +12,24 @@ interface OutletContextType {
 const GameSelection = () => {
   const { isSidebarOpen } = useOutletContext<OutletContextType>();
   
+  const navigate = useNavigate();
+  const { token, setToken } = UseTokenStore();
+  useEffect(() => {
+    async function check() {
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+        navigate("/auth");
+      }
+      
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
+    }
+  
+    check();
+  }, [token, navigate]);
+
   return (
    <div
     className={`
@@ -206,3 +228,4 @@ const GameSelection = () => {
 };
 
 export default GameSelection;
+
