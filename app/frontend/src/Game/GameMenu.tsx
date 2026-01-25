@@ -40,7 +40,7 @@ const gameModes = [
 
 export default function GameMenu() {
   return (
-    <div className="relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] overflow-y-auto flex justify-center items-start px-6 md:px-10 py-10 pb-16">
+    <div className="game-menu-scroll relative w-full min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] overflow-y-auto flex justify-center items-start px-6 md:px-10 pt-10 pb-20">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md sm:max-w-2xl md:max-w-5xl mx-auto my-auto">
         {gameModes.map((mode, i) => (
           <div
@@ -95,7 +95,7 @@ export default function GameMenu() {
                     <span className="pr-2 sm:pr-3">{mode.button}</span>
 
                     {/* Arrow Link */}
-                    <Link to={`/game/setup?${mode.route}`}>
+                    <Link to={mode.route === "tournament" ? `/game/tournament` : `/game/setup?${mode.route}`}>
                       <div
                         className="
                           flex items-center justify-center

@@ -44,7 +44,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/jwt-decode": "^2.2.1",
     "@types/node": "^24.10.1",
-    "@types/react": "^19.1.16",
+    "@types/react": "^19.2.7",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",

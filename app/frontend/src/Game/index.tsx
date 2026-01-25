@@ -10,24 +10,24 @@ interface GameProps {
 }
 
 export default function Game({ menuOpen}: GameProps) {
-  const navigate = useNavigate();
-  const { token, setToken } = UseTokenStore();
+  // const navigate = useNavigate();
+  // const { token, setToken } = UseTokenStore();
 
-  useEffect(() => {
-    async function check() {
-      const result = await isValidToken(token);
-      if (!result.valid)
-      {
-        navigate("/auth");
-      }
+  // useEffect(() => {
+  //   async function check() {
+  //     const result = await isValidToken(token);
+  //     if (!result.valid)
+  //     {
+  //       navigate("/auth");
+  //     }
       
-      if (result.newToken) {
-        setToken(result.newToken);
-      }
-    }
+  //     if (result.newToken) {
+  //       setToken(result.newToken);
+  //     }
+  //   }
 
-    check();
-  }, [token, navigate]);
+  //   check();
+  // }, [token, navigate]);
   return (
     <div className="relative w-full min-h-screen">
       <div

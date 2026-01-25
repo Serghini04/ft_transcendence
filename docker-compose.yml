@@ -118,6 +118,13 @@ services:
     container_name: game-service
     ports:
       - "3005:3005"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    volumes:
+      - ./infra/data/game:/app/src/db
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -126,8 +133,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    volumes:
-      - ./app/backend/services/game/src/db:/app/src/db
 
   notification-service:
     build:
@@ -141,7 +146,7 @@ services:
       - KAFKA_BROKER=kafka:9092
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -306,6 +311,12 @@ services:
       - "9200:9200"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -328,7 +339,8 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -347,7 +359,8 @@ services:
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD:-changeme}
       - KIBANA_PASSWORD=${KIBANA_PASSWORD:-changeme}
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -364,8 +377,10 @@ services:
     environment:
       - LOGSTASH_HOSTS=logstash:5044
     depends_on:
-      - elasticsearch
-      - logstash
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_started
     networks:
       - ft_Transc
     restart: unless-stopped

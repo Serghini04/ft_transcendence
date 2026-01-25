@@ -1,7 +1,7 @@
 // gameGateway.ts
 import { FastifyInstance } from "fastify";
 import { Socket } from "socket.io";
-import { createRoom, rooms, updateGame } from "./game.controller";
+import { createRoom, createTournamentRoom, rooms, updateGame } from "./game.controller";
 import { saveGameResult } from "../plugins/game.db";
 import { kafkaProducerService } from "../kafka/producer";
 
@@ -10,11 +10,15 @@ export const userSocketMap = new Map<number, Socket>();
 export const pendingChallenges = new Map<string, any>();
 export const challengeRooms = new Map<string, any>(); // roomId -> { player1Id, player2Id, connectedSockets: [] }
 
+// Track forfeited games for recent disconnects (userId -> { winnerId, gameType, timestamp })
+export const recentForfeits = new Map<number, { winnerId: number, gameType: string, timestamp: number }>();
+
 export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
   // ✅ Store fastify instance on namespace so we can access it later
   namespace.fastify = fastify;
 
   const waitingPlayers = new Map<string, Socket>();
+  const tournamentWaitingPlayers = new Map<string, any>(); // roomId -> { socket, userId, matchId, tournamentId }
 
   namespace.on("connection", (socket: any) => {
     console.log(`🟢 ${socket.id} connected`);
@@ -31,14 +35,41 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         options = { map: "Classic", powerUps: false, speed: "Normal" },
       }: any) => {
         try {
-          console.log("debuuuuuug: joining game", userId, options);
+          // Check if this user recently forfeited a game (within last 30 seconds)
+          const recentForfeit = recentForfeits.get(userId);
+          if (recentForfeit && Date.now() - recentForfeit.timestamp < 30000) {
+            console.log(`⚠️ User ${userId} rejoined after forfeit, sending game result`);
+            
+            // Send them the forfeit result
+            socket.emit("rejoinAfterForfeit", {
+              winnerId: recentForfeit.winnerId,
+              loserId: userId,
+              reason: "forfeit",
+              gameType: recentForfeit.gameType
+            });
+            
+            // Clean up the forfeit record
+            recentForfeits.delete(userId);
+            return;
+          }
+          
           const configKey = JSON.stringify(options);
           const waiting = waitingPlayers.get(configKey);
 
           if (!waiting) {
+            // Store socket with userId for checking
+            socket.data.userId = userId;
             waitingPlayers.set(configKey, socket);
             socket.emit("waiting");
           } else {
+            // Check if the waiting player is the same user
+            const waitingUserId = waiting.data.userId;
+            if (waitingUserId === userId) {
+              console.log(`⚠️ User ${userId} tried to match with themselves, keeping them in queue`);
+              socket.emit("waiting");
+              return;
+            }
+            
             waitingPlayers.delete(configKey);
             await createRoom(waiting, socket, configKey, options, namespace);
           }
@@ -76,6 +107,106 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
       } else {
         console.log(`⏳ Waiting for other player to join challenge room ${roomId}`);
         socket.emit("waiting");
+      }
+    });
+
+    // Handle joining a tournament match
+    socket.on("joinTournamentMatch", async ({ 
+      tournamentId, 
+      matchId, 
+      userId, 
+      opponentId, 
+      options 
+    }: any) => {
+      console.log(`🏆 Tournament match join request:`, {
+        tournamentId,
+        matchId,
+        userId,
+        opponentId,
+        socketId: socket.id
+      });
+      
+      // Check if this user recently forfeited a tournament match (within last 30 seconds)
+      const recentForfeit = recentForfeits.get(userId);
+      if (recentForfeit && recentForfeit.gameType === 'tournament' && Date.now() - recentForfeit.timestamp < 30000) {
+        console.log(`⚠️ User ${userId} rejoined tournament after forfeit, sending game result`);
+        
+        // Send them the forfeit result
+        socket.emit("rejoinAfterForfeit", {
+          winnerId: recentForfeit.winnerId,
+          loserId: userId,
+          reason: "forfeit",
+          gameType: "tournament"
+        });
+        
+        // Clean up the forfeit record
+        recentForfeits.delete(userId);
+        return;
+      }
+      
+      // Create unique room ID for this specific tournament match
+      const roomId = `tournament-${tournamentId}-${matchId}`;
+      console.log(`🔑 Generated roomId: ${roomId}`);
+      
+      // Check if opponent is already waiting
+      const waitingPlayer = tournamentWaitingPlayers.get(roomId);
+      console.log(`🔍 Checking waiting queue for roomId ${roomId}:`, {
+        hasWaitingPlayer: !!waitingPlayer,
+        waitingPlayerId: waitingPlayer?.userId,
+        currentPlayerId: userId,
+        allWaitingRooms: Array.from(tournamentWaitingPlayers.keys())
+      });
+      
+      if (!waitingPlayer) {
+        // First player to join - store and wait
+        tournamentWaitingPlayers.set(roomId, {
+          socket,
+          userId,
+          matchId,
+          tournamentId,
+          options
+        });
+        socket.emit("waiting");
+        console.log(`⏳ ${userId} (socket ${socket.id}) waiting for opponent in tournament match ${matchId}`);
+        console.log(`📊 Current waiting players:`, Array.from(tournamentWaitingPlayers.keys()));
+      } else {
+        // Verify this is the correct opponent
+        console.log(`👥 Found waiting player ${waitingPlayer.userId}, current player ${userId}`);
+        
+        // Second player joined - start the match!
+        tournamentWaitingPlayers.delete(roomId);
+        
+        console.log(`✅ Both players ready for tournament match ${matchId}, starting game...`);
+        console.log(`📊 Remaining waiting players:`, Array.from(tournamentWaitingPlayers.keys()));
+        
+        try {
+          // Create the tournament game room
+          console.log(`🎮 Calling createTournamentRoom with:`, {
+            player1Socket: waitingPlayer.socket.id,
+            player2Socket: socket.id,
+            roomId,
+            tournamentId,
+            matchId
+          });
+          
+          await createTournamentRoom(
+            waitingPlayer.socket,
+            socket,
+            roomId,
+            options,
+            namespace,
+            {
+              tournamentId,
+              matchId
+            }
+          );
+          
+          console.log(`✅ createTournamentRoom completed for ${roomId}`);
+        } catch (error) {
+          console.error(`❌ Error creating tournament room:`, error);
+          socket.emit("error", { message: "Failed to create tournament match" });
+          waitingPlayer.socket.emit("error", { message: "Failed to create tournament match" });
+        }
       }
     });
 
@@ -234,19 +365,52 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
               if (db) {
                 // Set score to 5-0 for forfeit win
                 const isLeftPlayerWinner = disconnectedPlayerIndex === 0 ? false : true;
-                const gameResult = {
+                const score1 = isLeftPlayerWinner ? 5 : 0;
+                const score2 = isLeftPlayerWinner ? 0 : 5;
+                
+                const disconnectedUserId = disconnectedPlayerIndex === 0 
+                  ? room.playerProfiles.left.id 
+                  : room.playerProfiles.right.id;
+                
+                // Store forfeit info for reconnection detection
+                recentForfeits.set(Number(disconnectedUserId), {
+                  winnerId: Number(opponentUserId),
+                  gameType: room.tournamentContext ? 'tournament' : 'online',
+                  timestamp: Date.now()
+                });
+                
+                console.log(`📝 Stored forfeit for user ${disconnectedUserId}, winner: ${opponentUserId}`);
+                
+                await saveGameResult(db, {
                   gameId: roomId,
                   mode: room.options.mode || 'online',
                   player1Id: room.playerProfiles.left.id,
                   player2Id: room.playerProfiles.right.id,
                   winnerId: opponentUserId,
-                  score1: isLeftPlayerWinner ? 5 : 0,
-                  score2: isLeftPlayerWinner ? 0 : 5,
+                  score1,
+                  score2,
                   createdAt: Date.now(),
-                };
+                });
                 kafkaProducerService.publishGameFinishedEvent(gameResult);
                 await saveGameResult(db, gameResult);
                 console.log("✅ Forfeit game result saved successfully");
+                
+                // If this is a tournament match, update tournament_matches table and advance winner
+                if (room.tournamentContext) {
+                  const { recordTournamentMatchResult } = await import('./game.controller');
+                  
+                  await recordTournamentMatchResult(db, {
+                    matchId: room.tournamentContext.matchId,
+                    tournamentId: room.tournamentContext.tournamentId,
+                    winnerId: opponentUserId,
+                    score1,
+                    score2,
+                    player1Id: room.playerProfiles.left.id,
+                    player2Id: room.playerProfiles.right.id,
+                  });
+                  
+                  console.log("✅ Tournament match result recorded and winner advanced");
+                }
               } else {
                 console.error("❌ Database not available for saving forfeit game");
               }

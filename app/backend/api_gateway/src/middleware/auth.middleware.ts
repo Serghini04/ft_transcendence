@@ -23,9 +23,9 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
     return;
   }
   // Skip tictac game routes - they handle their own auth
-  if (req.url.startsWith("/api/") && !req.url.startsWith("/api/v1/")) {
-    return;
-  }
+  // if (req.url.startsWith("/api/") && !req.url.startsWith("/api/v1/")) {
+  //   return;
+  // }
   const authHeader = req.headers.authorization;
   const accessToken = authHeader?.split(" ")[1];
 
@@ -37,10 +37,10 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
     
     const decoded = jwt.verify(accessToken, secrets.JWT_SECRET!) as UserPayload;
     req.user = decoded;
-    return; // Access allowed
+    return;
   } catch (err) {
-    // Access Token expired → we check refresh token
-    if (err instanceof jwt.TokenExpiredError) {
+    // Access Token expired or invalid → we check refresh token
+    if (err instanceof jwt.TokenExpiredError || err instanceof jwt.JsonWebTokenError) {
       const refreshToken = req.cookies.refreshToken;
       if (!refreshToken) {
         return reply.status(401).send({ code: "NO_REFRESH_TOKEN" });

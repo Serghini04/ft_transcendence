@@ -48,3 +48,7 @@ temp/
 # Coverage
 coverage/
 .nyc_output/
+
+# SQLite temporary files (should never be committed)
+*.sqlite-shm
+*.sqlite-wal
