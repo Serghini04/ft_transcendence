@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { TicTacAPI, type User } from "./services/api";
 import { useOnlineGame } from "./hooks/useOnlineGame";
 import TicTacGame from "./TicTacGame";
 import { UseUserStore } from "../userAuth/zustand/useStore";
 
-const OnlineTicTac = ({ isSidebarOpen }: { isSidebarOpen?: boolean }) => {
+interface OutletContextType {
+  isSidebarOpen?: boolean;
+}
+
+const OnlineTicTac = () => {
+  const { isSidebarOpen } = useOutletContext<OutletContextType>();
 
   const { user: authUser } = UseUserStore();
   const [user, setUser] = useState<User | null>(null);

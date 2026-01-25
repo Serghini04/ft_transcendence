@@ -2,7 +2,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { Menu } from "lucide-react";
 import IconButton from "@mui/material/IconButton";
 import { useEffect, useState, useRef } from "react";
-import { UseTokenStore } from "../userAuth/zustand/useStore";
+import { UseTokenStore, UseUserStore } from "../userAuth/zustand/useStore";
 import { useNotificationStore } from "../notification/store/useNotificationStroe";
 import { NotificationBell } from "../notification/components/NotificationBell";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,7 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
   const userId = UseTokenStore((s) => s.userId);
   const token = UseTokenStore((s) => s.token);
   const setToken = UseTokenStore((s) => s.setToken);
+  const user = UseUserStore((s) => s.user);
   const navigate = useNavigate();
 
   const connectSocket = useNotificationStore((s) => s.connectSocket);
@@ -30,6 +31,7 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +40,34 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
       connectSocket(userId);
     return () => disconnectSocket();
   }, [userId]);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!userId || !token) return;
+      
+      try {
+        const res = await fetch("http://localhost:8080/api/v1/auth/profile/getProfileUser", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          credentials: "include",
+          body: JSON.stringify({ id: userId })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.user && data.user.photoURL) {
+          setUserAvatar(data.user.photoURL);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+      }
+    };
+    
+    fetchUserData();
+  }, [userId, token]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -206,9 +236,21 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
         {/* Avatar */}
         <div 
           onClick={() => navigate(`/profile/${userId}`)}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-white transition-all cursor-pointer"
+          className="cursor-pointer"
         >
-          <img src="/user.png" alt="User avatar" className="w-full h-full object-cover" />
+          {userAvatar ? (
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-white transition-all">
+              <img 
+                src={userAvatar.startsWith('http') ? userAvatar : `${window.location.origin}/${userAvatar}`}
+                alt="User avatar" 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+          ) : (
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold border-2 border-emerald-500 hover:border-white transition-all">
+              {user.name?.[0]?.toUpperCase() || "?"}
+            </div>
+          )}
         </div>
 
       </div>

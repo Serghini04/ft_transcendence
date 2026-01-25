@@ -41,7 +41,8 @@ export class GameHistoryModel {
     const stmt = db.prepare('SELECT * FROM game_history WHERE game_id = ?');
     const history = stmt.get(gameId) as DBGameHistory | undefined;
     
-    if (!history) return undefined;
+    if (!history)
+        return undefined;
     
     return this.dbHistoryToGameHistory(history);
   }

@@ -1,15 +1,19 @@
 import { useNotificationStore, type Notification } from "../store/useNotificationStroe";
 import { formatDistanceToNow } from "date-fns";
-import { X, CheckCheck, Bell } from "lucide-react";
+import { X, CheckCheck, Bell, Check, XCircle } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { acceptTournamentInvitation, declineTournamentInvitation } from "../../Game/components/tournament/api";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { UseTokenStore } from "../../userAuth/zustand/useStore";
 
 interface NotificationPanelProps {
   onClose: () => void;
 }
 
 export function NotificationPanel({ onClose }: NotificationPanelProps) {
-  const { notifications, markAllAsRead, unseenNotifications } = useNotificationStore();
+  const { notifications, markAsRead, markAllAsRead, unseenNotifications } = useNotificationStore();
 
   useEffect(() => {
     if (unseenNotifications > 0) {
@@ -57,6 +61,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
+                  onMarkAsRead={markAsRead}
                 />
               ))}
             </div>
@@ -70,16 +75,139 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
 interface NotificationItemProps {
   notification: Notification & { metadata?: { senderId?: number; senderName?: string } };
+  onMarkAsRead: (notificationId: number) => void;
 }
 
-function NotificationItem({ notification }: NotificationItemProps) {
+function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
   const isUnread = !notification.read;
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const userId = UseTokenStore((state) => state.userId);
+  const updateNotificationMetadata = useNotificationStore((state) => state.updateNotificationMetadata);
+
+  // Check invitation status on mount for tournament invitations
+  useEffect(() => {
+    const checkInvitationStatus = async () => {
+      if (notification.type === 'tournament_invite' && 
+          notification.metadata?.invitationId && 
+          !notification.metadata?.status) {
+        try {
+          const response = await fetch(
+            `http://localhost:8080/api/v1/game/tournament-invitations/${notification.metadata.invitationId}`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.invitation && data.invitation.status !== 'pending') {
+              // Update local state with the actual status
+              updateNotificationMetadata(notification.metadata.invitationId, data.invitation.status);
+            }
+          }
+        } catch (error) {
+          // Silently fail - not critical
+          console.error('Failed to check invitation status:', error);
+        }
+      }
+    };
+
+    checkInvitationStatus();
+  }, [notification, updateNotificationMetadata]);
+
+  const handleAcceptInvitation = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!notification.metadata?.invitationId || !userId) {
+      toast.error("Invalid invitation data");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await acceptTournamentInvitation(
+        notification.metadata.invitationId,
+        String(userId)
+      );
+
+      if (response.success) {
+        toast.success(`You joined ${notification.metadata.tournamentName}! 🎉`);
+        
+        // Update notification metadata with 'accepted' status
+        updateNotificationMetadata(notification.metadata.invitationId, 'accepted');
+        
+        // Mark notification as read
+        onMarkAsRead(notification.id);
+        
+        // Navigate to tournament bracket
+        if (notification.metadata.tournamentId) {
+          localStorage.setItem('currentTournamentId', String(notification.metadata.tournamentId));
+          
+          // Navigate to tournament bracket
+          navigate('/game/tournament');
+        }
+      }
+    } catch (error: any) {
+      // If already responded, update UI to reflect that
+      if (error.message?.includes('already responded') || error.message?.includes('400')) {
+        updateNotificationMetadata(notification.metadata.invitationId!, 'accepted');
+        toast.info("You already responded to this invitation");
+      } else {
+        toast.error(error instanceof Error ? error.message : "Failed to accept invitation");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeclineInvitation = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!notification.metadata?.invitationId || !userId) {
+      toast.error("Invalid invitation data");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await declineTournamentInvitation(
+        notification.metadata.invitationId,
+        String(userId)
+      );
+
+      if (response.success) {
+        toast.info("Invitation declined");
+        
+        // Update notification metadata with 'declined' status
+        updateNotificationMetadata(notification.metadata.invitationId, 'declined');
+        
+        // Mark notification as read
+        onMarkAsRead(notification.id);
+      }
+    } catch (error: any) {
+      // If already responded, update UI to reflect that
+      if (error.message?.includes('already responded') || error.message?.includes('400')) {
+        updateNotificationMetadata(notification.metadata.invitationId!, 'declined');
+        toast.info("You already responded to this invitation");
+      } else {
+        toast.error(error instanceof Error ? error.message : "Failed to decline invitation");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isTournamentInvite = notification.type === 'tournament_invite';
 
   return (
     <div
-      className={`p-3 transition-all duration-200 border-b border-gray-800/50 ${
+      className={`p-3 hover:bg-[#0C7368]/10 transition-all duration-200 border-b border-gray-800/50 ${
         isUnread ? "bg-[#0C7368]/5" : ""
-      }`}
+      } ${!isTournamentInvite ? "cursor-pointer" : ""}`}
+      onClick={() => !isTournamentInvite && isUnread && onMarkAsRead(notification.id)}
     >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
@@ -94,7 +222,45 @@ function NotificationItem({ notification }: NotificationItemProps) {
           <p className="text-xs text-gray-400 line-clamp-2 mb-1.5">
             {notification.message}
           </p>
-          <span className="text-[10px] text-gray-600">
+          
+          {/* Tournament Invitation Actions */}
+          {isTournamentInvite && notification.metadata && !notification.metadata.status && (
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleAcceptInvitation}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0C7368] hover:bg-[#0A5B52] text-white text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Check size={14} />
+                Accept
+              </button>
+              <button
+                onClick={handleDeclineInvitation}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <XCircle size={14} />
+                Decline
+              </button>
+            </div>
+          )}
+
+          {/* Show status if already responded */}
+          {isTournamentInvite && notification.metadata && notification.metadata.status && (
+            <div className="mt-2">
+              {notification.metadata.status === 'accepted' ? (
+                <span className="text-xs text-green-400 font-medium">
+                  ✓ Accepted
+                </span>
+              ) : notification.metadata.status === 'declined' ? (
+                <span className="text-xs text-gray-500 font-medium">
+                  ✗ Declined
+                </span>
+              ) : null}
+            </div>
+          )}
+          
+          <span className="text-[10px] text-gray-600 block mt-1">
             {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
           </span>
         </div>

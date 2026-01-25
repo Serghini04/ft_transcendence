@@ -35,7 +35,8 @@ export class KafkaProducerService {
   }
 
   async connect(): Promise<void> {
-    if (this.isConnected) return;
+    if (this.isConnected)
+        return;
 
     try {
       console.log("Connecting Kafka producer...");
@@ -49,8 +50,8 @@ export class KafkaProducerService {
   }
 
   async disconnect(): Promise<void> {
-    if (!this.isConnected) return;
-
+    if (!this.isConnected)
+        return;
     try {
       await this.producer.disconnect();
       this.isConnected = false;
@@ -84,12 +85,10 @@ export class KafkaProducerService {
       console.log(`Published gameFinished event for game ${event.gameId} to Kafka`);
     } catch (error) {
       console.error("Failed to publish gameFinished event to Kafka:", error);
-      // Don't throw - we don't want to break game flow if Kafka is down
     }
   }
 }
 
-// Singleton instance
 let producerInstance: KafkaProducerService | null = null;
 
 export function getKafkaProducer(): KafkaProducerService {

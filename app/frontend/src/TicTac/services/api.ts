@@ -1,3 +1,5 @@
+import { authenticatedFetch } from '../../globalUtils/authenticatedFetch';
+
 // Use relative URL to go through nginx proxy (HTTPS)
 const getApiBaseUrl = () => {
   // if (import.meta.env.VITE_TICTAC_API_URL) {
@@ -58,7 +60,7 @@ export class TicTacAPI {
   static async CheckUserExists(username: string): Promise<{ exists: boolean; user?: User }> {
 
     const url = `${API_BASE_URL}/users/exists/${encodeURIComponent(username)}`;
-    const response = await fetch(url, { method: 'GET', credentials: 'include' });
+    const response = await authenticatedFetch(url, { method: 'GET' });
     
     if (!response.ok) {
       const text = await response.text();
@@ -69,7 +71,7 @@ export class TicTacAPI {
   }
 
   static async getUserStats(userId: string): Promise<UserStats> {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/stats`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/users/${userId}/stats`);
     
     if (!response.ok) throw new Error('Failed to get user stats');
     
@@ -78,7 +80,7 @@ export class TicTacAPI {
   }
 
   static async getUserHistory(userId: string, limit = 20): Promise<GameHistory[]> {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/history?limit=${limit}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/users/${userId}/history?limit=${limit}`);
     
     if (!response.ok) throw new Error('Failed to get user history');
     
@@ -87,7 +89,7 @@ export class TicTacAPI {
   }
 
   static async getLeaderboard(limit = 10): Promise<UserStats[]> {
-    const response = await fetch(`${API_BASE_URL}/users/leaderboard?limit=${limit}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/users/leaderboard?limit=${limit}`);
     
     if (!response.ok) throw new Error('Failed to get leaderboard');
     
@@ -97,7 +99,7 @@ export class TicTacAPI {
 
   
   static async getGame(gameId: string): Promise<GameState> {
-    const response = await fetch(`${API_BASE_URL}/games/${gameId}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/games/${gameId}`);
     
     if (!response.ok) throw new Error('Failed to get game');
     
@@ -106,9 +108,8 @@ export class TicTacAPI {
   }
 
   static async makeMove(gameId: string, playerId: string, position: number): Promise<GameState> {
-    const response = await fetch(`${API_BASE_URL}/games/${gameId}/move`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/games/${gameId}/move`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ playerId, position })
     });
     
@@ -122,9 +123,8 @@ export class TicTacAPI {
   }
 
   static async forfeitGame(gameId: string, playerId: string): Promise<GameState> {
-    const response = await fetch(`${API_BASE_URL}/games/${gameId}/forfeit`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/games/${gameId}/forfeit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ playerId })
     });
     
@@ -137,9 +137,8 @@ export class TicTacAPI {
   static async getActiveGame(playerId: string): Promise<GameState | null> {
     try {
       // Suppress 404 errors in console by catching them silently
-      const response = await fetch(`${API_BASE_URL}/games/player/${playerId}/active`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+      const response = await authenticatedFetch(`${API_BASE_URL}/games/player/${playerId}/active`, {
+        method: 'GET'
       }).catch(() => null);
       
       if (!response) return null;
@@ -158,9 +157,8 @@ export class TicTacAPI {
 
   // Matchmaking endpoints
   static async joinMatchmaking(userId: string, username: string, socketId: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/matchmaking/join`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/matchmaking/join`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, username, socketId })
     });
     
@@ -170,9 +168,8 @@ export class TicTacAPI {
   }
 
   static async leaveMatchmaking(userId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/matchmaking/leave`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/matchmaking/leave`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId })
     });
     
@@ -180,7 +177,7 @@ export class TicTacAPI {
   }
 
   static async getMatchmakingStatus(): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/matchmaking/status`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/matchmaking/status`);
     
     if (!response.ok) throw new Error('Failed to get matchmaking status');
     

@@ -237,16 +237,22 @@ Each service is independently:
 git clone https://github.com/yourusername/ft_transcendence.git
 cd ft_transcendence
 
-# 2. Build and start all services
+# 2. Configure Vault secrets (required for authentication)
+cp .env.vault.example .env.vault
+# Edit .env.vault with your actual secrets
+
+# 3. Build and start all services
 docker-compose up --build
 
-# 3. Access the application
+# 4. Access the application
 # Frontend: http://localhost:5173
 # Kafka UI: http://localhost:8080/kafka-ui
 # Grafana: http://localhost:3030 (admin/admin)
 # Kibana: http://localhost:5601
 # Prometheus: http://localhost:9090
 ```
+
+> 📝 **Note**: Vault secrets are automatically initialized from `.env.vault` file on startup. See [Vault Automation Guide](docs/vault-automation.md) for details.
 
 ### Development Setup
 

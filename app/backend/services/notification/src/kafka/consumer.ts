@@ -36,8 +36,10 @@ export class KafkaConsumerService {
       clientId: KAFKA_CLIENT_ID,
       brokers: [KAFKA_BROKER],
       retry: {
-        initialRetryTime: 100,
-        retries: 8,
+        initialRetryTime: 300,
+        retries: 10,
+        multiplier: 2,
+        maxRetryTime: 30000,
       },
     });
 
@@ -68,6 +70,34 @@ export class KafkaConsumerService {
       console.error("Failed to connect Kafka consumer:", error);
       throw error;
     }
+  }
+
+  async connectWithRetry(maxRetries: number = 10, initialDelay: number = 2000): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.connect();
+        return;
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const delay = initialDelay * Math.pow(2, attempt - 1);
+        
+        console.log(
+          `Kafka connection attempt ${attempt}/${maxRetries} failed: ${error.message}`
+        );
+        
+        if (isLastAttempt) {
+          console.error("Max Kafka connection retries reached. Service will continue without Kafka.");
+          throw error;
+        }
+        
+        console.log(`Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async disconnect(): Promise<void> {

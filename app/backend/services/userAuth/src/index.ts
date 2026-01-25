@@ -19,10 +19,9 @@ import multipart, { MultipartFile } from "@fastify/multipart"
 import { pipeline } from "stream/promises";
 import { promiseHooks } from "v8";
 import { UserEvent, kafkaProducerService } from "./kafka/producer.js";
+import { vaultClient } from "./utils/vault.client.js";
 
-// ...existing code...
-
-
+let secrets: any = null;
 interface User {
   id: number;
   name: string;
@@ -35,10 +34,31 @@ interface User {
   bio?: string;
 }
 
-
+// Initialize fastify app first
 const app = fastify();
+
+// Load secrets from Vault
+console.log('Loading secrets from Vault...');
+secrets = await vaultClient.loadSecrets();
+console.log('Secrets loaded successfully from Vault:', {
+  hasJwtSecret: !!secrets.JWT_SECRET,
+  hasJwtRefresh: !!secrets.JWT_REFRESH,
+  hasCookieSecret: !!secrets.COOKIE_SECRET,
+  hasInternalSecret: !!secrets.INTERNAL_SECRET_KEY,
+  hasEmailUser: !!secrets.EMAIL_USER,
+  hasEmailPassword: !!secrets.EMAIL_PASSWORD,
+});
+    
+app.log.info({
+  hasJwtSecret: !!secrets.JWT_SECRET,
+  hasJwtRefresh: !!secrets.JWT_REFRESH,
+  hasCookieSecret: !!secrets.COOKIE_SECRET,
+  hasInternalSecret: !!secrets.INTERNAL_SECRET_KEY,
+}, "Secrets loaded from Vault");
+
+export { secrets };
 await app.register(cookie, {
-  secret: process.env.COOKIE_SECRET,
+  secret: secrets.COOKIE_SECRET,
 });
 
 await app.register(cors, {
@@ -750,6 +770,23 @@ app.post("/api/v1/auth/profile/getProfileUser", async (request, reply) => {
 
 app.get("/api/v1/auth/protect", async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
+});
+
+app.post("/api/v1/auth/logout", async (request, reply) => {
+  try {
+    // Clear the refresh token cookie
+    reply.clearCookie("refreshToken", {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax"
+    });
+    
+    return reply.send({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return reply.status(500).send({ error: "Logout failed" });
+  }
 });
 
 // app.post ("/auth/v1/verify-email", async (request, reply) => {

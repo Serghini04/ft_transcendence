@@ -1,31 +1,58 @@
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { Users, User} from "lucide-react";
+import isValidToken from "../globalUtils/isValidToken";
+import { UseTokenStore } from "../userAuth/zustand/useStore";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
-interface GameSelectionProps {
+interface OutletContextType {
   isSidebarOpen?: boolean;
 }
 
-const GameSelection = ({ isSidebarOpen }: GameSelectionProps) => {
+const GameSelection = () => {
+  const { isSidebarOpen } = useOutletContext<OutletContextType>();
   
+  const navigate = useNavigate();
+  const { token, setToken } = UseTokenStore();
+  useEffect(() => {
+    async function check() {
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+        navigate("/auth");
+      }
+      
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
+    }
+  
+    check();
+  }, [token, navigate]);
+
   return (
    <div
     className={`
+          h-[calc(100vh-120px)]
           relative
           bg-[rgba(15,26,36,0.5)]
           md:rounded-tl-4xl
           shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
-         
+         flex
+         items-center
+         justify-center
           transition-all
+          pt-50
           md:mt-30
           xl:ml-10
-          min-h-screen h-screen 
+           
           overflow-y-auto hide-scrollbar
 
           ${isSidebarOpen ? "ml-20" : "ml-0"}
         `}   
   >
    
-    <div className="flex flex-col items-center justify-center min-h-screen text-white pl-0 md:pl-20 p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-visible pb-24">
+    <div className="flex flex-col items-center justify-center text-white pl-0 md:pl-20 p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-visible pb-24">
       
       <div className="max-w-5xl w-full relative z-10 px-2 sm:px-4">
         <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8 lg:mb-10">
@@ -201,3 +228,4 @@ const GameSelection = ({ isSidebarOpen }: GameSelectionProps) => {
 };
 
 export default GameSelection;
+

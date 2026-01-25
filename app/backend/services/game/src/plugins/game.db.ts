@@ -4,16 +4,6 @@ import path from "path";
 import fs from "fs";
 import { FastifyInstance } from "fastify";
 
-// -------------------------
-// Types
-// -------------------------
-// export interface PlayerInfo {
-//   id: string;
-//   name: string;
-//   avatar?: string;
-//   score: number;
-// }
-
 export interface GameData {
   gameId: string;
   mode: string;
@@ -25,11 +15,6 @@ export interface GameData {
   createdAt?: number;
 }
 
-// export interface UserProfile {
-//   id: string;
-//   name: string;
-//   avatar?: string;
-// }
 
 // -------------------------
 // Plugin
@@ -91,13 +76,160 @@ const createTables = (db: Database.Database) => {
     CREATE INDEX IF NOT EXISTS idx_users_level ON users(level);
     CREATE INDEX IF NOT EXISTS idx_users_updated ON users(updated_at);
   `);
+
+  // Tournament tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tournaments (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      creator_id TEXT NOT NULL,
+      max_players INTEGER NOT NULL,
+      current_players INTEGER DEFAULT 0,
+      visibility TEXT NOT NULL CHECK(visibility IN ('public', 'private')),
+      status TEXT NOT NULL DEFAULT 'waiting' CHECK(status IN ('waiting', 'in_progress', 'completed')),
+      created_at INTEGER NOT NULL,
+      started_at INTEGER,
+      completed_at INTEGER
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status);
+    CREATE INDEX IF NOT EXISTS idx_tournaments_creator ON tournaments(creator_id);
+    CREATE INDEX IF NOT EXISTS idx_tournaments_created ON tournaments(created_at);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tournament_participants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tournament_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      username TEXT NOT NULL,
+      joined_at INTEGER NOT NULL,
+      seed INTEGER,
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+      UNIQUE(tournament_id, user_id)
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_participants_tournament ON tournament_participants(tournament_id);
+    CREATE INDEX IF NOT EXISTS idx_participants_user ON tournament_participants(user_id);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tournament_matches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tournament_id TEXT NOT NULL,
+      round INTEGER NOT NULL,
+      position INTEGER NOT NULL,
+      player1_id TEXT,
+      player2_id TEXT,
+      winner_id TEXT,
+      score1 INTEGER,
+      score2 INTEGER,
+      scheduled_at INTEGER,
+      completed_at INTEGER,
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_matches_tournament ON tournament_matches(tournament_id);
+    CREATE INDEX IF NOT EXISTS idx_matches_round ON tournament_matches(tournament_id, round);
+  `);
+
+  // Relationships table (synced from chat service via Kafka)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS relationships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user1_id TEXT NOT NULL,
+      user2_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('friend', 'blocked', 'pending')),
+      blocked_by_user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user1_id, user2_id),
+      FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (blocked_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_relationships_user1 ON relationships(user1_id);
+    CREATE INDEX IF NOT EXISTS idx_relationships_user2 ON relationships(user2_id);
+    CREATE INDEX IF NOT EXISTS idx_relationships_type ON relationships(type);
+  `);
+
+  // Tournament invitations table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tournament_invitations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tournament_id TEXT NOT NULL,
+      inviter_id TEXT NOT NULL,
+      invitee_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'declined')),
+      created_at INTEGER NOT NULL,
+      responded_at INTEGER,
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+      UNIQUE(tournament_id, invitee_id)
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_invitations_tournament ON tournament_invitations(tournament_id);
+    CREATE INDEX IF NOT EXISTS idx_invitations_invitee ON tournament_invitations(invitee_id);
+    CREATE INDEX IF NOT EXISTS idx_invitations_status ON tournament_invitations(status);
+  `);
 };
 
 // Execute table creation
 createTables(db);
-console.log("✅ Database tables initialized");
+console.log("✅ Database tables initialized (including tournaments)");
 
+// Seed users FIRST (before relationships)
+const seedUsers = () => {
+  const userInsert = db.prepare(`
+    INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, ?)
+  `);
+  
+  userInsert.run('1', 'User 1', '', 0);
+  userInsert.run('2', 'User 2', '', 0);
+  userInsert.run('3', 'User 3', '', 0);
+  userInsert.run('4', 'User 4', '', 0);
+  
+  console.log("✅ Users seeded");
+};
 
+// Seed relationships (user1 is friends with all others)
+const seedRelationships = () => {
+  const relationshipsInsert = db.prepare(`
+    INSERT OR IGNORE INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
+  `);
+  
+  // Make user1 friends with users 2, 3, and 4
+  relationshipsInsert.run('1', '2', 'friend');
+  relationshipsInsert.run('1', '3', 'friend');
+  relationshipsInsert.run('1', '4', 'friend');
+  
+  console.log("✅ Relationships seeded (user1 is friends with all others)");
+};
+
+// Only seed if there are no users yet
+const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+if (userCount.count === 0) {
+  seedUsers(); // ← Seed users FIRST
+}
+
+// Only seed if there are no relationships yet
+const relationshipCount = db.prepare("SELECT COUNT(*) as count FROM relationships").get() as { count: number };
+if (relationshipCount.count === 0) {
+  seedRelationships(); // ← Then seed relationships
+}
+
+// -------------------------
+// Game operations
+// -------------------------
 export const saveGameResult = (db: Database.Database, gameData: GameData) => {
   const stmt = db.prepare(`
     INSERT INTO games (
@@ -124,87 +256,3 @@ export const saveGameResult = (db: Database.Database, gameData: GameData) => {
   ).lastInsertRowid;
 };
 
-// const getUserGames = (
-//   db: Database.Database,
-//   userId: string,
-//   limit: number
-// ) => {
-//   const stmt = db.prepare(`
-//     SELECT * FROM games
-//     WHERE player1_id = ? OR player2_id = ?
-//     ORDER BY created_at DESC
-//     LIMIT ?
-//   `);
-//   return stmt.all(userId, userId, limit);
-// };
-
-// const getUserStats = (db: Database.Database, userId: string) => {
-//   const games = db
-//     .prepare(
-//       `
-//       SELECT * FROM games
-//       WHERE player1_id = ? OR player2_id = ?
-//     `
-//     )
-//     .all(userId, userId);
-
-//   const wins = games.filter((g) => g.winner_id === userId).length;
-
-//   return {
-//     totalGames: games.length,
-//     wins,
-//     losses: games.length - wins,
-//     level: games.length > 0 ? (wins / games.length) * 10 : 0,
-//   };
-// };
-
-// const getRecentGames = (db: Database.Database, limit: number) => {
-//   return db
-//     .prepare(
-//       `
-//       SELECT * FROM games
-//       ORDER BY created_at DESC
-//       LIMIT ?
-//     `
-//     )
-//     .all(limit);
-// };
-
-// -------------------------
-// Users
-// -------------------------
-// const upsertUser = (db: Database.Database, user: UserProfile) => {
-//   const stmt = db.prepare(`
-//     INSERT INTO users (id, name, avatar, level, created_at, updated_at)
-//     VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-//     ON CONFLICT(id) DO UPDATE SET
-//       name = excluded.name,
-//       avatar = excluded.avatar,
-//       updated_at = CURRENT_TIMESTAMP
-//   `);
-
-//   return stmt.run(user.id, user.name, user.avatar);
-// };
-
-// const updateUserLevel = (
-//   db: Database.Database,
-//   userId: string,
-//   level: number
-// ) => {
-//   return db
-//     .prepare(`UPDATE users SET level = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
-//     .run(level, userId);
-// };
-
-// const getLeaderboard = (db: Database.Database, limit: number) => {
-//   return db
-//     .prepare(
-//       `
-//       SELECT id as user_id, name, avatar, level
-//       FROM users
-//       ORDER BY level DESC
-//       LIMIT ?
-//     `
-//     )
-//     .all(limit);
-// };

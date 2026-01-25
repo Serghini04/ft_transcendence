@@ -56,8 +56,8 @@ dev:
 
 
 stop-all:
-	docker-compose down
 	@if [ -n "$$(docker ps -q)" ]; then docker stop $$(docker ps -q); fi
+	@docker-compose down 2>/dev/null || true
 
 delete-all: stop-all
 	@docker rm -f $$(docker ps -aq) 2>/dev/null || true
@@ -67,10 +67,9 @@ delete-all: stop-all
 	@docker system prune -af --volumes
 
 fclean: stop-all
-	docker-compose down -v --remove-orphans
-	@docker volume ls -q -f name=trancsendence | xargs -r docker volume rm 2>/dev/null || true
-	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|tictac-game|chat-service|game-service|notification-service|api-gateway|frontend):" | xargs -r docker rmi -f 2>/dev/null || true
-	@docker network ls -q -f name=ft_transc | xargs -r docker network rm 2>/dev/null || true
+	@docker-compose down -v --remove-orphans 2>/dev/null || true
+	@docker volume ls -q -f name=trancsendence | grep -v '^$$' | xargs docker volume rm 2>/dev/null || true
+	@docker network ls -q -f name=ft_transc | grep -v '^$$' | xargs docker network rm 2>/dev/null || true
 	@docker builder prune -f
 
 re: fclean build up

@@ -74,6 +74,54 @@
   }
 }
 
+/* Custom Scrollbar Styles - Teal/Cyan Gradient */
+.game-menu-scroll::-webkit-scrollbar,
+.tournament-page::-webkit-scrollbar,
+.tournament-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.game-menu-scroll::-webkit-scrollbar-track,
+.tournament-page::-webkit-scrollbar-track,
+.tournament-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-left: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.game-menu-scroll::-webkit-scrollbar-thumb,
+.tournament-page::-webkit-scrollbar-thumb,
+.tournament-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #14b8a6, #06b6d4);
+  border-radius: 6px;
+  border: 3px solid rgba(15, 23, 42, 0.5);
+}
+
+.game-menu-scroll::-webkit-scrollbar-thumb:hover,
+.tournament-page::-webkit-scrollbar-thumb:hover,
+.tournament-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #0d9488, #0891b2);
+  border: 3px solid rgba(15, 23, 42, 0.3);
+}
+
+/* Firefox scrollbar support */
+.game-menu-scroll,
+.tournament-page,
+.tournament-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #14b8a6 rgba(15, 23, 42, 0.5);
+}
+
+/* Custom Select Option Styles */
+select option {
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px;
+}
+
+select option:checked {
+  background: linear-gradient(to right, #14b8a6, #06b6d4);
+  color: #ffffff;
+}
 .hide-scrollbar {
   -ms-overflow-style: none;     
   scrollbar-width: none;        
