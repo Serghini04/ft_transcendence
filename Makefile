@@ -72,6 +72,12 @@ fclean: stop-all
 	@docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "^(kafka|zookeeper|prometheus|grafana|alertmanager|node-exporter|elasticsearch|logstash|kibana|filebeat|tictac-game|chat-service|game-service|notification-service|api-gateway|frontend):" | xargs -r docker rmi -f 2>/dev/null || true
 	@docker network ls -q -f name=ft_transc | xargs -r docker network rm 2>/dev/null || true
 	@docker builder prune -f
+	@echo "Cleaning SQLite databases..."
+	@rm -f infra/data/user_auth/*.db infra/data/user_auth/*.sqlite infra/data/user_auth/*.sqlite3
+	@rm -f infra/data/game/*.db infra/data/game/*.sqlite infra/data/game/*.sqlite3
+	@rm -f infra/data/chat/*.db infra/data/chat/*.sqlite infra/data/chat/*.sqlite3
+	@rm -f infra/data/leaderboard/*.db infra/data/leaderboard/*.sqlite infra/data/leaderboard/*.sqlite3
+	@echo "All SQLite databases cleaned!"
 
 re: fclean build up
 

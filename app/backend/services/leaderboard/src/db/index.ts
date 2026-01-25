@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 
-export const db = new Database("./src/db/leaderboard.sqlite");
+export const db = new Database("/app/data/leaderboard.sqlite");
 
 db.pragma("foreign_keys = ON");
 db.pragma("journal_mode = WAL");
