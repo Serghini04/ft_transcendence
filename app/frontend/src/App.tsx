@@ -1,7 +1,7 @@
 import './index.css';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import MainLayout from './components/MainLayout';
 import Home from './userAuth/dashboard/components/Home';
@@ -16,19 +16,33 @@ import Tournament from "./Game/components/tournament";
 import Online from "./Game/components/online";
 import GameSetup from "./Game/components/setup";
 import TournamentGame from "./Game/components/tournament/TournamentGame";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import GameSelection from './TicTac/GameSelection';
 import TicTac from './TicTac/TicTac';
 import OnlineTicTac from './TicTac/OnlineTicTac';
 import Profile from './userAuth/profile/components/Profile';
 import NotFound from './components/NotFound';
 
-export default function App() {
+function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Cross-tab logout synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'logout-event' && e.newValue) {
+        // Immediate redirect - page reload will clear everything
+        window.location.href = '/auth';
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   return (
     <>
-      <Router>
-        <Routes>
+      <Routes>
 
           {/* Auth is outside MainLayout */}
           <Route path="/auth" element={<Auth />} />
@@ -60,7 +74,6 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
-      </Router>
       <ToastContainer 
         position="top-center"
         autoClose={3000}
@@ -74,6 +87,13 @@ export default function App() {
         theme="dark"
       />
     </>
+  );
+}
 
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }

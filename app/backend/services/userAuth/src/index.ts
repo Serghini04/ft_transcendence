@@ -751,6 +751,23 @@ app.get("/api/v1/auth/protect", async (request, reply) => {
     return reply.send({message: "Protected route accessed", user: request.user});
 });
 
+app.post("/api/v1/auth/logout", async (request, reply) => {
+  try {
+    // Clear the refresh token cookie
+    reply.clearCookie("refreshToken", {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax"
+    });
+    
+    return reply.send({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return reply.status(500).send({ error: "Logout failed" });
+  }
+});
+
 // app.post ("/auth/v1/verify-email", async (request, reply) => {
 //   try {
 //     const { otp } = request.body as { otp: string };

@@ -8,7 +8,17 @@ import {
  
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { UseTokenStore } from "../userAuth/zustand/useStore";
+import { 
+  UseTokenStore, 
+  UseUserStore, 
+  UseBioStore, 
+  UseimageDataUrlStore, 
+  UsephotosFileStore,
+  UseOtpStore,
+  UseShowOtpInputStore,
+  UseErrorStore,
+  UseSettingsErrorStore
+} from "../userAuth/zustand/useStore";
 
 function TicTacCombinedIcon({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
@@ -28,11 +38,39 @@ export default function SideMenu({ open, onClose }: SideMenuProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const setToken = UseTokenStore((s) => s.setToken);
+  const setUser = UseUserStore((s) => s.setUser);
+  const setBio = UseBioStore((s) => s.setBio);
+  const setBgImageDataUrl = UseimageDataUrlStore((s) => s.setBgImageDataUrl);
+  const setProfileImageDataUrl = UseimageDataUrlStore((s) => s.setProfileImageDataUrl);
+  const setProfileFile = UsephotosFileStore((s) => s.setProfileFile);
+  const setBgImageFile = UsephotosFileStore((s) => s.setBgImageFile);
+  const setOtpOriginal = UseOtpStore((s) => s.setOtpOriginal);
+  const setFlag = UseOtpStore((s) => s.setFlag);
+  const setOtpFlag = UseShowOtpInputStore((s) => s.setOtpFlag);
+  const setErrorMsg = UseErrorStore((s) => s.setErrorMsg);
+  const setNameErrorMsg = UseSettingsErrorStore((s) => s.setNameErrorMsg);
+  const setCurrentPasswordErrorMsg = UseSettingsErrorStore((s) => s.setCurrentPasswordErrorMsg);
+  const setNewPasswordErrorMsg = UseSettingsErrorStore((s) => s.setNewPasswordErrorMsg);
+  const setConfirmPasswordErrorMsg = UseSettingsErrorStore((s) => s.setConfirmPasswordErrorMsg);
 
-  const handleLogout = () => {
-    setToken("");
+  const handleLogout = async () => {
     onClose();
-    navigate("/auth");
+    
+    // Broadcast logout to other tabs
+    localStorage.setItem('logout-event', Date.now().toString());
+    
+    // Call backend logout
+    fetch("http://localhost:3000/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    }).catch(console.error);
+    
+    // Clear storage and redirect immediately
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Immediate redirect - faster than navigate + state cleanup
+    window.location.href = '/auth';
   };
 
   return (
