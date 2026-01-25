@@ -17,7 +17,7 @@ export default function Activity({played, wins, ticTacToePlayed, ticTacToeWins, 
     const pingPongGoals = goals ?? 0;
     // console.log("Activity Component Props: XXXXXXXXXXXXXXXXXXXXXXXXX", { played, wins, tictactoeplayed, tictactoewins });
     return (
-        <div className="w-full h-50 xl:w-[35vw] xl:min-h-[clamp(20vw,25vw,30vw)] xl:mr-[-4]">
+        <div className="w-full h-50 xl:w-[35vw] xl:min-h-[clamp(20vw,25vw,30vw)] xl:mr-[-4] ml-6">
   <div className="rounded-xl xl:rounded-[1vw] p-4 xl:p-[1.5vw] backdrop-blur-md shadow-xl bg-[rgba(68,78,106,0.3)]">
     
     {/* HEADER */}

@@ -422,6 +422,7 @@ services:
       - CORS_ORIGIN=http://localhost:5173,http://localhost:8888,http://10.32.138.11:5173,http://10.32.138.11:8888
     volumes:
       - tictac-data:/app/data
+      - userauth-data:/app/shared/userauth:ro
     networks:
       - ft_Transc
     restart: unless-stopped

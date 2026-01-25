@@ -66,7 +66,7 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(now.getDate() - 7);
 
-    // 🟠 PingPong
+    // 🟠 PingPong - count wins per day from games
     pingPongData.games?.forEach((game: GameData) => {
       const date = new Date(game.created_at);
       if (date >= sevenDaysAgo && game.winner_id == user.id) {
@@ -74,13 +74,11 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
       }
     });
 
-    // 🔵 TicTacToe
-    ticTacData.games?.forEach((game: GameData) => {
-      const date = new Date(game.created_at);
-      if (date >= sevenDaysAgo && game.winner_id == user.id) {
-        ticTacWinsPerDay[date.getDay()]++;
-      }
-    });
+    // 🔵 TicTacToe - show total wins on current day (aggregate stats only)
+    if (ticTacData.wins) {
+      ticTacWinsPerDay[now.getDay()] = ticTacData.wins;
+    }
+    
     console.log("🟦 TIC TAC RAW DATA:", ticTacData);
     console.log("🟦 TIC TAC WINS PER DAY:", ticTacWinsPerDay);
 
@@ -108,7 +106,7 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
   console.log("📊 Rendering WeeklyLevel - maxWins:", maxWins, "data:", weeklyData);
 
   return (
-    <div className="w-full xl:w-[35vw] xl:min-h-[clamp(35vw,42vw,50vw)] xl:mt-[-6vw]">
+    <div className="w-full xl:w-[35vw] xl:min-h-[clamp(35vw,42vw,50vw)] xl:mt-[-6vw] ml-6">
   <div className="rounded-2xl p-6 xl:p-[2vw] bg-[rgba(68,78,106,0.3)] border border-white/10 shadow-xl backdrop-blur-md ">
     <div className="flex justify-between items-center mb-6 xl:mb-[1.5vw]">
       <h2 className="text-white text-lg xl:text-[1.4vw] font-semibold xl:pb-[11.2vw]">Weekly Level</h2>
@@ -116,7 +114,7 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
 
     <div className="relative">
       {/* Percentage markers */}
-      <div className="absolute left-0 top-11 xl:top-[2vw] flex flex-col justify-between h-48 xl:h-[25vw] text-xs xl:text-[0.8vw] text-gray-500 pr-2">
+      <div className="absolute left-0 top-11 xl:top-[-1.7vw] flex flex-col justify-between h-48 xl:h-[25vw] text-xs xl:text-[0.8vw] text-gray-500 pr-2">
         {[100, 75, 50, 25, 0].map((value) => (
           <span key={value} className="-mt-1">{value}%</span>
         ))}
@@ -132,14 +130,14 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
 
           return (
             <div key={index} className="flex flex-col items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-end gap-1 w-full justify-center h-48 xl:h-[25vw]">
+              <div className="flex items-end gap-1 xl:gap-[0.3vw] w-full justify-center h-48 xl:h-[25vw]">
                 <div
-                  className="w-[clamp(16px,2vw,20px)] xl:w-[1.5vw] bg-gradient-to-t from-amber-400 to-amber-300 rounded-t transition-all duration-300"
+                  className="w-[20px] xl:w-[1.8vw] bg-gradient-to-t from-amber-400 to-amber-300 rounded-t transition-all duration-300"
                   style={{ height: `${finalPingPongHeight}%` }}
                   title={`PingPong: ${day.pingPongWins} wins`}
                 />
                 <div
-                  className="w-[clamp(16px,2vw,20px)] xl:w-[1.5vw] bg-gradient-to-t from-cyan-400 to-teal-300 rounded-t transition-all duration-300"
+                  className="w-[20px] xl:w-[1.8vw] bg-gradient-to-t from-cyan-400 to-teal-300 rounded-t transition-all duration-300"
                   style={{ height: `${finalTicTacHeight}%` }}
                   title={`TicTacToe: ${day.ticTacWins} wins`}
                 />
