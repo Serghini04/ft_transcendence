@@ -188,44 +188,26 @@ createTables(db);
 console.log("✅ Database tables initialized (including tournaments)");
 
 // Seed users FIRST (before relationships)
-const seedUsers = () => {
-  const userInsert = db.prepare(`
-    INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, ?)
-  `);
+// const seedUsers = () => {
+//   const userInsert = db.prepare(`
+//     INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, ?)
+//   `);
   
-  userInsert.run('1', 'User 1', '', 0);
-  userInsert.run('2', 'User 2', '', 0);
-  userInsert.run('3', 'User 3', '', 0);
-  userInsert.run('4', 'User 4', '', 0);
+//   userInsert.run('1', 'User 1', '', 0);
+//   userInsert.run('2', 'User 2', '', 0);
+//   userInsert.run('3', 'User 3', '', 0);
+//   userInsert.run('4', 'User 4', '', 0);
   
-  console.log("✅ Users seeded");
-};
-
-// Seed relationships (user1 is friends with all others)
-const seedRelationships = () => {
-  const relationshipsInsert = db.prepare(`
-    INSERT OR IGNORE INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
-  `);
-  
-  // Make user1 friends with users 2, 3, and 4
-  relationshipsInsert.run('1', '2', 'friend');
-  relationshipsInsert.run('1', '3', 'friend');
-  relationshipsInsert.run('1', '4', 'friend');
-  
-  console.log("✅ Relationships seeded (user1 is friends with all others)");
-};
+//   console.log("✅ Users seeded");
+// };
 
 // Only seed if there are no users yet
-const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-if (userCount.count === 0) {
-  seedUsers(); // ← Seed users FIRST
-}
+// const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+// if (userCount.count === 0) {
+//   seedUsers();
+// }
 
-// Only seed if there are no relationships yet
-const relationshipCount = db.prepare("SELECT COUNT(*) as count FROM relationships").get() as { count: number };
-if (relationshipCount.count === 0) {
-  seedRelationships(); // ← Then seed relationships
-}
+console.log("ℹ️ Relationships will be synced from chat service via Kafka");
 
 // -------------------------
 // Game operations

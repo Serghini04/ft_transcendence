@@ -16,6 +16,15 @@ interface UserEvent {
   showNotifications: boolean;
 }
 
+interface RelationshipEvent {
+  action: 'created' | 'updated' | 'deleted';
+  user1_id: number;
+  user2_id: number;
+  type?: 'friend' | 'blocked' | 'pending';
+  blocked_by_user_id?: number;
+  timestamp: string;
+}
+
 export class KafkaConsumerService {
   private kafka: Kafka;
   private consumer: Consumer;
@@ -45,6 +54,35 @@ export class KafkaConsumerService {
       console.error('❌ Failed to connect Kafka consumer:', error);
       throw error;
     }
+  }
+
+  async connectWithRetry(maxRetries: number = 10, initialDelay: number = 2000): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.connect();
+        console.log(`✅ Kafka connected successfully on attempt ${attempt}`);
+        return;
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const delay = initialDelay * Math.pow(2, attempt - 1);
+        
+        console.log(
+          `⚠️ Kafka connection attempt ${attempt}/${maxRetries} failed: ${error.message}`
+        );
+        
+        if (isLastAttempt) {
+          console.error('❌ Max Kafka connection retries reached. Service will continue without Kafka.');
+          throw error;
+        }
+        
+        console.log(`🔄 Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async disconnect(): Promise<void> {
@@ -77,7 +115,13 @@ export class KafkaConsumerService {
         fromBeginning: false,
       });
 
-      console.log('✅ Subscribed to topics: UserCreated, userUpdated');
+      // Subscribe to relationships topic
+      await this.consumer.subscribe({
+        topic: 'relationships',
+        fromBeginning: true,
+      });
+
+      console.log('✅ Subscribed to topics: UserCreated, userUpdated, relationships');
     } catch (error) {
       console.error('❌ Failed to subscribe to topics:', error);
       throw error;
@@ -113,19 +157,21 @@ export class KafkaConsumerService {
         return;
       }
 
-      const event: UserEvent = JSON.parse(value);
-      console.log(`📥 Received event from topic '${topic}':`, {
-        userId: event.userId,
-        name: event.name,
-      });
+      console.log(`📥 Received event from topic '${topic}'`);
 
       // Handle different topics
       switch (topic) {
         case 'UserCreated':
-          await this.handleUserCreated(event);
+          const userCreatedEvent: UserEvent = JSON.parse(value);
+          await this.handleUserCreated(userCreatedEvent);
           break;
         case 'userUpdated':
-          await this.handleUserUpdated(event);
+          const userUpdatedEvent: UserEvent = JSON.parse(value);
+          await this.handleUserUpdated(userUpdatedEvent);
+          break;
+        case 'relationships':
+          const relationshipEvent: RelationshipEvent = JSON.parse(value);
+          await this.handleRelationshipEvent(relationshipEvent);
           break;
         default:
           console.warn(`⚠️ Unknown topic: ${topic}`);
@@ -193,6 +239,125 @@ export class KafkaConsumerService {
       console.log(`✅ User ${event.userId} updated successfully in game database`);
     } catch (error) {
       console.error('❌ Failed to update user:', error);
+      throw error;
+    }
+  }
+
+  private async handleRelationshipEvent(event: RelationshipEvent): Promise<void> {
+    try {
+      console.log(`🔗 Processing relationship ${event.action}:`, {
+        user1_id: event.user1_id,
+        user2_id: event.user2_id,
+        type: event.type,
+      });
+
+      switch (event.action) {
+        case 'created':
+          await this.handleRelationshipCreated(event);
+          break;
+        case 'updated':
+          await this.handleRelationshipUpdated(event);
+          break;
+        case 'deleted':
+          await this.handleRelationshipDeleted(event);
+          break;
+        default:
+          console.warn(`⚠️ Unknown relationship action: ${event.action}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to process relationship event:', error);
+      throw error;
+    }
+  }
+
+  private async handleRelationshipCreated(event: RelationshipEvent): Promise<void> {
+    try {
+      // Check if relationship already exists
+      const existingRel = db.prepare(`
+        SELECT id FROM relationships 
+        WHERE user1_id = ? AND user2_id = ?
+      `).get(event.user1_id.toString(), event.user2_id.toString());
+
+      if (existingRel) {
+        console.log(`ℹ️ Relationship already exists, updating instead`);
+        await this.handleRelationshipUpdated(event);
+        return;
+      }
+
+      // Insert new relationship
+      const stmt = db.prepare(`
+        INSERT INTO relationships (user1_id, user2_id, type, blocked_by_user_id)
+        VALUES (?, ?, ?, ?)
+      `);
+
+      stmt.run(
+        event.user1_id.toString(),
+        event.user2_id.toString(),
+        event.type || 'friend',
+        event.blocked_by_user_id ? event.blocked_by_user_id.toString() : null
+      );
+
+      console.log(`✅ Relationship created successfully in game database`);
+    } catch (error) {
+      console.error('❌ Failed to create relationship:', error);
+      throw error;
+    }
+  }
+
+  private async handleRelationshipUpdated(event: RelationshipEvent): Promise<void> {
+    try {
+      // Update relationship
+      const stmt = db.prepare(`
+        UPDATE relationships 
+        SET type = ?, blocked_by_user_id = ?
+        WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+      `);
+
+      const result = stmt.run(
+        event.type || 'friend',
+        event.blocked_by_user_id ? event.blocked_by_user_id.toString() : null,
+        event.user1_id.toString(),
+        event.user2_id.toString(),
+        event.user2_id.toString(),
+        event.user1_id.toString()
+      );
+
+      if (result.changes === 0) {
+        console.log(`ℹ️ Relationship not found, creating instead`);
+        await this.handleRelationshipCreated(event);
+        return;
+      }
+
+      console.log(`✅ Relationship updated successfully in game database`);
+    } catch (error) {
+      console.error('❌ Failed to update relationship:', error);
+      throw error;
+    }
+  }
+
+  private async handleRelationshipDeleted(event: RelationshipEvent): Promise<void> {
+    try {
+      // Delete relationship
+      const stmt = db.prepare(`
+        DELETE FROM relationships 
+        WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+      `);
+
+      const result = stmt.run(
+        event.user1_id.toString(),
+        event.user2_id.toString(),
+        event.user2_id.toString(),
+        event.user1_id.toString()
+      );
+
+      if (result.changes === 0) {
+        console.log(`ℹ️ Relationship not found, nothing to delete`);
+        return;
+      }
+
+      console.log(`✅ Relationship deleted successfully from game database`);
+    } catch (error) {
+      console.error('❌ Failed to delete relationship:', error);
       throw error;
     }
   }
