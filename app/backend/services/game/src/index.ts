@@ -258,8 +258,8 @@ const start = async () => {
     await kafkaProducerService.connect();
     app.log.info("Kafka producer connected successfully");
     
-    // Connect and start Kafka consumer with retry logic
-    await kafkaConsumerService.connectWithRetry();
+    // Connect and start Kafka consumer
+    await kafkaConsumerService.connect();
     await kafkaConsumerService.subscribe();
     await kafkaConsumerService.startConsuming();
     app.log.info("Kafka consumer started successfully");

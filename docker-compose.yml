@@ -455,6 +455,7 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:8888}
     volumes:
       - tictac-data:/app/data
+      - ./infra/data/shared:/app/shared:ro
     networks:
       - ft_Transc
     restart: unless-stopped

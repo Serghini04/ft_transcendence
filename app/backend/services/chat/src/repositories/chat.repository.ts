@@ -2,7 +2,6 @@ import Database from "better-sqlite3";
 import { Relationship } from "../models/relationship";
 import { User } from "../models/user";
 import { Message } from "../models/message";
-import { kafkaProducerService } from "../kafka/producer";
 
 
 export class ChatRepository {
@@ -214,15 +213,6 @@ export class ChatRepository {
       const result = stmt.run(blockerId, blockerId, blockedId, blockedId, blockerId);
       
       if (result.changes > 0) {
-        // Publish to Kafka
-        const [user1_id, user2_id] = blockerId < blockedId ? [blockerId, blockedId] : [blockedId, blockerId];
-        kafkaProducerService.publishRelationshipUpdated({
-          user1_id,
-          user2_id,
-          type: 'blocked',
-          blocked_by_user_id: blockerId
-        }).catch(err => console.error('Failed to publish relationship updated:', err));
-        
         return { success: true, message: 'User blocked successfully' };
       }
       return { success: false, message: 'Relationship not found' };
@@ -242,14 +232,6 @@ export class ChatRepository {
       const result = stmt.run(unblockerId, blockedId, blockedId, unblockerId, unblockerId);
       
       if (result.changes > 0) {
-        // Publish to Kafka
-        const [user1_id, user2_id] = unblockerId < blockedId ? [unblockerId, blockedId] : [blockedId, unblockerId];
-        kafkaProducerService.publishRelationshipUpdated({
-          user1_id,
-          user2_id,
-          type: 'friend'
-        }).catch(err => console.error('Failed to publish relationship updated:', err));
-        
         return { success: true, message: 'User unblocked successfully' };
       }
       return { success: false, message: 'Cannot unblock: you did not block this user' };
@@ -289,13 +271,6 @@ export class ChatRepository {
       const result = stmt.run(user1_id, user2_id, senderId);
 
       if (result.changes > 0) {
-        // Publish to Kafka
-        kafkaProducerService.publishRelationshipCreated({
-          user1_id,
-          user2_id,
-          type: 'pending'
-        }).catch(err => console.error('Failed to publish relationship created:', err));
-        
         return { success: true, message: 'Friend request sent' };
       }
       return { success: false, message: 'Failed to send friend request' };
@@ -315,14 +290,6 @@ export class ChatRepository {
       const result = stmt.run(userId, requesterId, requesterId, userId);
 
       if (result.changes > 0) {
-        // Publish to Kafka
-        const [user1_id, user2_id] = userId < requesterId ? [userId, requesterId] : [requesterId, userId];
-        kafkaProducerService.publishRelationshipUpdated({
-          user1_id,
-          user2_id,
-          type: 'friend'
-        }).catch(err => console.error('Failed to publish relationship updated:', err));
-        
         return { success: true, message: 'Friend request accepted' };
       }
       return { success: false, message: 'Friend request not found' };
@@ -341,10 +308,6 @@ export class ChatRepository {
       const result = stmt.run(userId, requesterId, requesterId, userId);
 
       if (result.changes > 0) {
-        // Publish to Kafka
-        kafkaProducerService.publishRelationshipDeleted(userId, requesterId)
-          .catch(err => console.error('Failed to publish relationship deleted:', err));
-        
         return { success: true, message: 'Friend request rejected' };
       }
       return { success: false, message: 'Friend request not found' };
@@ -436,10 +399,6 @@ export class ChatRepository {
       const result = stmt.run(userId, friendId, friendId, userId);
 
       if (result.changes > 0) {
-        // Publish to Kafka
-        kafkaProducerService.publishRelationshipDeleted(userId, friendId)
-          .catch(err => console.error('Failed to publish relationship deleted:', err));
-        
         return { success: true, message: 'Friend removed successfully' };
       }
       return { success: false, message: 'Friend relationship not found' };

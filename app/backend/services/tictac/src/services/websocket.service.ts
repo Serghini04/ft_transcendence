@@ -16,7 +16,6 @@ export class WebSocketHandler {
   private static connections: Map<string, WebSocket> = new Map();
   private static gameConnections: Map<string, Set<string>> = new Map();
   private static userToGameMap: Map<string, string> = new Map(); // Track user's active game
-  private static heartbeats: Map<string, { isAlive: boolean; interval: NodeJS.Timeout }> = new Map();
 
   static setup(fastify: FastifyInstance) {
     // Start automatic timeout monitoring
@@ -28,34 +27,6 @@ export class WebSocketHandler {
     });
 
     fastify.get('/ws', { websocket: true }, (socket, request) => {
-      // Initialize heartbeat
-      const socketId = Math.random().toString(36);
-      this.heartbeats.set(socketId, {
-        isAlive: true,
-        interval: setInterval(() => {
-          const heartbeat = this.heartbeats.get(socketId);
-          if (!heartbeat) return;
-
-          if (heartbeat.isAlive === false) {
-            clearInterval(heartbeat.interval);
-            this.heartbeats.delete(socketId);
-            socket.terminate();
-            fastify.log.warn('Terminating inactive WebSocket connection');
-            return;
-          }
-
-          heartbeat.isAlive = false;
-          socket.ping();
-        }, 30000) // Send ping every 30 seconds
-      });
-
-      // Handle pong responses
-      socket.on('pong', () => {
-        const heartbeat = this.heartbeats.get(socketId);
-        if (heartbeat) {
-          heartbeat.isAlive = true;
-        }
-      });
 
       socket.on('message', async (data: Buffer) => {
         try {
@@ -68,12 +39,6 @@ export class WebSocketHandler {
       });
 
       socket.on('close', () => {
-        // Clean up heartbeat
-        const heartbeat = this.heartbeats.get(socketId);
-        if (heartbeat) {
-          clearInterval(heartbeat.interval);
-          this.heartbeats.delete(socketId);
-        }
         this.handleDisconnect(socket);
         fastify.log.info('WebSocket connection closed');
       });

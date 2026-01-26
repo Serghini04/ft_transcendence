@@ -201,6 +201,13 @@ console.log("✅ Database tables initialized (including tournaments)");
 //   console.log("✅ Users seeded");
 // };
 
+
+// Only seed if there are no users yet
+// const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+// if (userCount.count === 0) {
+//   seedUsers();
+// }
+
 // // Seed relationships (user1 is friends with all others)
 // const seedRelationships = () => {
 //   const relationshipsInsert = db.prepare(`

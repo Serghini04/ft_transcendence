@@ -4,7 +4,6 @@ import IconButton from "@mui/material/IconButton";
 import { useEffect, useState, useRef } from "react";
 import { UseTokenStore, UseUserStore } from "../userAuth/zustand/useStore";
 import { useNotificationStore } from "../notification/store/useNotificationStroe";
-import { useChatStore } from "../chat/store/useChatStore";
 import { NotificationBell } from "../notification/components/NotificationBell";
 import { useNavigate } from "react-router-dom";
 import verifyToken from "../globalUtils/verifyToken";
@@ -28,10 +27,6 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
   const disconnectSocket = useNotificationStore((s) => s.disconnectSocket);
   const onlineUsers = useNotificationStore((s) => s.onlineUsers);
 
-  // Connect chat socket for global online status
-  const connectChatSocket = useChatStore((s) => s.connectSocket);
-  const disconnectChatSocket = useChatStore((s) => s.disconnectSocket);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -41,14 +36,9 @@ export default function HeaderBar({ onMenuToggle }: { onMenuToggle: () => void }
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (userId) {
+    if (userId)
       connectSocket(userId);
-      connectChatSocket(Number(userId));
-    }
-    return () => {
-      disconnectSocket();
-      disconnectChatSocket();
-    };
+    return () => disconnectSocket();
   }, [userId]);
 
   useEffect(() => {
