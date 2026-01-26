@@ -106,11 +106,11 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
     console.error("❌ Weekly stats error:", err);
   }
 }
-  console.log("📊 Rendering WeeklyLevel - 
-  // Calculate the maximum wins for scaling (considering both games)
-  const maxWins = Math.max(...weeklyData.map(d => d.pingPongWins + d.ticTacWins), 1);
-  
-  console.log("📊 Rendering WeeklyLevel - maxWins:", maxWins, "data:", weeklyData);
+    
+    fetchWeeklyWins();
+  }, [user.id, token]);
+
+  console.log("📊 Rendering WeeklyLevel - data:", weeklyData);
 
   return (
     <div className="w-full xl:w-[35vw] xl:min-h-[clamp(35vw,42vw,50vw)] xl:mt-[-6vw] ml-6">
@@ -130,23 +130,23 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
       {/* Bars */}
       <div className="ml-10 xl:ml-[3vw] flex items-end justify-around gap-4 xl:gap-[1vw] h-64 xl:h-[25vw] px-4">
         {weeklyData.map((day, index) => {
-          const pingPongHeight = maxWins > 0 ? (day.pingPongWins / maxWins) * 100 : 0;
-          const ticTacHeight = maxWins > 0 ? (day.ticTacWins / maxWins) * 100 : 0;
-          const finalPingPongHeight = day.pingPongWins > 0 ? Math.max(pingPongHeight, 10) : 0;
           // Bar height is directly the win percentage (0-100%)
           const finalPingPongHeight = day.pingPongWins > 0 ? Math.max(day.pingPongWins, 5) : 0;
-          const finalTicTacHeight = day.ticTacWins > 0 ? Math.max(day.ticTacWins, 5n-w-0">
+          const finalTicTacHeight = day.ticTacWins > 0 ? Math.max(day.ticTacWins, 5) : 0;
+
+          return (
+            <div key={index} className="flex flex-col items-center gap-2 flex-1 min-w-0">
               <div className="flex items-end gap-1 xl:gap-[0.3vw] w-full justify-center h-48 xl:h-[25vw]">
                 <div
                   className="w-[20px] xl:w-[1.8vw] bg-gradient-to-t from-amber-400 to-amber-300 rounded-t transition-all duration-300"
                   style={{ height: `${finalPingPongHeight}%` }}
-                  title={`PingPong: ${day.pingPongWins} wins`}
-                />.toFixed(1)}% win rate`}
+                  title={`PingPong: ${day.pingPongWins.toFixed(1)}% win rate`}
                 />
                 <div
                   className="w-[20px] xl:w-[1.8vw] bg-gradient-to-t from-cyan-400 to-teal-300 rounded-t transition-all duration-300"
                   style={{ height: `${finalTicTacHeight}%` }}
-                  title={`TicTacToe: ${day.ticTacWins.toFixed(1)}% win rate
+                  title={`TicTacToe: ${day.ticTacWins.toFixed(1)}% win rate`}
+                />
               </div>
 
               {/* Day label */}
