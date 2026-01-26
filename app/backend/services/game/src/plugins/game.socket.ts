@@ -11,6 +11,10 @@ export let pendingChallenges: Map<string, any> = new Map();
 async function gameSocket(fastify: FastifyInstance) {
   const io = new Server(fastify.server, {
     cors: { origin: "*" },
+    pingTimeout: 30000,       // 30 seconds - how long to wait for pong response
+    pingInterval: 25000,      // 25 seconds - how often to send ping
+    connectTimeout: 45000,    // 45 seconds - connection timeout
+    transports: ['websocket', 'polling'],
   });
 
   // Create /game namespace to match what the gateway expects

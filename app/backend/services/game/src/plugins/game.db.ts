@@ -187,7 +187,7 @@ const createTables = (db: Database.Database) => {
 createTables(db);
 console.log("✅ Database tables initialized (including tournaments)");
 
-// Seed users FIRST (before relationships)
+// // Seed users FIRST (before relationships)
 // const seedUsers = () => {
 //   const userInsert = db.prepare(`
 //     INSERT OR IGNORE INTO users (id, name, avatar, level) VALUES (?, ?, ?, ?)
@@ -201,13 +201,31 @@ console.log("✅ Database tables initialized (including tournaments)");
 //   console.log("✅ Users seeded");
 // };
 
-// Only seed if there are no users yet
+// // Seed relationships (user1 is friends with all others)
+// const seedRelationships = () => {
+//   const relationshipsInsert = db.prepare(`
+//     INSERT OR IGNORE INTO relationships (user1_id, user2_id, type) VALUES (?, ?, ?)
+//   `);
+  
+//   // Make user1 friends with users 2, 3, and 4
+//   relationshipsInsert.run('1', '2', 'friend');
+//   relationshipsInsert.run('1', '3', 'friend');
+//   relationshipsInsert.run('1', '4', 'friend');
+  
+//   console.log("✅ Relationships seeded (user1 is friends with all others)");
+// };
+
+// // Only seed if there are no users yet
 // const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
 // if (userCount.count === 0) {
-//   seedUsers();
+//   seedUsers(); // ← Seed users FIRST
 // }
 
-console.log("ℹ️ Relationships will be synced from chat service via Kafka");
+// // Only seed if there are no relationships yet
+// const relationshipCount = db.prepare("SELECT COUNT(*) as count FROM relationships").get() as { count: number };
+// if (relationshipCount.count === 0) {
+//   seedRelationships(); // ← Then seed relationships
+// }
 
 // -------------------------
 // Game operations

@@ -46,7 +46,7 @@ function AppContent() {
 
           {/* Auth is outside MainLayout */}
           <Route path="/auth" element={<Auth />} />
-
+          <Route path="*" element={<NotFound />} />
           {/* All other routes use MainLayout */}
           <Route element={<MainLayout menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}>
             <Route path="/" element={<Home />} />
@@ -69,9 +69,6 @@ function AppContent() {
             <Route path="/SecondGame" element={<GameSelection />} />
             <Route path="/tictac" element={<TicTac />} />
             <Route path="/tictac/online" element={<OnlineTicTac />} />
-            
-            {/* Catch all - 404 Not Found */}
-            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       <ToastContainer 
