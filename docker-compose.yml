@@ -455,7 +455,7 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:8888}
     volumes:
       - tictac-data:/app/data
-      - userauth-data:/app/shared/userauth:ro
+      - ./infra/data/shared:/app/shared:ro
     networks:
       - ft_Transc
     restart: unless-stopped
@@ -479,6 +479,7 @@ services:
       - uploads:/app/uploads
       - userauth-data:/app/data
       - ./infra/data/user_auth:/app/db
+      - ./infra/data/shared:/app/shared
     image: user_auth
     container_name: user_auth
     ports:

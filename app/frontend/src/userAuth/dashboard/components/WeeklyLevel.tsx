@@ -60,46 +60,53 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
     verifyToken(ticTacData);
 
     const pingPongWinsPerDay = [0, 0, 0, 0, 0, 0, 0];
+    const pingPongTotalPerDay = [0, 0, 0, 0, 0, 0, 0];
     const ticTacWinsPerDay  = [0, 0, 0, 0, 0, 0, 0];
 
     const now = new Date();
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(now.getDate() - 7);
 
-    // 🟠 PingPong - count wins per day from games
+    // 🟠 PingPong - count wins and total games per day
     pingPongData.games?.forEach((game: GameData) => {
       const date = new Date(game.created_at);
-      if (date >= sevenDaysAgo && game.winner_id == user.id) {
-        pingPongWinsPerDay[date.getDay()]++;
+      if (date >= sevenDaysAgo) {
+        const dayIndex = date.getDay();
+        pingPongTotalPerDay[dayIndex]++;
+        if (game.winner_id == user.id) {
+          pingPongWinsPerDay[dayIndex]++;
+        }
       }
     });
 
-    // 🔵 TicTacToe - show total wins on current day (aggregate stats only)
-    if (ticTacData.wins) {
-      ticTacWinsPerDay[now.getDay()] = ticTacData.wins;
+    // 🔵 TicTacToe - calculate win percentage from aggregate stats
+    if (ticTacData.wins && ticTacData.total_games) {
+      const winRate = (ticTacData.wins / ticTacData.total_games) * 100;
+      ticTacWinsPerDay[now.getDay()] = winRate;
     }
     
     console.log("🟦 TIC TAC RAW DATA:", ticTacData);
     console.log("🟦 TIC TAC WINS PER DAY:", ticTacWinsPerDay);
 
+    // Calculate win percentages for each day
+    const calculateWinRate = (wins: number, total: number) => 
+      total > 0 ? (wins / total) * 100 : 0;
+
     setWeeklyData([
-      { day: "Sun", pingPongWins: pingPongWinsPerDay[0], ticTacWins: ticTacWinsPerDay[0] },
-      { day: "Mon", pingPongWins: pingPongWinsPerDay[1], ticTacWins: ticTacWinsPerDay[1] },
-      { day: "Tue", pingPongWins: pingPongWinsPerDay[2], ticTacWins: ticTacWinsPerDay[2] },
-      { day: "Wed", pingPongWins: pingPongWinsPerDay[3], ticTacWins: ticTacWinsPerDay[3] },
-      { day: "Thu", pingPongWins: pingPongWinsPerDay[4], ticTacWins: ticTacWinsPerDay[4] },
-      { day: "Fri", pingPongWins: pingPongWinsPerDay[5], ticTacWins: ticTacWinsPerDay[5] },
-      { day: "Sat", pingPongWins: pingPongWinsPerDay[6], ticTacWins: ticTacWinsPerDay[6] },
+      { day: "Sun", pingPongWins: calculateWinRate(pingPongWinsPerDay[0], pingPongTotalPerDay[0]), ticTacWins: ticTacWinsPerDay[0] },
+      { day: "Mon", pingPongWins: calculateWinRate(pingPongWinsPerDay[1], pingPongTotalPerDay[1]), ticTacWins: ticTacWinsPerDay[1] },
+      { day: "Tue", pingPongWins: calculateWinRate(pingPongWinsPerDay[2], pingPongTotalPerDay[2]), ticTacWins: ticTacWinsPerDay[2] },
+      { day: "Wed", pingPongWins: calculateWinRate(pingPongWinsPerDay[3], pingPongTotalPerDay[3]), ticTacWins: ticTacWinsPerDay[3] },
+      { day: "Thu", pingPongWins: calculateWinRate(pingPongWinsPerDay[4], pingPongTotalPerDay[4]), ticTacWins: ticTacWinsPerDay[4] },
+      { day: "Fri", pingPongWins: calculateWinRate(pingPongWinsPerDay[5], pingPongTotalPerDay[5]), ticTacWins: ticTacWinsPerDay[5] },
+      { day: "Sat", pingPongWins: calculateWinRate(pingPongWinsPerDay[6], pingPongTotalPerDay[6]), ticTacWins: ticTacWinsPerDay[6] },
     ]);
       console.log("------------------->", weeklyData);
   } catch (err) {
     console.error("❌ Weekly stats error:", err);
   }
 }
-    
-    fetchWeeklyWins();
-  }, [user.id, token]);
-
+  console.log("📊 Rendering WeeklyLevel - 
   // Calculate the maximum wins for scaling (considering both games)
   const maxWins = Math.max(...weeklyData.map(d => d.pingPongWins + d.ticTacWins), 1);
   
@@ -126,21 +133,20 @@ export default function WeeklyLevel({ played = 0, wins = 0, losses = 0 }: Weekly
           const pingPongHeight = maxWins > 0 ? (day.pingPongWins / maxWins) * 100 : 0;
           const ticTacHeight = maxWins > 0 ? (day.ticTacWins / maxWins) * 100 : 0;
           const finalPingPongHeight = day.pingPongWins > 0 ? Math.max(pingPongHeight, 10) : 0;
-          const finalTicTacHeight = day.ticTacWins > 0 ? Math.max(ticTacHeight, 10) : 0;
-
-          return (
-            <div key={index} className="flex flex-col items-center gap-2 flex-1 min-w-0">
+          // Bar height is directly the win percentage (0-100%)
+          const finalPingPongHeight = day.pingPongWins > 0 ? Math.max(day.pingPongWins, 5) : 0;
+          const finalTicTacHeight = day.ticTacWins > 0 ? Math.max(day.ticTacWins, 5n-w-0">
               <div className="flex items-end gap-1 xl:gap-[0.3vw] w-full justify-center h-48 xl:h-[25vw]">
                 <div
                   className="w-[20px] xl:w-[1.8vw] bg-gradient-to-t from-amber-400 to-amber-300 rounded-t transition-all duration-300"
                   style={{ height: `${finalPingPongHeight}%` }}
                   title={`PingPong: ${day.pingPongWins} wins`}
+                />.toFixed(1)}% win rate`}
                 />
                 <div
                   className="w-[20px] xl:w-[1.8vw] bg-gradient-to-t from-cyan-400 to-teal-300 rounded-t transition-all duration-300"
                   style={{ height: `${finalTicTacHeight}%` }}
-                  title={`TicTacToe: ${day.ticTacWins} wins`}
-                />
+                  title={`TicTacToe: ${day.ticTacWins.toFixed(1)}% win rate
               </div>
 
               {/* Day label */}
