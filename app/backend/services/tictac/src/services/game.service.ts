@@ -238,22 +238,46 @@ export class GameService {
     try {
       const kafkaProducer = getKafkaProducer();
       
-      // Map TicTacToe user IDs to numeric user IDs from main database
-      const numericPlayer1Id = mapToNumericUserId(game.player1Id);
-      const numericPlayer2Id = mapToNumericUserId(game.player2Id);
+      // Get usernames from TicTacToe user records
+      const player1 = UserModel.findById(game.player1Id);
+      const player2 = UserModel.findById(game.player2Id);
+      
+      if (!player1 || !player2) {
+        console.error(`⚠️ Cannot publish game ${game.id}: Players not found in TicTacToe database`, {
+          player1Id: game.player1Id,
+          player2Id: game.player2Id
+        });
+        return;
+      }
+      
+      // Database returns 'username' column, not 'name'
+      const player1Username = (player1 as any).username;
+      const player2Username = (player2 as any).username;
+      
+      // Map TicTacToe usernames to numeric user IDs from main database
+      const numericPlayer1Id = mapToNumericUserId(player1Username);
+      const numericPlayer2Id = mapToNumericUserId(player2Username);
       
       // Skip publishing if we can't map both players
       if (!numericPlayer1Id || !numericPlayer2Id) {
         console.error(`⚠️ Cannot publish game ${game.id}: Failed to map user IDs`, {
-          player1Id: game.player1Id,
-          player2Id: game.player2Id,
+          player1Username,
+          player2Username,
           numericPlayer1Id,
           numericPlayer2Id
         });
         return;
       }
       
-      const numericWinnerId = game.winner ? mapToNumericUserId(game.winner) : null;
+      // Map winner username to numeric ID if there's a winner
+      let numericWinnerId: number | null = null;
+      if (game.winner) {
+        const winner = UserModel.findById(game.winner);
+        if (winner) {
+          const winnerUsername = (winner as any).username;
+          numericWinnerId = mapToNumericUserId(winnerUsername);
+        }
+      }
       
       const event: GameFinishedEvent = {
         gameId: game.id,

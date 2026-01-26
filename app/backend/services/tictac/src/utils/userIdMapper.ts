@@ -6,10 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Connect to the user_auth database
-// In Docker, the database is mounted at /app/shared/userauth/database.db
+// In Docker, the database is mounted at /app/shared/userauth.db
 // In development, it's at the relative path
 const userAuthDbPath = process.env.NODE_ENV === 'production' 
-  ? '/app/shared/userauth/database.db'
+  ? '/app/shared/userauth.db'
   : path.join(__dirname, '../../../../../infra/data/user_auth/user_auth.db');
 let userAuthDb: Database.Database | null = null;
 
