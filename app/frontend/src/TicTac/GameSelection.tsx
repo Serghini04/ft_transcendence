@@ -43,7 +43,7 @@ const GameSelection = () => {
          justify-center
           transition-all
           pt-50
-          md:mt-30
+          md:mt-20
           xl:ml-10
            
           overflow-y-auto hide-scrollbar

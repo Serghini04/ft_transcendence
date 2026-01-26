@@ -188,7 +188,7 @@ export default function Profile()
           flex-col
           inset-0
           bg-[rgba(15,26,36,0.5)]
-          mt-30
+          mt-20
           md:ml-30 ml-[-5rem]
           border-l-2 md:border-l-2 border-t-2
           border-[#27445E]

@@ -354,7 +354,7 @@ const isPlayersTurn = isOnline ? currentGame?.currentTurn === playerSymbol : tru
   items-center
   justify-center
     transition-all
-    md:mt-30
+    md:mt-20
     xl:ml-10
     
     overflow-y-auto hide-scrollbar

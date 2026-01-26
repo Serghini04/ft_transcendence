@@ -381,7 +381,7 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
                 
                 console.log(`📝 Stored forfeit for user ${disconnectedUserId}, winner: ${opponentUserId}`);
                 
-                const gameResult = {
+                await saveGameResult(db, {
                   gameId: roomId,
                   mode: room.options.mode || 'online',
                   player1Id: room.playerProfiles.left.id,
@@ -390,10 +390,9 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
                   score1,
                   score2,
                   createdAt: Date.now(),
-                };
-                
-                await saveGameResult(db, gameResult);
+                });
                 kafkaProducerService.publishGameFinishedEvent(gameResult);
+                await saveGameResult(db, gameResult);
                 console.log("✅ Forfeit game result saved successfully");
                 
                 // If this is a tournament match, update tournament_matches table and advance winner

@@ -10,31 +10,31 @@ interface GameProps {
 }
 
 export default function Game({ menuOpen}: GameProps) {
-  // const navigate = useNavigate();
-  // const { token, setToken } = UseTokenStore();
+  const navigate = useNavigate();
+  const { token, setToken } = UseTokenStore();
 
-  // useEffect(() => {
-  //   async function check() {
-  //     const result = await isValidToken(token);
-  //     if (!result.valid)
-  //     {
-  //       navigate("/auth");
-  //     }
+  useEffect(() => {
+    async function check() {
+      const result = await isValidToken(token);
+      if (!result.valid)
+      {
+        navigate("/auth");
+      }
       
-  //     if (result.newToken) {
-  //       setToken(result.newToken);
-  //     }
-  //   }
+      if (result.newToken) {
+        setToken(result.newToken);
+      }
+    }
 
-  //   check();
-  // }, [token, navigate]);
+    check();
+  }, [token, navigate]);
   return (
     <div className="relative w-full min-h-screen">
       <div
         className="
         fixed
         bg-[rgba(15,26,36,0.5)]
-        mt-30
+        mt-20
         md:ml-30 ml-[-5rem]   /* push left off-screen on mobile */
         border-l-2 md:border-l-2 border-t-2
         rounded-tl-4xl
