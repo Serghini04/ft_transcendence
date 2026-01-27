@@ -8,6 +8,7 @@ import ProfileCard from "./ProfileCard";
 import ProfileHeader from "./ProfileHeader";
 import verifyToken from "../../../globalUtils/verifyToken";
 import { UseTokenStore, UseUserStore } from "../../zustand/useStore";
+import { motion } from "framer-motion";
 
 export default function Profile()
 {
@@ -154,16 +155,18 @@ export default function Profile()
         }
         
         console.log("USER DATA SETTINGS: ", data);
+        console.log("🔍 DEBUG - Raw profileVisibility from backend:", data.user.profileVisibility, "Type:", typeof data.user.profileVisibility);
+        console.log("🔍 DEBUG - After Boolean conversion:", Boolean(data.user.profileVisibility));
+        
         setUserInfo({
           name: data.user.name,
           email: data.user.email,
           photoURL: data.user.photoURL,
           bgPhotoURL: data.user.bgPhotoURL,
-          profileVisibility: Boolean(data.user.profileVisibility),
-          showNotifications: Boolean(data.user.showNotifications),
+          profileVisibility: data.user.profileVisibility === true || data.user.profileVisibility === 1 || data.user.profileVisibility === "true",
+          showNotifications: data.user.showNotifications === true || data.user.showNotifications === 1 || data.user.showNotifications === "true",
           bio: data.user.bio
         });
-        console.log("USER INFO IN SETTINGS: ", userInfo);
       } catch (err) {
         console.error("Error fetching user data:", err);
         setError("Failed to load user profile");
@@ -172,14 +175,11 @@ export default function Profile()
     }
     fetchUserData();
     }, [token, profileUserId, isValidPath, isValidId, id, navigate]); // Re-fetch when ID changes
-
-    console.log("--------------------> : ", userInfo);
     
     // Show loading or error state
     if (error) {
         return null; // Will redirect, so show nothing
     }
-    
     return (
         <div
         className="
@@ -203,7 +203,19 @@ export default function Profile()
         <div className="w-full flex flex-col gap-8 pb-8 pt-4">
                 <ProfileCard user={userInfo} wins={statistic.wins} losses={statistic.losses} />
                 <Bio userId={profileUserId} bio={userInfo.bio} />
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 px-4 items-center justify-center">
+            <div className={`${(!userInfo.profileVisibility && user.id !== profileUserId) ? "visible" : "hidden"} w-full flex flex-col md:flex-row items-center mx-auto gap-4 p-4 md:pl-4 xl:p-[1.2vw] xl:gap-[1vw] justify-center mt-6 xl:mt-[4vw] md:p-0 pl-[6rem]`}>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="text-center text-3xl sm:text-4xl md:text-5xl xl:text-[2.6vw] font-extrabold tracking-wide"
+              >
+                <span className="bg-gradient-to-r from-cyan-400 via-blue-300 to-primary bg-clip-text text-transparent animate-pulse md:p-0 p-[4rem]">
+                  This account is private
+                </span>
+              </motion.h1>
+            </div>
+            <div className={`${(userInfo.profileVisibility || user.id === profileUserId) ? "visible" : "hidden"}  grid grid-cols-1 xl:grid-cols-2 gap-6 px-4 items-center justify-center`}>
                 <div className="">
                     <LastMatches games={gameHistory} profileUserId={profileUserId} token={token} />
                 </div>
