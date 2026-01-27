@@ -97,34 +97,49 @@ export class KafkaConsumerService {
     }
   }
 
-  async subscribe(): Promise<void> {
+  async subscribe(maxRetries: number = 5, initialDelay: number = 2000): Promise<void> {
     if (!this.isConnected) {
       throw new Error('Consumer not connected. Call connect() first.');
     }
 
-    try {
-      // Subscribe to UserCreated topic
-      await this.consumer.subscribe({
-        topic: 'UserCreated',
-        fromBeginning: true,
-      });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Subscribe to UserCreated topic
+        await this.consumer.subscribe({
+          topic: 'UserCreated',
+          fromBeginning: true,
+        });
 
-      // Subscribe to userUpdated topic
-      await this.consumer.subscribe({
-        topic: 'userUpdated',
-        fromBeginning: false,
-      });
+        // Subscribe to userUpdated topic
+        await this.consumer.subscribe({
+          topic: 'userUpdated',
+          fromBeginning: false,
+        });
 
-      // Subscribe to relationships topic
-      await this.consumer.subscribe({
-        topic: 'relationships',
-        fromBeginning: true,
-      });
+        // Subscribe to relationships topic
+        await this.consumer.subscribe({
+          topic: 'relationships',
+          fromBeginning: true,
+        });
 
-      console.log('✅ Subscribed to topics: UserCreated, userUpdated, relationships');
-    } catch (error) {
-      console.error('❌ Failed to subscribe to topics:', error);
-      throw error;
+        console.log('✅ Subscribed to topics: UserCreated, userUpdated, relationships');
+        return; // Success, exit retry loop
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const delay = initialDelay * Math.pow(1.5, attempt - 1);
+        
+        console.log(
+          `⚠️ Topic subscription attempt ${attempt}/${maxRetries} failed: ${error.message}`
+        );
+        
+        if (isLastAttempt) {
+          console.error('❌ Max topic subscription retries reached. Service will start without Kafka consumer.');
+          throw error;
+        }
+        
+        console.log(`🔄 Retrying topic subscription in ${delay}ms...`);
+        await this.sleep(delay);
+      }
     }
   }
 

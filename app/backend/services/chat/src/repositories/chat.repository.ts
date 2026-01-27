@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { Relationship } from "../models/relationship";
 import { User } from "../models/user";
 import { Message } from "../models/message";
+import { kafkaProducerService } from "../kafka/producer";
 
 
 export class ChatRepository {
@@ -205,6 +206,8 @@ export class ChatRepository {
 
   blockUser(blockerId: number, blockedId: number): { success: boolean; message: string } {
     try {
+      const [user1_id, user2_id] = blockerId < blockedId ? [blockerId, blockedId] : [blockedId, blockerId];
+      
       const stmt = this.db.prepare(`
         UPDATE relationships 
         SET type = 'blocked', blocked_by_user_id = ?
@@ -213,6 +216,16 @@ export class ChatRepository {
       const result = stmt.run(blockerId, blockerId, blockedId, blockedId, blockerId);
       
       if (result.changes > 0) {
+        // Publish to Kafka
+        kafkaProducerService.publishRelationshipEvent({
+          action: 'updated',
+          user1_id,
+          user2_id,
+          type: 'blocked',
+          blocked_by_user_id: blockerId,
+          timestamp: new Date().toISOString(),
+        }).catch(err => console.error('Failed to publish block event:', err));
+        
         return { success: true, message: 'User blocked successfully' };
       }
       return { success: false, message: 'Relationship not found' };
@@ -223,6 +236,8 @@ export class ChatRepository {
 
   unblockUser(unblockerId: number, blockedId: number): { success: boolean; message: string } {
     try {
+      const [user1_id, user2_id] = unblockerId < blockedId ? [unblockerId, blockedId] : [blockedId, unblockerId];
+      
       const stmt = this.db.prepare(`
         UPDATE relationships 
         SET type = 'friend', blocked_by_user_id = NULL
@@ -232,6 +247,15 @@ export class ChatRepository {
       const result = stmt.run(unblockerId, blockedId, blockedId, unblockerId, unblockerId);
       
       if (result.changes > 0) {
+        // Publish to Kafka
+        kafkaProducerService.publishRelationshipEvent({
+          action: 'updated',
+          user1_id,
+          user2_id,
+          type: 'friend',
+          timestamp: new Date().toISOString(),
+        }).catch(err => console.error('Failed to publish unblock event:', err));
+        
         return { success: true, message: 'User unblocked successfully' };
       }
       return { success: false, message: 'Cannot unblock: you did not block this user' };
@@ -271,6 +295,15 @@ export class ChatRepository {
       const result = stmt.run(user1_id, user2_id, senderId);
 
       if (result.changes > 0) {
+        // Publish to Kafka
+        kafkaProducerService.publishRelationshipEvent({
+          action: 'created',
+          user1_id,
+          user2_id,
+          type: 'pending',
+          timestamp: new Date().toISOString(),
+        }).catch(err => console.error('Failed to publish friend request event:', err));
+        
         return { success: true, message: 'Friend request sent' };
       }
       return { success: false, message: 'Failed to send friend request' };
@@ -281,6 +314,8 @@ export class ChatRepository {
 
   acceptFriendRequest(userId: number, requesterId: number): { success: boolean; message: string } {
     try {
+      const [user1_id, user2_id] = userId < requesterId ? [userId, requesterId] : [requesterId, userId];
+      
       const stmt = this.db.prepare(`
         UPDATE relationships 
         SET type = 'friend'
@@ -290,6 +325,15 @@ export class ChatRepository {
       const result = stmt.run(userId, requesterId, requesterId, userId);
 
       if (result.changes > 0) {
+        // Publish to Kafka
+        kafkaProducerService.publishRelationshipEvent({
+          action: 'updated',
+          user1_id,
+          user2_id,
+          type: 'friend',
+          timestamp: new Date().toISOString(),
+        }).catch(err => console.error('Failed to publish accept friend request event:', err));
+        
         return { success: true, message: 'Friend request accepted' };
       }
       return { success: false, message: 'Friend request not found' };
@@ -300,6 +344,8 @@ export class ChatRepository {
 
   rejectFriendRequest(userId: number, requesterId: number): { success: boolean; message: string } {
     try {
+      const [user1_id, user2_id] = userId < requesterId ? [userId, requesterId] : [requesterId, userId];
+      
       const stmt = this.db.prepare(`
         DELETE FROM relationships 
         WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?))
@@ -308,6 +354,14 @@ export class ChatRepository {
       const result = stmt.run(userId, requesterId, requesterId, userId);
 
       if (result.changes > 0) {
+        // Publish to Kafka
+        kafkaProducerService.publishRelationshipEvent({
+          action: 'deleted',
+          user1_id,
+          user2_id,
+          timestamp: new Date().toISOString(),
+        }).catch(err => console.error('Failed to publish reject friend request event:', err));
+        
         return { success: true, message: 'Friend request rejected' };
       }
       return { success: false, message: 'Friend request not found' };
@@ -391,6 +445,8 @@ export class ChatRepository {
 
   removeFriend(userId: number, friendId: number): { success: boolean; message: string } {
     try {
+      const [user1_id, user2_id] = userId < friendId ? [userId, friendId] : [friendId, userId];
+      
       const stmt = this.db.prepare(`
         DELETE FROM relationships 
         WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?))
@@ -399,6 +455,14 @@ export class ChatRepository {
       const result = stmt.run(userId, friendId, friendId, userId);
 
       if (result.changes > 0) {
+        // Publish to Kafka
+        kafkaProducerService.publishRelationshipEvent({
+          action: 'deleted',
+          user1_id,
+          user2_id,
+          timestamp: new Date().toISOString(),
+        }).catch(err => console.error('Failed to publish remove friend event:', err));
+        
         return { success: true, message: 'Friend removed successfully' };
       }
       return { success: false, message: 'Friend relationship not found' };

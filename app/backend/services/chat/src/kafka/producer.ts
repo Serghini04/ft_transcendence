@@ -12,6 +12,15 @@ export interface NotificationEvent {
   showNotifications?: boolean;
 }
 
+export interface RelationshipEvent {
+  action: 'created' | 'updated' | 'deleted';
+  user1_id: number;
+  user2_id: number;
+  type?: 'friend' | 'blocked' | 'pending';
+  blocked_by_user_id?: number;
+  timestamp: string;
+}
+
 export class KafkaProducerService {
   private kafka: Kafka;
   private producer: Producer;
@@ -131,6 +140,33 @@ export class KafkaProducerService {
     });
     
     console.log(`Friend request notification published for user ${recipientId} from ${senderName}`);
+  }
+
+  async publishRelationshipEvent(event: RelationshipEvent): Promise<void> {
+    if (!this.isConnected) {
+      console.error("Cannot publish relationship event: Producer not connected");
+      return;
+    }
+
+    try {
+      console.log(`Publishing relationship event to Kafka topic 'relationships':`, event);
+      await this.producer.send({
+        topic: "relationships",
+        messages: [
+          {
+            key: `${event.user1_id}-${event.user2_id}`,
+            value: JSON.stringify(event),
+            headers: {
+              "event-type": `relationship.${event.action}`,
+            },
+          },
+        ],
+      });
+      console.log(`✅ Relationship event published successfully: ${event.action} (user1: ${event.user1_id}, user2: ${event.user2_id})`);
+    } catch (error) {
+      console.error("❌ Failed to publish relationship event:", error);
+      throw error;
+    }
   }
 }
 
