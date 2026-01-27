@@ -260,6 +260,37 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  cadvisor:
+    build:
+      context: ./infra/cadvisor
+      dockerfile: Dockerfile
+    image: cadvisor
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=10s'
+      - '--disable_metrics=disk,network,tcp,udp,percpu,sched,process'
+    networks:
+      - ft_Transc
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   grafana:
     build:
       context: ./infra/monitoring/grafana

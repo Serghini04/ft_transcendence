@@ -238,9 +238,9 @@
       },
       "targets": [
         {
-          "expr": "sum by (job) (process_resident_memory_bytes) / 1024 / 1024",
+          "expr": "sum by (container_label_com_docker_compose_service) (container_memory_usage_bytes{container_label_com_docker_compose_service!=\"\"}) / 1024 / 1024",
           "refId": "A",
-          "legendFormat": "{{job}}"
+          "legendFormat": "{{container_label_com_docker_compose_service}}"
         }
       ],
       "title": "Memory Usage by Service (MB)",

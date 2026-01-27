@@ -76,3 +76,66 @@ scrape_configs:
       - targets: ['grafana:3000']
         labels:
           service: 'grafana'
+
+  # Chat Service
+  - job_name: 'chat-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['chat-service:3003']
+        labels:
+          service: 'chat-service'
+
+  # Game Service
+  - job_name: 'game-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['game-service:3005']
+        labels:
+          service: 'game-service'
+
+  # Notification Service
+  - job_name: 'notification-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['notification-service:3006']
+        labels:
+          service: 'notification-service'
+
+  # Leaderboard Service
+  - job_name: 'leaderboard-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['leaderboard-service:3016']
+        labels:
+          service: 'leaderboard-service'
+
+  # TicTac Game Service
+  - job_name: 'tictac-game'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['tictac-game:3030']
+        labels:
+          service: 'tictac-game'
+
+  # User Auth Service
+  - job_name: 'user_auth'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['user_auth:3004']
+        labels:
+          service: 'user_auth'
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          service: 'api-gateway'
+
+  # cAdvisor - Container metrics for all services
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
