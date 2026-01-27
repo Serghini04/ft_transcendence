@@ -35,9 +35,9 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
         options = { map: "Classic", powerUps: false, speed: "Normal" },
       }: any) => {
         try {
-          // Check if this user recently forfeited a game (within last 30 seconds)
+          // Check if this user recently forfeited a game (within last 1 second)
           const recentForfeit = recentForfeits.get(userId);
-          if (recentForfeit && Date.now() - recentForfeit.timestamp < 30000) {
+          if (recentForfeit && Date.now() - recentForfeit.timestamp < 1000) {
             console.log(`⚠️ User ${userId} rejoined after forfeit, sending game result`);
             
             // Send them the forfeit result
@@ -85,6 +85,23 @@ export const gameGateway = (namespace: any, fastify: FastifyInstance) => {
     socket.on("joinChallengeRoom", async ({ roomId, userId }: any) => {
       console.log(`🎮 ${userId} joining challenge room ${roomId}`);
       
+      // ✅ Check if this user recently forfeited a challenge game (within last 1 second)
+      const recentForfeit = recentForfeits.get(userId);
+      if (recentForfeit && recentForfeit.gameType === 'online' && Date.now() - recentForfeit.timestamp < 1000) {
+        console.log(`⚠️ User ${userId} rejoined after challenge forfeit, sending game result`);
+        
+        // Send them the forfeit result
+        socket.emit("rejoinAfterForfeit", {
+          winnerId: recentForfeit.winnerId,
+          loserId: userId,
+          reason: "forfeit",
+          gameType: "challenge"
+        });
+        
+        // Clean up the forfeit record
+        recentForfeits.delete(userId);
+        return;
+      }
       const challengeRoom = challengeRooms.get(roomId);
       if (!challengeRoom) {
         socket.emit("error", { message: "Challenge room not found or expired" });
