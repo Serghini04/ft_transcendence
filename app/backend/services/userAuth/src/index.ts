@@ -756,7 +756,9 @@ app.post("/api/v1/auth/profile/getProfileUser", async (request, reply) => {
       email: user.email,
       photoURL: user.photoURL,
       bgPhotoURL: user.bgPhotoURL,
-      bio: user.bio
+      bio: user.bio,
+      profileVisibility: user.profileVisibility,
+      showNotifications: user.showNotifications
     }
     reply.status(201).send({ 
       message: "User data fetched successfully",

@@ -311,7 +311,7 @@ export default function Bio({ userId, bio }: BioProps) {
   ].join(" ");
 
   return (
-    <div className={containerClass}>
+    <div className={`w-full flex flex-col md:flex-row items-center mx-auto gap-4 p-4 md:pl-4 xl:p-[1.2vw] xl:gap-[1vw] ${isOwnProfile ? "justify-center" : "justify-between pl-[6rem] xl:pl-[3.5vw]"} md:p-0 pl-[6rem]`}>
   <motion.h1
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
