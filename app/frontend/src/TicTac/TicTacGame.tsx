@@ -198,27 +198,24 @@ const isPlayersTurn = isOnline ? currentGame?.currentTurn === playerSymbol : tru
     return (
     <div
       className={`
+         h-[calc(100vh-80px)]
           relative
-          flex justify-center
-          bg-[rgba(18,19,20,0.5)]
-          shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
-          transition-all
-          
-          mask-t-from-20%
-          h-screen
-          overflow-auto hide-scrollbar
-         
-
-          px-3 sm:px-6 md:px-10
-          pt-6 sm:pt-8 md:pt-10
-
+          bg-[rgba(15,26,36,0.5)]
           md:rounded-tl-4xl
+          shadow-[inset_2px_0_0_0_#27445E,inset_0_2px_0_0_#27445E]
+         flex
+         items-center
+         justify-center
+          transition-all
+          pt-50
+          md:mt-20
           xl:ml-10
-          mt-7
-        ${isSidebarOpen ? "ml-20" : "ml-0"}
+           
+          overflow-y-auto hide-scrollbar
+
+          ${isSidebarOpen ? "ml-20" : "ml-0"}
       `}
       >
-    
       <div className="flex flex-col items-center justify-center max-h-screen text-white p-4 pb-24 ">
 
         <div className="relative z-10 w-full max-w-md hide-scrollbar">
@@ -345,7 +342,7 @@ const isPlayersTurn = isOnline ? currentGame?.currentTurn === playerSymbol : tru
     // her
   <div
   className={`
-    h-[calc(100vh-120px)]
+    h-[calc(100vh-80px)]
     relative
     bg-[rgba(15,26,36,0.5)]
     md:rounded-tl-4xl

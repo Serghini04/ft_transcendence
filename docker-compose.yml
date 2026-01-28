@@ -305,9 +305,9 @@ services:
       - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
       - ./infra/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini
     environment:
-      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
-      - GF_SECURITY_SECRET_KEY=${GF_SECURITY_SECRET_KEY:-changeme}
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-hidriouc}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-Hicham1337@}
+      - GF_SECURITY_SECRET_KEY=${GF_SECURITY_SECRET_KEY:-SW2YcwTIb9zpOOhoPsMm}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=false
     depends_on:
@@ -485,7 +485,7 @@ services:
       - SKILL_RANGE=${TICTAC_SKILL_RANGE:-100}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:8888}
     volumes:
-      - tictac-data:/app/data
+      - ./infra/data/tictac:/app/data
       - ./infra/data/shared:/app/shared:ro
     networks:
       - ft_Transc
@@ -579,7 +579,6 @@ volumes:
   grafana-data:
   elasticsearch-data:
   kafka-data:
-  tictac-data:
   uploads:
   vault-data:
   vault-logs:

@@ -33,7 +33,7 @@ const GameSelection = () => {
   return (
    <div
     className={`
-          h-[calc(100vh-120px)]
+          h-[calc(100vh-80px)]
           relative
           bg-[rgba(15,26,36,0.5)]
           md:rounded-tl-4xl
@@ -190,11 +190,6 @@ const GameSelection = () => {
                         style={{ transitionDelay: '100ms' }}>
                     Real-time
                   </span>
-                  {/* <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-green-500/20 rounded-full text-[10px] sm:text-xs text-green-300
-                                 group-hover:bg-green-500/30 transition-all duration-300 group-hover:scale-110"
-                        style={{ transitionDelay: '150ms' }}>
-                    Stats Tracking
-                  </span> */}
                 </div>
               </div>
             </div>
@@ -202,7 +197,8 @@ const GameSelection = () => {
         </div>
 
         {/* Quick Tips */}
-        <div className="mt-6 sm:mt-8 md:mt-12 bg-[rgba(79,103,127,0.15)] p-3 sm:p-4 md:p-6 rounded-xl border border-[#27445E] backdrop-blur-sm
+        
+        {/* <div className="mt-6 sm:mt-8 md:mt-12 bg-[rgba(79,103,127,0.15)] p-3 sm:p-4 md:p-6 rounded-xl border border-[#27445E] backdrop-blur-sm
                 hover:bg-[rgba(79,103,127,0.2)] hover:border-[#4f677f] transition-all duration-300
                 animate-fade-in opacity-0" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
           <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-3 text-gray-300">💡 Quick Tips</h3>
@@ -220,7 +216,7 @@ const GameSelection = () => {
               <span><strong className="text-gray-300">Rating system:</strong> Win games to increase your ELO rating</span>
             </li>
           </ul>
-        </div>
+        </div> */}
       </div>
     </div>
   </div>

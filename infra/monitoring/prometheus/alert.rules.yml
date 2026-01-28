@@ -1,5 +1,8 @@
 # Prometheus Alert Rules
 groups:
+  # ============================================
+  # System Resource Alerts
+  # ============================================
   - name: system_alerts
     interval: 15s
     rules:
@@ -73,6 +76,9 @@ groups:
           summary: "High network traffic on {{ $labels.instance }}"
           description: "Network interface {{ $labels.device }} is receiving high traffic"
 
+  # ============================================
+  # Infrastructure Service Alerts
+  # ============================================
   - name: kafka_alerts
     interval: 15s
     rules:
@@ -84,17 +90,7 @@ groups:
           severity: critical
         annotations:
           summary: "Kafka broker is down"
-          description: "Kafka broker {{ $labels.instance }} has been down for more than 2 minutes"
-
-      # Zookeeper down
-      - alert: ZookeeperDown
-        expr: up{job="zookeeper"} == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Zookeeper is down"
-          description: "Zookeeper {{ $labels.instance }} has been down for more than 2 minutes"
+          description: "Kafka broker has been down for more than 2 minutes"
 
       # Kafka under-replicated partitions
       - alert: KafkaUnderReplicatedPartitions
@@ -116,116 +112,137 @@ groups:
           summary: "Kafka has offline partitions"
           description: "Kafka has {{ $value }} offline partitions"
 
-      # Kafka producer/consumer down
-      - alert: KafkaProducerDown
-        expr: up{job="kafka-producer"} == 0
-        for: 3m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Kafka producer is down"
-          description: "Kafka producer has been down for more than 3 minutes"
-
-      - alert: KafkaConsumerDown
-        expr: up{job="kafka-consumer"} == 0
-        for: 3m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Kafka consumer is down"
-          description: "Kafka consumer has been down for more than 3 minutes"
-
-  - name: service_alerts
+  - name: vault_alerts
     interval: 15s
     rules:
-      # Service down
-      - alert: ServiceDown
-        expr: up == 0
+      # Vault down
+      - alert: VaultDown
+        expr: up{job="vault"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Service {{ $labels.job }} is down"
-          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes"
+          summary: "Vault is down"
+          description: "Vault has been down for more than 2 minutes"
 
-      # Prometheus target down
-      - alert: PrometheusTargetDown
-        expr: up == 0
-        for: 5m
+      # Vault sealed
+      - alert: VaultSealed
+        expr: vault_core_unsealed == 0
+        for: 1m
         labels:
-          severity: warning
+          severity: critical
         annotations:
-          summary: "Prometheus target {{ $labels.job }} is down"
-          description: "{{ $labels.job }} target has been down for more than 5 minutes"
+          summary: "Vault is sealed"
+          description: "Vault is sealed and cannot serve requests"
 
-  - name: alertmanager_alerts
+  # ============================================
+  # Backend Microservices Alerts
+  # ============================================
+  - name: backend_service_alerts
     interval: 15s
     rules:
-      # Alertmanager down
-      - alert: AlertmanagerDown
-        expr: up{job="alertmanager"} == 0
+      # API Gateway down
+      - alert: APIGatewayDown
+        expr: up{job="api-gateway"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Alertmanager is down"
-          description: "Alertmanager has been down for more than 2 minutes"
+          summary: "API Gateway is down"
+          description: "API Gateway has been down for more than 2 minutes"
 
-      # Alertmanager configuration reload failed
-      - alert: AlertmanagerConfigReloadFailed
-        expr: alertmanager_config_last_reload_successful == 0
-        for: 5m
+      # User Auth down
+      - alert: UserAuthDown
+        expr: up{job="user_auth"} == 0
+        for: 2m
         labels:
-          severity: warning
+          severity: critical
         annotations:
-          summary: "Alertmanager configuration reload failed"
-          description: "Alertmanager configuration reload has failed"
+          summary: "User authentication service is down"
+          description: "User authentication service has been down for more than 2 minutes"
 
-  - name: monitoring_alerts
+      # Chat Service down
+      - alert: ChatServiceDown
+        expr: up{job="chat-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Chat service is down"
+          description: "Chat service has been down for more than 2 minutes"
+
+      # Game Service down
+      - alert: GameServiceDown
+        expr: up{job="game-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Game service is down"
+          description: "Game service has been down for more than 2 minutes"
+
+      # Notification Service down
+      - alert: NotificationServiceDown
+        expr: up{job="notification-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Notification service is down"
+          description: "Notification service has been down for more than 2 minutes"
+
+      # Leaderboard Service down
+      - alert: LeaderboardServiceDown
+        expr: up{job="leaderboard-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Leaderboard service is down"
+          description: "Leaderboard service has been down for more than 2 minutes"
+
+      # TicTac Game down
+      - alert: TicTacGameDown
+        expr: up{job="tictac-game"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TicTac game service is down"
+          description: "TicTac game service has been down for more than 2 minutes"
+
+  # ============================================
+  # Frontend Alerts
+  # ============================================
+  - name: frontend_alerts
     interval: 15s
     rules:
-      # Prometheus too many restarts
-      - alert: PrometheusTooManyRestarts
-        expr: changes(process_start_time_seconds{job="prometheus"}[15m]) > 2
+      # Frontend down
+      - alert: FrontendDown
+        expr: up{job="frontend"} == 0
+        for: 2m
         labels:
-          severity: warning
+          severity: critical
         annotations:
-          summary: "Prometheus has restarted multiple times"
-          description: "Prometheus has restarted {{ $value }} times in the last 15 minutes"
+          summary: "Frontend is down"
+          description: "Frontend NGINX has been down for more than 2 minutes"
 
-      # Grafana down
-      - alert: GrafanaDown
-        expr: up{job="grafana"} == 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Grafana is down"
-          description: "Grafana has been down for more than 5 minutes"
-
-      # Prometheus TSDB compaction failed
-      - alert: PrometheusTSDBCompactionFailed
-        expr: rate(prometheus_tsdb_compactions_failed_total[5m]) > 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Prometheus TSDB compaction failed"
-          description: "Prometheus TSDB compaction has failed"
-
-      # Prometheus configuration reload failed
-      - alert: PrometheusConfigReloadFailed
-        expr: prometheus_config_last_reload_successful == 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Prometheus configuration reload failed"
-          description: "Prometheus configuration reload has failed"
-
+  # ============================================
+  # ELK Stack Alerts
+  # ============================================
   - name: elasticsearch_alerts
     interval: 30s
     rules:
+      # Elasticsearch down
+      - alert: ElasticsearchDown
+        expr: up{job="elasticsearch"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elasticsearch is down"
+          description: "Elasticsearch has been down for more than 2 minutes"
+
       # Elasticsearch cluster health
       - alert: ElasticsearchClusterRed
         expr: elasticsearch_cluster_health_status{color="red"} == 1
@@ -255,35 +272,139 @@ groups:
           summary: "Elasticsearch heap usage is high"
           description: "Elasticsearch JVM heap usage is above 90% (current: {{ $value }}%)"
 
+  - name: logstash_alerts
+    interval: 30s
+    rules:
+      # Logstash down
+      - alert: LogstashDown
+        expr: up{job="logstash"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Logstash is down"
+          description: "Logstash has been down for more than 2 minutes"
+
+  - name: kibana_alerts
+    interval: 30s
+    rules:
+      # Kibana down
+      - alert: KibanaDown
+        expr: up{job="kibana"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kibana is down"
+          description: "Kibana has been down for more than 5 minutes"
+
+  # ============================================
+  # Monitoring Stack Alerts
+  # ============================================
+  - name: monitoring_alerts
+    interval: 15s
+    rules:
+      # Prometheus too many restarts
+      - alert: PrometheusTooManyRestarts
+        expr: changes(process_start_time_seconds{job="prometheus"}[15m]) > 2
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus has restarted multiple times"
+          description: "Prometheus has restarted {{ $value }} times in the last 15 minutes"
+
+      # Alertmanager down
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager is down"
+          description: "Alertmanager has been down for more than 2 minutes"
+
+      # Alertmanager configuration reload failed
+      - alert: AlertmanagerConfigReloadFailed
+        expr: alertmanager_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alertmanager configuration reload failed"
+          description: "Alertmanager configuration reload has failed"
+
+      # Grafana down
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Grafana is down"
+          description: "Grafana has been down for more than 5 minutes"
+
+      # Node Exporter down
+      - alert: NodeExporterDown
+        expr: up{job="node-exporter"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node Exporter is down"
+          description: "Node Exporter has been down for more than 5 minutes - system metrics unavailable"
+
+      # cAdvisor down
+      - alert: cAdvisorDown
+        expr: up{job="cadvisor"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cAdvisor is down"
+          description: "cAdvisor has been down for more than 5 minutes - container metrics unavailable"
+
+      # Prometheus TSDB compaction failed
+      - alert: PrometheusTSDBCompactionFailed
+        expr: rate(prometheus_tsdb_compactions_failed_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus TSDB compaction failed"
+          description: "Prometheus TSDB compaction has failed"
+
+      # Prometheus configuration reload failed
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus configuration reload failed"
+          description: "Prometheus configuration reload has failed"
+
+  # ============================================
+  # Container Resource Alerts
+  # ============================================
   - name: container_alerts
     interval: 30s
     rules:
       # Container CPU throttling
       - alert: ContainerCPUThrottling
-        expr: rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.5
+        expr: rate(container_cpu_cfs_throttled_seconds_total{container_label_com_docker_compose_service!=""}[5m]) > 0.5
         for: 10m
         labels:
           severity: warning
         annotations:
-          summary: "Container {{ $labels.name }} is being CPU throttled"
-          description: "Container {{ $labels.name }} is experiencing CPU throttling"
+          summary: "Container {{ $labels.container_label_com_docker_compose_service }} is being CPU throttled"
+          description: "Container {{ $labels.container_label_com_docker_compose_service }} is experiencing CPU throttling"
 
       # Container high memory usage
       - alert: ContainerHighMemoryUsage
-        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 90
+        expr: (container_memory_usage_bytes{container_label_com_docker_compose_service!=""} / container_spec_memory_limit_bytes{container_label_com_docker_compose_service!=""}) * 100 > 90
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Container {{ $labels.name }} high memory usage"
-          description: "Container {{ $labels.name }} is using {{ $value }}% of its memory limit"
-
-      # Container restarts
-      - alert: ContainerRestarting
-        expr: rate(container_last_seen[5m]) > 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} is restarting frequently"
-          description: "Container {{ $labels.name }} has restarted multiple times"
+          summary: "Container {{ $labels.container_label_com_docker_compose_service }} high memory usage"
+          description: "Container {{ $labels.container_label_com_docker_compose_service }} is using {{ $value }}% of its memory limit"

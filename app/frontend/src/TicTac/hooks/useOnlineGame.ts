@@ -14,7 +14,6 @@ export function useOnlineGame(user: User | null) {
   useEffect(() => {
     if (!user) return;
 
-    // Connect to WebSocket
     wsService.connect(user.id)
       .then(() => {
         setIsConnected(true);
@@ -24,13 +23,11 @@ export function useOnlineGame(user: User | null) {
         setError('Failed to connect to game server');
       });
 
-    // Set up message handlers
     const handleMatchFound = (message: WSMessage) => {
       setCurrentGame(message.game);
       setOpponent(message.opponent);
       setIsSearching(false);
       
-      // Join the game via WebSocket
       if (user && message.game) {
         wsService.joinGame(user.id, message.game.id);
       }
@@ -54,7 +51,6 @@ export function useOnlineGame(user: User | null) {
 
     const handleError = (message: WSMessage) => {
       const errorMsg = message.error || message.message || 'An error occurred';
-      // Don't treat queue refresh/already-in-queue as an error
       if (errorMsg.includes('Already in matchmaking queue') || 
           errorMsg.includes('Refreshed matchmaking queue position')) {
         return;

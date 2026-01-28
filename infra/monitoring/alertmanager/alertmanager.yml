@@ -1,12 +1,12 @@
 # Alertmanager Configuration
 global:
   resolve_timeout: 5m
-  # SMTP configuration (optional - configure if you want email alerts)
-  # smtp_smarthost: 'smtp.gmail.com:587'
-  # smtp_from: 'alertmanager@example.com'
-  # smtp_auth_username: 'your-email@gmail.com'
-  # smtp_auth_password: 'your-app-password'
-  # smtp_require_tls: true
+  
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'hichamdriouch1337@gmail.com'
+  smtp_auth_username: 'hichamdriouch1337@gmail.com'
+  smtp_auth_password: 'gyllrsiohwzzqjfn'
+  smtp_require_tls: true
 
 # Templates for notifications
 templates:
@@ -14,83 +14,112 @@ templates:
 
 # Route configuration
 route:
-  # Default receiver
+  # Default receiver - catches all alerts not matched by child routes
   receiver: 'default'
   
-  # Group alerts
+  # Group alerts by these labels to reduce notification spam
   group_by: ['alertname', 'cluster', 'service']
   
-  # Wait before sending initial notification
+  # Wait before sending initial notification (allows grouping)
   group_wait: 10s
   
-  # Wait before sending notification about new alerts
+  # Wait before sending notification about new alerts in existing group
   group_interval: 10s
   
-  # Wait before resending notification
+  # Wait before resending notification for same alert
   repeat_interval: 12h
   
-  # Child routes
+  # Child routes - more specific routing rules
   routes:
-    # Critical alerts route
+    # Critical alerts route - urgent, fast notifications
     - match:
         severity: critical
       receiver: 'critical'
-      continue: true
+      continue: true  # Also send to default receiver
       group_wait: 10s
       repeat_interval: 5m
     
-    # Warning alerts route
+    # Warning alerts route - less urgent
     - match:
         severity: warning
       receiver: 'warning'
-      continue: true
+      continue: true  # Also send to default receiver
       group_wait: 30s
       repeat_interval: 1h
     
-    # Kafka specific alerts
+    # Kafka specific alerts - dedicated team
     - match_re:
         alertname: '^Kafka.*'
       receiver: 'kafka-team'
-      continue: false
+      continue: false  # Don't send to default
       group_wait: 10s
       repeat_interval: 30m
 
 # Receivers configuration
 receivers:
-  # Default receiver (logs only)
   - name: 'default'
-    webhook_configs:
-      - url: 'http://localhost:9093/webhook/default'
-        send_resolved: true
 
-  # Critical alerts receiver
   - name: 'critical'
-    webhook_configs:
-      - url: 'http://localhost:9093/webhook/critical'
-        send_resolved: true
-    # Email configuration example (uncomment and configure)
-    # email_configs:
-    #   - to: 'team@example.com'
-    #     subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
-    #     html: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    email_configs:
+    - to: 'mehdi_serghini@yahoo.com'
+      from: 'hichamdriouch1337@gmail.com'
+      smarthost: 'smtp.gmail.com:587'
+      auth_username: 'hichamdriouch1337@gmail.com'
+      auth_password: 'gyllrsiohwzzqjfn'
+      headers:
+        Subject: '[CRITICAL] {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+      html: |
+        <h2 style="color: #d9534f;">Critical Alert Fired</h2>
+        {{ range .Alerts }}
+        <div style="border-left: 4px solid #d9534f; padding-left: 15px; margin: 15px 0;">
+          <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+          <p><strong>Service:</strong> {{ .Labels.service }}</p>
+          <p><strong>Instance:</strong> {{ .Labels.instance }}</p>
+        </div>
+        {{ end }}
+      send_resolved: true
 
-  # Warning alerts receiver
   - name: 'warning'
-    webhook_configs:
-      - url: 'http://localhost:9093/webhook/warning'
-        send_resolved: true
+    email_configs:
+    - to: 'mehdi_serghini@yahoo.com'
+      from: 'hichamdriouch1337@gmail.com'
+      smarthost: 'smtp.gmail.com:587'
+      auth_username: 'hichamdriouch1337@gmail.com'
+      auth_password: 'gyllrsiohwzzqjfn'
+      headers:
+        Subject: '[WARNING] {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+      html: |
+        <h2 style="color: #f0ad4e;">Warning Alert</h2>
+        {{ range .Alerts }}
+        <div style="border-left: 4px solid #f0ad4e; padding-left: 15px; margin: 15px 0;">
+          <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          <p><strong>Service:</strong> {{ .Labels.service }}</p>
+          <p><strong>Instance:</strong> {{ .Labels.instance }}</p>
+        </div>
+        {{ end }}
+      send_resolved: true
 
-  # Kafka team receiver
   - name: 'kafka-team'
-    webhook_configs:
-      - url: 'http://localhost:9093/webhook/kafka'
-        send_resolved: true
-    # Slack configuration example (uncomment and configure)
-    # slack_configs:
-    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-    #     channel: '#kafka-alerts'
-    #     title: 'Kafka Alert: {{ .GroupLabels.alertname }}'
-    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    email_configs:
+    - to: 'hichamdriouch1337@gmail.com'
+      from: 'hichamdriouch1337@gmail.com'
+      smarthost: 'smtp.gmail.com:587'
+      auth_username: 'hichamdriouch1337@gmail.com'
+      auth_password: 'gyllrsiohwzzqjfn'
+      headers:
+        Subject: '[KAFKA] {{ .GroupLabels.alertname }}'
+      html: |
+        <h2 style="color: #5bc0de;">Kafka Alert</h2>
+        {{ range .Alerts }}
+        <div style="border-left: 4px solid #5bc0de; padding-left: 15px; margin: 15px 0;">
+          <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+        </div>
+        {{ end }}
+      send_resolved: true
 
 # Inhibit rules - suppress certain alerts when others are active
 inhibit_rules:

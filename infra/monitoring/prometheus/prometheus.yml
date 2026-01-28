@@ -19,6 +19,10 @@ rule_files:
 
 # Scrape configurations
 scrape_configs:
+  # ============================================
+  # Monitoring Stack
+  # ============================================
+  
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
@@ -33,19 +37,30 @@ scrape_configs:
         labels:
           service: 'alertmanager'
 
-  # Node Exporter
+  # Node Exporter - System metrics
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']
         labels:
           service: 'node-exporter'
 
-  # Zookeeper JMX Exporter
-  - job_name: 'zookeeper'
+  # cAdvisor - Container metrics for all services
+  - job_name: 'cadvisor'
     static_configs:
-      - targets: ['zookeeper:7072']
+      - targets: ['cadvisor:8080']
         labels:
-          service: 'zookeeper'
+          service: 'cadvisor'
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+
+  # ============================================
+  # Infrastructure Services
+  # ============================================
 
   # Kafka JMX Exporter
   - job_name: 'kafka'
@@ -54,28 +69,63 @@ scrape_configs:
         labels:
           service: 'kafka'
 
-  # Kafka Producer
-  - job_name: 'kafka-producer'
+  # Vault
+  - job_name: 'vault'
+    metrics_path: '/v1/sys/metrics'
+    params:
+      format: ['prometheus']
+    static_configs:
+      - targets: ['vault:8200']
+        labels:
+          service: 'vault'
+
+  # ============================================
+  # ELK Stack
+  # ============================================
+
+  # Elasticsearch
+  - job_name: 'elasticsearch'
+    metrics_path: '/_prometheus/metrics'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+        labels:
+          service: 'elasticsearch'
+
+  # Logstash
+  - job_name: 'logstash'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['kafka-producer:3001']
+      - targets: ['logstash:9600']
         labels:
-          service: 'kafka-producer'
+          service: 'logstash'
 
-  # Kafka Consumer
-  - job_name: 'kafka-consumer'
+  # Kibana
+  - job_name: 'kibana'
+    metrics_path: '/api/status'
+    static_configs:
+      - targets: ['kibana:5601']
+        labels:
+          service: 'kibana'
+
+  # ============================================
+  # Backend Microservices
+  # ============================================
+
+  # API Gateway
+  - job_name: 'api-gateway'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['kafka-consumer:3002']
+      - targets: ['api-gateway:8080']
         labels:
-          service: 'kafka-consumer'
+          service: 'api-gateway'
 
-  # Grafana
-  - job_name: 'grafana'
+  # User Auth Service
+  - job_name: 'user_auth'
+    metrics_path: '/metrics'
     static_configs:
-      - targets: ['grafana:3000']
+      - targets: ['user_auth:3004']
         labels:
-          service: 'grafana'
+          service: 'user_auth'
 
   # Chat Service
   - job_name: 'chat-service'
@@ -117,25 +167,14 @@ scrape_configs:
         labels:
           service: 'tictac-game'
 
-  # User Auth Service
-  - job_name: 'user_auth'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['user_auth:3004']
-        labels:
-          service: 'user_auth'
+  # ============================================
+  # Frontend
+  # ============================================
 
-  # API Gateway
-  - job_name: 'api-gateway'
-    metrics_path: '/metrics'
+  # Frontend NGINX
+  - job_name: 'frontend'
+    metrics_path: '/nginx_status'
     static_configs:
-      - targets: ['api-gateway:8080']
+      - targets: ['frontend:80']
         labels:
-          service: 'api-gateway'
-
-  # cAdvisor - Container metrics for all services
-  - job_name: 'cadvisor'
-    static_configs:
-      - targets: ['cadvisor:8080']
-        labels:
-          service: 'cadvisor'
+          service: 'frontend'

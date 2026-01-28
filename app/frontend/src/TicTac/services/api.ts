@@ -1,4 +1,5 @@
 import { authenticatedFetch } from '../../globalUtils/authenticatedFetch';
+import { UseTokenStore } from '../../userAuth/zustand/useStore';
 
 // Use relative URL to go through nginx proxy (HTTPS)
 const getApiBaseUrl = () => {
@@ -10,6 +11,39 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+
+// Helper to check if a game exists without triggering console errors
+const checkActiveGameQuietly = async (playerId: string): Promise<GameState | null> => {
+  try {
+    const { token } = UseTokenStore.getState();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/games/player/${playerId}/active`, {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    });
+    
+    if (response.status === 404) {
+      return null; // No active game - this is expected
+    }
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.game;
+  } catch {
+    return null;
+  }
+};
 
 export interface User {
   id: string;
@@ -135,24 +169,7 @@ export class TicTacAPI {
   }
 
   static async getActiveGame(playerId: string): Promise<GameState | null> {
-    try {
-      // Suppress 404 errors in console by catching them silently
-      const response = await authenticatedFetch(`${API_BASE_URL}/games/player/${playerId}/active`, {
-        method: 'GET'
-      }).catch(() => null);
-      
-      if (!response) return null;
-      
-     
-      if (response.status === 404) return null;
-      if (!response.ok) return null;
-      
-      const data = await response.json();
-      return data.game;
-    } catch (error) {
-    
-      return null;
-    }
+    return checkActiveGameQuietly(playerId);
   }
 
   // Matchmaking endpoints

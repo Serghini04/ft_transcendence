@@ -85,8 +85,10 @@ export async function gameRoutes(fastify: FastifyInstance) {
     try {
       const game = GameModel.findActiveByPlayer(playerId);
 
+      // Return 200 with null game instead of 404 to avoid console errors
+      // No active game is a valid state, not an error
       if (!game) {
-        return reply.code(404).send({ error: 'No active game found' });
+        return reply.code(200).send({ game: null });
       }
 
       return reply.code(200).send({ game });

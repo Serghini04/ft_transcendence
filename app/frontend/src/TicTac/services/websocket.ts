@@ -106,7 +106,7 @@ export class WebSocketService {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {
-      console.error('[WS] Cannot send - WebSocket not connected. ReadyState:', this.ws?.readyState);
+      console.log('[WS] Cannot send - WebSocket not connected. ReadyState:', this.ws?.readyState);
     }
   }
 
