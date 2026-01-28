@@ -553,7 +553,7 @@ services:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
       - ./infra/vault/scripts:/vault/scripts:ro
-      - ./.env.vault:/vault/secrets/.env.vault:ro
+      - ./.env.example:/vault/.env.example:ro
     networks:
       - ft_Transc
     restart: unless-stopped

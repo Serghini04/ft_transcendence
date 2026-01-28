@@ -45,7 +45,6 @@ export default function Home() {
             total_score: pingPongData.total_score || 0,
             goals_conceded: pingPongData.goals_conceded || 0
           });
-          console.log("Ping Pong Stats:", pingPongData);
         }
         
         // Fetch TicTacToe stats
@@ -59,7 +58,6 @@ export default function Home() {
             losses: ticTacToeData.losses || 0,
             draws: ticTacToeData.draws || 0
           });
-          console.log("TicTacToe Stats:", ticTacToeData);
         }
         verifyToken(ticTacToeData);
       } catch (err) {

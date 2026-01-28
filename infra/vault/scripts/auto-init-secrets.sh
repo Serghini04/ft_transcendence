@@ -13,25 +13,7 @@ done
 echo "Vault is ready!"
 
 # Path to secrets file
-SECRETS_FILE="/vault/secrets/.env.vault"
-
-if [ ! -f "$SECRETS_FILE" ]; then
-  echo "No secrets file found at $SECRETS_FILE"
-  echo "ℹUsing default secrets"
-  
-  # Create default secrets
-  vault kv put secret/app \
-    JWT_SECRET='breakingPong_123!@' \
-    JWT_REFRESH='breakingPong_Refresh_123!@' \
-    COOKIE_SECRET='superSecretCookieKey!@' \
-    ELASTIC_PASSWORD='changeme' \
-    KIBANA_PASSWORD='changeme' \
-    EMAIL_USER='ouaouriktsoulaymane@gmail.com' \
-    EMAIL_PASSWORD='ynyr itsc mvvo wrmm'
-  
-  echo "Default secrets stored in Vault"
-  exit 0
-fi
+SECRETS_FILE="/vault/.env.example"
 
 echo "📖 Reading secrets from $SECRETS_FILE"
 

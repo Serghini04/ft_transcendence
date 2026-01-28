@@ -58,6 +58,30 @@ export class KafkaProducerService {
     }
   }
 
+  async connectWithRetry(maxRetries: number = 10, initialDelay: number = 2000): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.connect();
+        console.log(`✅ Kafka connected successfully on attempt ${attempt}`);
+        return;
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const delay = initialDelay * Math.pow(2, attempt - 1);
+        
+        console.log(
+          `⚠️ Kafka connection attempt ${attempt}/${maxRetries} failed: ${error.message}`
+        );
+        
+        if (isLastAttempt) {
+          console.error('❌ Max Kafka connection retries reached. Service will continue without Kafka.');
+          throw error;
+        }
+        
+        console.log(`🔄 Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+  }
   async disconnect(): Promise<void> {
     if (!this.isConnected)
       return;
