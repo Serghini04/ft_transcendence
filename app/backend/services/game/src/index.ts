@@ -50,17 +50,30 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
   console.log(`🎮 Challenge request: ${challengerId} → ${challengedId}`);
   
   try {
-    const { userSocketMap, pendingChallenges } = await import("./controllers/game.gateway");
-    const { gameNamespace } = await import("./plugins/game.socket");
+    // ✅ Import the maps from game.gateway
+    const gameGatewayModule = await import("./controllers/game.gateway");
+    const { userSocketMap, pendingChallenges } = gameGatewayModule;
+    const gameSocketModule = await import("./plugins/game.socket");
+    const { gameNamespace } = gameSocketModule;
     
-    if (!gameNamespace) {
+    // ✅ Check if userSocketMap exists
+    if (!userSocketMap) {
+      console.error("❌ userSocketMap is undefined");
       return reply.status(500).send({ error: "Game service not ready" });
     }
+    
+    if (!gameNamespace) {
+      console.error("❌ gameNamespace is undefined");
+      return reply.status(500).send({ error: "Game service not ready" });
+    }
+    
+    console.log(`📊 Online users:`, Array.from(userSocketMap.keys()));
     
     // Check if opponent socket exists (is online)
     const opponentSocket = userSocketMap.get(Number(challengedId));
     if (!opponentSocket) {
-      return reply.status(400).send({ error: "User is offline" });
+      console.log(`❌ Opponent ${challengedId} not found in userSocketMap`);
+      return reply.status(400).send({ error: "User is offline", message: "This user must be in the game menu to receive challenges" });
     }
     
     // Check if opponent is already in a game
@@ -74,7 +87,7 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
     // Fetch challenger profile
     let challengerData;
     try {
-      const challengerRes = await fetch(`http:/api-gateway:8080/api/v1/game/user/${challengerId}`, {
+      const challengerRes = await fetch(`http://api-gateway:8080/api/v1/game/user/${challengerId}`, {
         method: "GET",
         headers: { 
           Authorization: request.headers.authorization || '',
@@ -136,8 +149,8 @@ app.post("/api/v1/game/challenge", async (request, reply) => {
     
     return reply.send({ success: true, challengeId });
   } catch (error) {
-    console.error("Error sending challenge:", error);
-    return reply.status(500).send({ error: "Failed to send challenge" });
+    console.error("❌ Challenge error:", error);
+    return reply.status(500).send({ error: "Failed to send challenge", message: error instanceof Error ? error.message : String(error) });
   }
 });
 
