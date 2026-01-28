@@ -553,7 +553,7 @@ export default function TournamentBracket({
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center overflow-hidden">
                       {opponent.avatar ? (
-                        <img src={opponent.avatar} alt={opponent.name} className="w-full h-full object-cover" onError={(e) => {
+                        <img src={`${opponent.avatar.startsWith('http') ? opponent.avatar : `${window.location.origin}/${opponent.avatar}`}`} alt={opponent.name} className="w-full h-full object-cover" onError={(e) => {
                           e.currentTarget.style.display = 'none';
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }} />
@@ -655,9 +655,7 @@ export default function TournamentBracket({
                         <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                           {friend.avatar_url ? (
                             <img 
-                              src={friend.avatar_url.startsWith('/src/') 
-                                ? friend.avatar_url.replace('/src/', '/') 
-                                : friend.avatar_url} 
+                              src={`${friend.avatar_url.startsWith('http') ? friend.avatar_url : `${window.location.origin}/${friend.avatar_url.startsWith('/src/') ? friend.avatar_url.replace('/src/', '/') : friend.avatar_url}`}`} 
                               alt={friend.username} 
                               className="w-full h-full object-cover" 
                               onError={(e) => {

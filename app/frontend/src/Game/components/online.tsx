@@ -136,7 +136,7 @@ export default function Online() {
       s.on("waiting", () => setWaiting(true));
   
       // Handle rejoining after forfeit
-      s.on("rejoinAfterForfeit", ({ winnerId, loserId, reason }: { winnerId: string, loserId: string, reason: string }) => {
+      s.on("rejoinAfterForfeit", async ({ winnerId, loserId, reason }: { winnerId: string, loserId: string, reason: string }) => {
         console.log("⚠️ Rejoined after forfeit - showing game result");
         
         const currentYourProfile = yourProfileRef.current;
@@ -147,8 +147,29 @@ export default function Online() {
         setForfeitWin(true);
         setWaiting(false);
         
-        // Set winner profile (you lost, so winner is opponent)
-        if (currentYourProfile) {
+        // Fetch winner profile (opponent who won by forfeit)
+        try {
+          const res = await fetch(`http://localhost:8080/api/v1/game/user/${winnerId}`, {
+            method: "GET",
+            credentials: "include",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          
+          const raw = await res.json();
+          verifyToken(raw);
+          
+          const winnerData: UserProfile = {
+            id: raw.id,
+            name: raw.username,
+            avatar: raw.avatarUrl,
+          };
+          
+          setWinnerProfile(winnerData);
+          console.log("---------> : Fetched winner profile after forfeit:", winnerData);
+        } catch (err) {
+          console.error("Failed to fetch winner profile:", err);
+          // Fallback to basic profile
           setWinnerProfile({
             id: winnerId,
             name: "Opponent",
@@ -479,9 +500,11 @@ export default function Online() {
             {yourProfile && opponentProfile && (
               <>
                 <img 
-                  src={playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar} 
+                  src={`${(playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar).startsWith('http') 
+                    ? (playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar) 
+                    : `${window.location.origin}/${playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar}`}`} 
                   alt={playerPositionRef.current === "left" ? yourProfile.name : opponentProfile.name} 
-                  className="h-10 rounded-full border-2 border-[#50614d80]-500"
+                  className="h-10 w-10 rounded-full border-2 border-[#50614d80]-500"
                 />
                 <span className="text-[22px] font-semibold">{state.scores.left}</span>
               </>
@@ -505,9 +528,11 @@ export default function Online() {
             <span className="text-[22px] font-semibold">{state.scores.right}</span>
             {yourProfile && opponentProfile && (
               <img 
-                src={playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar} 
+                src={`${(playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar).startsWith('http') 
+                  ? (playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar) 
+                  : `${window.location.origin}/${playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar}`}`} 
                 alt={playerPositionRef.current === "right" ? yourProfile.name : opponentProfile.name} 
-                className="h-10 rounded-full border-2 border-[#50614d80]-500" 
+                className="h-10 w-10 rounded-full border-2 border-[#50614d80]-500" 
               />
             )}
           </div>
@@ -524,7 +549,9 @@ export default function Online() {
         {winner && winnerProfile && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20 rounded-tl-4xl">
             <img
-              src={winnerProfile.avatar}
+              src={`${winnerProfile.avatar.startsWith('http') 
+                ? winnerProfile.avatar 
+                : `${window.location.origin}/${winnerProfile.avatar}`}`}
               alt={winnerProfile.name}
               className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4 object-cover"
             />

@@ -510,9 +510,9 @@ export default function TournamentGame() {
             {yourProfile && opponentProfile && (
               <>
                 <img 
-                  src={playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar} 
+                  src={`${(playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar).startsWith('http') ? (playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar) : `${window.location.origin}/${playerPositionRef.current === "left" ? yourProfile.avatar : opponentProfile.avatar}`}`} 
                   alt={playerPositionRef.current === "left" ? yourProfile.name : opponentProfile.name} 
-                  className="h-10 rounded-full border-2 border-teal-500"
+                  className="h-10 w-10 rounded-full border-2 border-teal-500"
                 />
                 <span className="text-[22px] font-semibold">{state.scores.left}</span>
               </>
@@ -536,9 +536,9 @@ export default function TournamentGame() {
             <span className="text-[22px] font-semibold">{state.scores.right}</span>
             {yourProfile && opponentProfile && (
               <img 
-                src={playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar} 
+                src={`${(playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar).startsWith('http') ? (playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar) : `${window.location.origin}/${playerPositionRef.current === "right" ? yourProfile.avatar : opponentProfile.avatar}`}`} 
                 alt={playerPositionRef.current === "right" ? yourProfile.name : opponentProfile.name} 
-                className="h-10 rounded-full border-2 border-teal-500" 
+                className="h-10 w-10 rounded-full border-2 border-teal-500" 
               />
             )}
           </div>
@@ -555,7 +555,7 @@ export default function TournamentGame() {
         {winner && winnerProfile && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20 rounded-tl-4xl">
             <img
-              src={winnerProfile.avatar}
+              src={`${winnerProfile.avatar.startsWith('http') ? winnerProfile.avatar : `${window.location.origin}/${winnerProfile.avatar}`}`}
               alt={winnerProfile.name}
               className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4 object-cover"
             />

@@ -3,7 +3,7 @@ import { useLocation , useNavigate } from "react-router-dom";
 import { verifyToken } from "../../globalUtils/verifyToken";
 import { UseTokenStore, UseUserStore } from "../../userAuth/zustand/useStore";
 import aiAvatarImg from "../../assets/images/aiAvatar.jpg";
-import user1Img from "../../assets/images/aiAvatar.jpg";
+// import user1Img from "../../assets/images/aiAvatar.jpg";
 
 interface Player {
   id: number;
@@ -234,7 +234,7 @@ class AIPlayer {
 
 export default function Ai() {
   const [players, setPlayers] = useState<Players>({
-    first: { id: 0, name: "You", avatar: user1Img },
+    first: { id: 0, name: "You", avatar: "" },
     second: { id: 1, name: "AI Opponent", avatar: aiAvatarImg },
   });
   const [leftScore, setLeftScore] = useState(0);
@@ -302,7 +302,7 @@ export default function Ai() {
         const data: Player = {
           id: raw.id,
           name: raw.username,
-          avatar: raw.avatarUrl || user1Img,
+          avatar: raw.avatarUrl || "",
         };
         
         setPlayers({
@@ -758,8 +758,8 @@ export default function Ai() {
           {/* AI Player Top */}
           <div className="flex flex-col items-center gap-2 text-white">
             <img
-              src={players.second.avatar}
-              className="h-10 rounded-full border-2 border-[#50614d80]-500"
+              src={`${players.second.avatar.startsWith('http') ? players.second.avatar : `${window.location.origin}/${players.second.avatar}`}`}
+              className="h-10 w-10 rounded-full border-2 border-[#50614d80]-500"
               alt={players.second.name}
             />
             <span className="text-lg font-semibold">{rightScore}</span>
@@ -777,7 +777,7 @@ export default function Ai() {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-xl z-20 p-4">
               <div className="flex flex-col items-center justify-center translate-x-9 sm:translate-x-0">
                 <img
-                  src={winner === "left" ? players.first.avatar : players.second.avatar}
+                  src={`${(winner === "left" ? players.first.avatar : players.second.avatar).startsWith('http') ? (winner === "left" ? players.first.avatar : players.second.avatar) : `${window.location.origin}/${winner === "left" ? players.first.avatar : players.second.avatar}`}`}
                   alt="Winner"
                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-yellow-400 shadow-lg mb-3 object-cover"
                 />
@@ -805,7 +805,7 @@ export default function Ai() {
           {/* Human Player Bottom */}
           <div className="flex flex-col items-center gap-2 text-white">
             <span className="text-lg font-semibold">{leftScore}</span>
-            <img src={players.first.avatar} className="h-10 rounded-full border-2 border-[#50614d80]-500" alt={players.first.name} />
+            <img src={`${players.first.avatar.startsWith('http') ? players.first.avatar : `${window.location.origin}/${players.first.avatar}`}`} className="h-10 w-10 rounded-full border-2 border-[#50614d80]-500" alt={players.first.name} />
           </div>
         </>
       ) : (
@@ -822,7 +822,7 @@ export default function Ai() {
             >
               {/* Human Player */}
               <div className="flex items-center gap-3 w-20">
-                <img src={players.first.avatar} alt={players.first.name} className="h-10 rounded-full border-2 border-[#50614d80]-500" />
+                <img src={`${players.first.avatar.startsWith('http') ? players.first.avatar : `${window.location.origin}/${players.first.avatar}`}`} alt={players.first.name} className="h-10 w-10 rounded-full border-2 border-[#50614d80]-500" />
                 <span className="text-[22px] font-semibold">{leftScore}</span>
               </div>
 
@@ -845,9 +845,9 @@ export default function Ai() {
                 <span className="text-[22px] font-semibold">{rightScore}</span>
                 <div className="relative">
                   <img
-                    src={players.second.avatar}
+                    src={`${players.second.avatar.startsWith('http') ? players.second.avatar : `${window.location.origin}/${players.second.avatar}`}`}
                     alt={players.second.name}
-                    className="h-10 rounded-full border-2 border-[#50614d80]-500"
+                    className="h-10 w-10 rounded-full border-2 border-[#50614d80]-500"
                   />
                 </div>
               </div>
@@ -864,7 +864,7 @@ export default function Ai() {
             {winner && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-tl-4xl z-20 p-6">
                 <img
-                  src={winner === "left" ? players.first.avatar : players.second.avatar}
+                  src={`${(winner === "left" ? players.first.avatar : players.second.avatar).startsWith('http') ? (winner === "left" ? players.first.avatar : players.second.avatar) : `${window.location.origin}/${winner === "left" ? players.first.avatar : players.second.avatar}`}`}
                   alt="Winner"
                   className="w-28 h-28 rounded-full border-4 border-yellow-400 shadow-lg mb-4"
                 />
